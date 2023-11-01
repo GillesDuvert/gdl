@@ -3476,22 +3476,26 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
     gdlStoreCLIP();
     return zposStart;
   }
-  void gdlDrawMultipleTicks (EnvT *e, GDLGStream *a, int axisId, DDouble* val, int n, DFloat TickLen, DString & Opt, DLong modifierCode, DLong TickLayout, PLPointer data, bool doPlot=true) {
+
+  PLFLT gdlDrawMultipleTicks(EnvT *e, GDLGStream *a, int axisId, DDouble* val, int n, DFloat TickLen, DString & Opt, DLong modifierCode, DLong TickLayout, PLPointer data, bool doPlot = true) {
 	//doPlot tells if plotting must be done (XYZ STYLE=4?), but the routine must always set the good VPOR() even f nothing was drawn.
-	bool tickinvert=(Opt.find(TICKINVERT)!=std::string::npos);
-	PLFLT just=0.5;
-	if (axisId == YAXIS)just=1;
-	if (TickLayout==2) just=0;
-	//mtex options dur to ticklayout
-	std::string sideCode="b";
+	bool tickinvert = (Opt.find(TICKINVERT) != std::string::npos);
+	PLFLT increment = 0;
+	PLFLT just = 0.5;
+	if (axisId == YAXIS)just = 1;
+	if (TickLayout == 2) just = 0;
+	//mtex options due to ticklayout
+	std::string sideCode = "b";
 	if (modifierCode == 0 || modifierCode == 1) {
-	  if (axisId == XAXIS) sideCode="b"; else sideCode=(TickLayout==2)?"l":"lv";
+	  if (axisId == XAXIS) sideCode = "b";
+	  else sideCode = (TickLayout == 2) ? "l" : "lv";
 	} else if (modifierCode == 2) {
-	  if (axisId == XAXIS) sideCode="t"; else sideCode=(TickLayout==2)?"r":"rv";
+	  if (axisId == XAXIS) sideCode = "t";
+	  else sideCode = (TickLayout == 2) ? "r" : "rv";
 	}
-    static char label[256];
-    PLFLT pos, disp; //as in plmtex() documentation
-    //interlignes
+	static char label[256];
+	PLFLT pos, disp; //as in plmtex() documentation
+	//interlignes
 	PLFLT interligne_as_norm = (axisId == XAXIS) ? a->nLineSpacing() : a->nLineSpacing() * a->yPageSize() / a->xPageSize();
 	PLFLT typical_char_size_mm = (axisId == XAXIS) ? a->mmCharHeight() : a->mmCharLength();
 	PLFLT interligne_as_char = a->mmLineSpacing() / typical_char_size_mm;
@@ -3501,10 +3505,10 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 	a->plstream::gvpd(refboxxmin, refboxxmax, refboxymin, refboxymax);
 	PLFLT owxmin, owxmax, owymin, owymax;
 	a->plstream::gvpw(owxmin, owxmax, owymin, owymax);
-	
+
 	//the axis line first. omitted if tickLayout=1, and also if doplot=false (XYZSTYLE=4)
 	if (doPlot) {
-	  if (TickLayout!=1) {
+	  if (TickLayout != 1) {
 		if (axisId == XAXIS) {
 		  if (Opt.find(TOP) != std::string::npos) a->join(owxmin, owymax, owxmax, owymax);
 		  if (Opt.find(BOTTOM) != std::string::npos) a->join(owxmin, owymin, owxmax, owymin);
@@ -3514,23 +3518,24 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 		}
 	  }
 	}
-	
+
 	//tickinvert special change of vpor (not able to write outside of vpor with plplot)
-	PLFLT TickIncr=TickLen; //ticks len are in normalized size
+	PLFLT TickIncr = TickLen; //ticks len are in normalized size
 	if (tickinvert) {
 	  if (axisId == XAXIS) {
 		PLFLT nsize = fabs(refboxymax - refboxymin);
-		a->plstream::vpor(refboxxmin, refboxxmax, refboxymin-TickLen*nsize, refboxymax+TickLen*nsize); //enlarge vpor by 2*Ticklen
-		TickIncr=TickLen*nsize/(nsize+2*TickLen); //renormalize ticklen as world coord did not change
-		a->plstream::wind(owxmin, owxmax, owymin, owymax);
+		a->plstream::vpor(refboxxmin, refboxxmax, refboxymin - TickLen*nsize, refboxymax + TickLen * nsize); //enlarge vpor by 2*Ticklen
+		TickIncr = TickLen / (1 + 2 * TickLen); //renormalize ticklen as world coord did not change
+		if (doPlot) increment += TickLen * nsize;
 	  } else {
 		PLFLT nsize = fabs(refboxxmax - refboxxmin);
-		a->plstream::vpor(refboxxmin-TickLen*nsize, refboxxmax+TickLen*nsize, refboxymin, refboxymax);
-		TickIncr=TickLen*nsize/(nsize+2*TickLen); //renormalize ticklen as world coord did not change
-		a->plstream::wind(owxmin, owxmax, owymin, owymax);
+		a->plstream::vpor(refboxxmin - TickLen*nsize, refboxxmax + TickLen*nsize, refboxymin, refboxymax);
+		TickIncr = TickLen / (1 + 2 * TickLen); //renormalize ticklen as world coord did not change
+		if (doPlot) increment += TickLen * nsize;
 	  }
+	  a->plstream::wind(owxmin, owxmax, owymin, owymax);
 	}
-    
+
 	if (doPlot) {
 	  // ticks & labels
 	  PLFLT x[2], y[2];
@@ -3551,6 +3556,7 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 		  gdlAxisTickFunc(axisId, val[i], label, 255, data);
 		  if (Opt.find(NOTICKS) == std::string::npos) a->mtex(sideCode.c_str(), disp, pos, just, label); //NOTICKS means label only.
 		}
+		if (Opt.find(NOTICKS) == std::string::npos) increment += -0.5 * a->nCharHeight() + 1.5 * interligne_as_norm;
 	  } else {
 		PLFLT size = fabs(owxmax - owxmin);
 		for (auto i = 0; i < n; ++i) {
@@ -3568,19 +3574,16 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 		  gdlAxisTickFunc(axisId, val[i], label, 255, data);
 		  if (Opt.find(NOTICKS) == std::string::npos) a->mtex(sideCode.c_str(), disp, pos, just, label);
 		}
+		if (Opt.find(NOTICKS) == std::string::npos) increment += 1.5 * interligne_as_norm;
 	  }
 	}
-	
-	//reset
+
+	//give back increment in X or Y due to the box ticks & labels
 	if (tickinvert < 0) {
-	  if (axisId == XAXIS) {
-		a->plstream::vpor(refboxxmin, refboxxmax, refboxymin, refboxymax);
-	  } else {
-		a->plstream::vpor(refboxxmin, refboxxmax, refboxymin, refboxymax);
-	  }
+	  a->plstream::vpor(refboxxmin, refboxxmax, refboxymin, refboxymax);
 	  a->plstream::wind(owxmin, owxmax, owymin, owymax);
 	}
-	
+	return increment;
   }
   
   //gdlAxis will write an axis from Start to End, following all modifier switch, in the good place of the current VPOR, independent of the current WIN,
@@ -3844,7 +3847,9 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 	  tickdata.nchars = 0; //set nchars to 0, at the end nchars will be the maximum size.
 	  if (hasTickv) {
 		int ntickv = MIN(Tickv->N_Elements(), Ticks + 1);
-		gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, Opt, modifierCode, TickLayout, &tickdata, doplot);
+		if (axisId == XAXIS) 
+		  xdisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, Opt, modifierCode, TickLayout, &tickdata, doplot);
+		else ydisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, Opt, modifierCode, TickLayout, &tickdata, doplot);
 	  } else {
 		  if (axisId == XAXIS) {
 		  a->plstream::vpor(boxxmin, boxxmax, boxymin - xdisplacement, boxymax);
@@ -3889,7 +3894,8 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 	  if (i == 1) tickOpt = (TickLayout == 2) ? tickLayout2 : additionalAxesTickOpt;
       if (hasTickv) {
         int ntickv=MIN(Tickv->N_Elements(),Ticks+1);
-        gdlDrawMultipleTicks (e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, tickOpt, modifierCode, TickLayout, &tickdata, doplot); 
+		if (axisId == XAXIS) xdisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, tickOpt, modifierCode, TickLayout, &tickdata, doplot); 
+		else 		ydisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, tickOpt, modifierCode, TickLayout, &tickdata, doplot); 
       } else {
 		if (axisId == XAXIS) {
 		  a->plstream::vpor(boxxmin, boxxmax, boxymin - xdisplacement, boxymax);
