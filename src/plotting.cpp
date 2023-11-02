@@ -1771,139 +1771,109 @@ namespace lib
   return res;
   }
 
-  void gdlAxisTickFunc(PLINT axis, PLFLT value, char *label, PLINT length, PLPointer data) {
-    SizeT internalIndex = 0;
-    addToTickGet(axis, value);
-    struct GDL_TICKDATA *ptr = (GDL_TICKDATA*) data;
-    if (ptr->nTickName > 0) doOurOwnFormat(value, label, length, data); //priority!
-    else if (ptr->nTickFormat > 0) {//will be formatted -- not interpreting the tickunits
-      DDouble v = value;
-      if (ptr->isLog) v = pow(10., v);
-      if (((*ptr->TickFormat)[0]).substr(0, 1) == "(") { //internal format, call internal func "STRING"
-        EnvT *e = ptr->e;
-        static int stringIx = LibFunIx("STRING");
-        assert(stringIx >= 0);
-        EnvT* newEnv = new EnvT(e, libFunList[stringIx], NULL);
-        Guard<EnvT> guard(newEnv);
-        // add parameters
-        newEnv->SetNextPar(new DDoubleGDL(v));
-        newEnv->SetNextPar(new DStringGDL(((*ptr->TickFormat)[0]).c_str()));
-        // make the call
-        BaseGDL* res = static_cast<DLibFun*> (newEnv->GetPro())->Fun()(newEnv);
-        strncpy(label, (*static_cast<DStringGDL*> (res))[0].c_str(), length);
-      } else // external function: if tickunits not specified, pass Axis (int), Index(int),Value(Double)
-        //    else pass also Level(int)
-        // Thanks to Marc for code snippet!
-        // NOTE: this encompasses the 'LABEL_DATE' format, an existing procedure in the IDL library.
-      {
-        EnvT *e = ptr->e;
-        DString callF = (*ptr->TickFormat)[0];
-        // this is a function name -> convert to UPPERCASE
-        callF = StrUpCase(callF);
-        //  Search in user proc and function
-        SizeT funIx = GDLInterpreter::GetFunIx(callF);
 
-        EnvUDT* newEnv = new EnvUDT(e->CallingNode(), funList[ funIx], (DObjGDL**) NULL);
-        Guard< EnvUDT> guard(newEnv);
-        // add parameters
-        newEnv->SetNextPar(new DLongGDL(axis - 1)); //axis in PLPLOT starts at 1, it starts at 0 in IDL
-        newEnv->SetNextPar(new DLongGDL(internalIndex)); //index
-        newEnv->SetNextPar(new DDoubleGDL(v)); //value
-        // guard *before* pushing new env
-        StackGuard<EnvStackT> guard1(e->Interpreter()->CallStack());
-        e->Interpreter()->CallStack().push_back(newEnv);
-        guard.release();
-
-        BaseGDL* retValGDL = e->Interpreter()->call_fun(static_cast<DSubUD*> (newEnv->GetPro())->GetTree());
-        // we are the owner of the returned value
-        Guard<BaseGDL> retGuard(retValGDL);
-        strncpy(label, (*static_cast<DStringGDL*> (retValGDL))[0].c_str(), length);
-        internalIndex++;
-      }
-    } else {
-      doOurOwnFormat(value, label, length, data);
+  void gdlMultiAxisTickFunc(PLINT axis, PLFLT value, char *label, PLINT length, PLPointer multiaxisdata) {
+	addToTickGet(axis, value);
+	static SizeT internalIndex = 0;
+	static DLong lastMultiAxisLevel = 0;
+	struct GDL_TICKDATA *ptr = (GDL_TICKDATA*) multiaxisdata;
+	if (ptr->reset) {
+	  internalIndex = 0; //reset index each time a new axis command is issued.
+	  ptr->reset = false;
 	}
-  }
+	if (ptr->counter != lastMultiAxisLevel) {
+	  lastMultiAxisLevel = ptr->counter;
+	  internalIndex = 0; //reset index each time sub-axis changes
+	  ptr->tickNameCounter = 0;
+	}
+	if (ptr->tickOptionCode == GDL_TICKUNITS) {
+	do_tickunits:
+	  if (ptr->counter > ptr->nTickUnits - 1) {
+		doOurOwnFormat(value, label, length, multiaxisdata);
+	  } else {
+		DString what = StrUpCase((*ptr->TickUnits)[ptr->counter]);
+		doPossibleCalendarFormat(value, label, length, what, multiaxisdata);
+	  }
+	} else if (ptr->tickOptionCode == GDL_TICKUNITS_AND_FORMAT) {
+	  if ((ptr->nTickFormat > 1) && (ptr->counter > ptr->nTickFormat - 1)) { //if Tickformat is of dimension 1, it applies everywhere...
+		goto do_tickunits; //format does not apply but tickunits still apply
+	  } else { //will be formatted -- not interpreting the tickunits
+		DDouble v = value;
+		if (ptr->isLog) v = pow(10., v);
 
-  void gdlSimpleAxisTickFunc(PLINT axis, PLFLT value, char *label, PLINT length, PLPointer data) {
-    SizeT internalIndex = 0;
-    addToTickGet(axis, value);
-    struct GDL_TICKDATA *ptr = (GDL_TICKDATA*) data;
-    if (ptr->nTickName > 0) doOurOwnFormat(value, label, length, data); //priority!
-    else if (ptr->nTickFormat > 0) {//will be formatted -- not interpreting the tickunits
-      DDouble v = value;
-      if (ptr->isLog) v = pow(10., v);
-      if (((*ptr->TickFormat)[0]).substr(0, 1) == "(") { //internal format, call internal func "STRING"
-        EnvT *e = ptr->e;
-        static int stringIx = LibFunIx("STRING");
-        assert(stringIx >= 0);
-        EnvT* newEnv = new EnvT(e, libFunList[stringIx], NULL);
-        Guard<EnvT> guard(newEnv);
-        // add parameters
-        newEnv->SetNextPar(new DDoubleGDL(v));
-        newEnv->SetNextPar(new DStringGDL(((*ptr->TickFormat)[0]).c_str()));
-        // make the call
-        BaseGDL* res = static_cast<DLibFun*> (newEnv->GetPro())->Fun()(newEnv);
-        strncpy(label, (*static_cast<DStringGDL*> (res))[0].c_str(), length);
-      } else // external function: if tickunits not specified, pass Axis (int), Index(int),Value(Double)
-        //    else pass also Level(int)
-        // Thanks to Marc for code snippet!
-        // NOTE: this encompasses the 'LABEL_DATE' format, an existing procedure in the IDL library.
-      {
-        EnvT *e = ptr->e;
-        DString callF = (*ptr->TickFormat)[0];
-        // this is a function name -> convert to UPPERCASE
-        callF = StrUpCase(callF);
-        //  Search in user proc and function
-        SizeT funIx = GDLInterpreter::GetFunIx(callF);
+		DString currentFormat = (*ptr->TickFormat)[(ptr->nTickFormat > 1) ? ptr->counter : 0]; //insure we stick to the only format if its dimension is 1.
 
-        EnvUDT* newEnv = new EnvUDT(e->CallingNode(), funList[ funIx], (DObjGDL**) NULL);
-        Guard< EnvUDT> guard(newEnv);
-        // add parameters
-        newEnv->SetNextPar(new DLongGDL(axis - 1)); //axis in PLPLOT starts at 1, it starts at 0 in IDL
-        newEnv->SetNextPar(new DLongGDL(internalIndex)); //index
-        newEnv->SetNextPar(new DDoubleGDL(v)); //value
-        // guard *before* pushing new env
-        StackGuard<EnvStackT> guard1(e->Interpreter()->CallStack());
-        e->Interpreter()->CallStack().push_back(newEnv);
-        guard.release();
+		if (currentFormat.substr(0, 1) == "(") {
+		  //internal format, call internal func "STRING"
+		  EnvT *e = ptr->e;
+		  static int stringIx = LibFunIx("STRING");
+		  assert(stringIx >= 0);
+		  EnvT* newEnv = new EnvT(e, libFunList[stringIx], NULL);
+		  Guard<EnvT> guard(newEnv);
+		  // add parameters
+		  newEnv->SetNextPar(new DDoubleGDL(v));
+		  newEnv->SetNextPar(new DStringGDL(currentFormat));
+		  // make the call
+		  BaseGDL* res = static_cast<DLibFun*> (newEnv->GetPro())->Fun()(newEnv);
+		  strncpy(label, (*static_cast<DStringGDL*> (res))[0].c_str(), 1000);
+		} else // external function: if tickunits not specified, pass Axis (int), Index(int),Value(Double)
+		  //    else pass also Level(int)
+		  // Thanks to Marc for code snippet!
+		  // NOTE: this encompasses the 'LABEL_DATE' format, an existing procedure in the IDL library.
+		{
+		  EnvT *e = ptr->e;
+		  // this is a function name -> convert to UPPERCASE
+		  currentFormat = StrUpCase(currentFormat);
+		  //  Search in user proc and function
+		  SizeT funIx = GDLInterpreter::GetFunIx(currentFormat);
 
-        BaseGDL* retValGDL = e->Interpreter()->call_fun(static_cast<DSubUD*> (newEnv->GetPro())->GetTree());
-        // we are the owner of the returned value
-        Guard<BaseGDL> retGuard(retValGDL);
-        strncpy(label, (*static_cast<DStringGDL*> (retValGDL))[0].c_str(), length);
-        internalIndex++;
-      }
-    } else {
-      doOurOwnFormat(value, label, length, data);
+		  EnvUDT* newEnv = new EnvUDT(e->CallingNode(), funList[ funIx], (DObjGDL**) NULL);
+		  Guard< EnvUDT> guard(newEnv);
+		  // add parameters
+		  newEnv->SetNextPar(new DLongGDL(axis - 1)); //axis in PLPLOT starts at 1, it starts at 0 in IDL
+		  newEnv->SetNextPar(new DLongGDL(internalIndex)); //index
+		  newEnv->SetNextPar(new DDoubleGDL(v)); //value
+		  newEnv->SetNextPar(new DLongGDL(ptr->counter)); //level
+		  // guard *before* pushing new env
+		  StackGuard<EnvStackT> guard1(e->Interpreter()->CallStack());
+		  e->Interpreter()->CallStack().push_back(newEnv);
+		  guard.release();
+
+		  BaseGDL* retValGDL = e->Interpreter()->call_fun(static_cast<DSubUD*> (newEnv->GetPro())->GetTree());
+		  // we are the owner of the returned value
+		  Guard<BaseGDL> retGuard(retValGDL);
+		  strncpy(label, (*static_cast<DStringGDL*> (retValGDL))[0].c_str(), 1000);
+		}
+	  }
 	}
 	if (ptr->tickLayoutCode == 2) {
 	  int l = strlen(label);
-      char *test = (char*) calloc(length+1, sizeof (char));
+	  char *test = (char*) calloc(length + 1, sizeof (char));
 	  // we are bound by the length=40 max of plplot, for a STATIC "label" string! Impossible to do more!
 	  // in average only 18 characters possible to pad by whitespaces (if no !xx codes inside)
-	  int left_to_pad=(length-l);  //max num of possible blanks before.
-	  int to_pad=l+2; //number of characters to add to push on the right
-	  to_pad*=1.75; //..as the whitespace is smaller than the average character (always those approximations since hershey and other charatcers are not fixed-point)
-	  to_pad=min(left_to_pad,to_pad); //to insure at last that labels are writtent even if not correctly aligned
+	  int left_to_pad = (length - l); //max num of possible blanks before.
+	  int to_pad = l + 2; //number of characters to add to push on the right
+	  to_pad *= 1.75; //..as the whitespace is smaller than the average character (always those approximations since hershey and other charatcers are not fixed-point)
+	  to_pad = min(left_to_pad, to_pad); //to insure at last that labels are writtent even if not correctly aligned
 	  //displace "label" on the right (for alignment purposes) by adding l whitespaces using test (which is larger enough). This is not always sufficicient alas.
 	  memset(test, ' ', to_pad);
-	  snprintf(test + to_pad, length-to_pad,"%s",label);
+	  snprintf(test + to_pad, length - to_pad, "%s", label);
 	  strncpy(label, test, length);
-      free(test);
+	  free(test);
 	}
-    //translate format codes (as in mtex).
-    double nchars;
-    std::string out = ptr->a->TranslateFormatCodes(label, &nchars);
-    ptr->nchars = max(ptr->nchars, nchars);
-    strncpy(label, out.c_str(), length);
+	//translate format codes (as in mtex).
+	double nchars;
+	std::string out = ptr->a->TranslateFormatCodes(label, &nchars);
+	ptr->nchars = max(ptr->nchars, nchars);
+	strncpy(label, out.c_str(), length);
+	internalIndex++;
   }
 
-  void gdlMultiAxisTickFunc(PLINT axis, PLFLT value, char *label, PLINT length, PLPointer multiaxisdata) {
+  void gdlAxisTickFunc(PLINT axis, PLFLT value, char *label, PLINT length, PLPointer data) {
     addToTickGet(axis, value);
     static SizeT internalIndex = 0;
     static DLong lastMultiAxisLevel = 0;
-    struct GDL_TICKDATA *ptr = (GDL_TICKDATA*) multiaxisdata;
+    struct GDL_TICKDATA *ptr = (GDL_TICKDATA*) data;
     if (ptr->reset) {
       internalIndex = 0; //reset index each time a new axis command is issued.
       ptr->reset = false;
@@ -1916,10 +1886,10 @@ namespace lib
     if (ptr->tickOptionCode == GDL_TICKUNITS) {
     do_tickunits:
       if (ptr->counter > ptr->nTickUnits - 1) {
-        doOurOwnFormat(value, label, length, multiaxisdata);
+        doOurOwnFormat(value, label, length, data);
       } else {
         DString what = StrUpCase((*ptr->TickUnits)[ptr->counter]);
-        doPossibleCalendarFormat(value, label, length, what, multiaxisdata);
+        doPossibleCalendarFormat(value, label, length, what, data);
       }
     } else if (ptr->tickOptionCode == GDL_TICKUNITS_AND_FORMAT) {
       if ( (ptr->nTickFormat > 1) && (ptr->counter > ptr->nTickFormat - 1)) { //if Tickformat is of dimension 1, it applies everywhere...
@@ -1973,27 +1943,6 @@ namespace lib
         }
       }
 	}
-	if (ptr->tickLayoutCode == 2) {
-	  int l = strlen(label);
-      char *test = (char*) calloc(length+1, sizeof (char));
-	  // we are bound by the length=40 max of plplot, for a STATIC "label" string! Impossible to do more!
-	  // in average only 18 characters possible to pad by whitespaces (if no !xx codes inside)
-	  int left_to_pad=(length-l);  //max num of possible blanks before.
-	  int to_pad=l+2; //number of characters to add to push on the right
-	  to_pad*=1.75; //..as the whitespace is smaller than the average character (always those approximations since hershey and other charatcers are not fixed-point)
-	  to_pad=min(left_to_pad,to_pad); //to insure at last that labels are writtent even if not correctly aligned
-	  //displace "label" on the right (for alignment purposes) by adding l whitespaces using test (which is larger enough). This is not always sufficicient alas.
-	  memset(test, ' ', to_pad);
-	  snprintf(test + to_pad, length-to_pad,"%s",label);
-	  strncpy(label, test, length);
-      free(test);
-	}
-    //translate format codes (as in mtex).
-    double nchars;
-    std::string out = ptr->a->TranslateFormatCodes(label, &nchars);
-    ptr->nchars = max(ptr->nchars, nchars);
-    strncpy(label, out.c_str(), length);
-    internalIndex++;
   }
 
   
@@ -3477,7 +3426,7 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
     return zposStart;
   }
 
-  PLFLT gdlDrawMultipleTicks(EnvT *e, GDLGStream *a, int axisId, DDouble* val, int n, DFloat TickLen, DString & Opt, DLong modifierCode, DLong TickLayout, PLPointer data, bool doPlot = true) {
+  PLFLT gdlDrawAxis(EnvT *e, GDLGStream *a, int axisId, DDouble* val, int nVal, DFloat TickLen, DString & Opt, DLong modifierCode, DLong TickLayout, PLPointer data, bool doPlot = true) {
 	//doPlot tells if plotting must be done (XYZ STYLE=4?), but the routine must always set the good VPOR() even f nothing was drawn.
 	bool tickinvert = (Opt.find(TICKINVERT) != std::string::npos);
 	PLFLT increment = 0;
@@ -3541,7 +3490,7 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 	  PLFLT x[2], y[2];
 	  if (axisId == XAXIS) {
 		PLFLT size = fabs(owymax - owymin);
-		for (auto i = 0; i < n; ++i) {
+		for (auto i = 0; i < nVal; ++i) {
 		  x[0] = val[i];
 		  x[1] = val[i];
 		  y[0] = owymin;
@@ -3559,7 +3508,7 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 		if (Opt.find(NOTICKS) == std::string::npos) increment += -0.5 * a->nCharHeight() + 1.5 * interligne_as_norm;
 	  } else {
 		PLFLT size = fabs(owxmax - owxmin);
-		for (auto i = 0; i < n; ++i) {
+		for (auto i = 0; i < nVal; ++i) {
 		  y[0] = val[i];
 		  y[1] = val[i];
 		  x[0] = owxmin;
@@ -3843,13 +3792,13 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 	xdisplacement = - 2 * a->nCharHeight() + 1.5*interligne_as_norm;
 	for (SizeT i = 0; i < tickdata.nTickUnits; ++i) //loop on TICKUNITS axis
 	{
-	  TickInterval = gdlComputeTickInterval(e, axisId, Start, End, Log, i);
+	  if (i > 0 || TickInterval==0 ) TickInterval = gdlComputeTickInterval(e, axisId, Start, End, Log, i);
 	  tickdata.nchars = 0; //set nchars to 0, at the end nchars will be the maximum size.
 	  if (hasTickv) {
 		int ntickv = MIN(Tickv->N_Elements(), Ticks + 1);
 		if (axisId == XAXIS) 
-		  xdisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, Opt, modifierCode, TickLayout, &tickdata, doplot);
-		else ydisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, Opt, modifierCode, TickLayout, &tickdata, doplot);
+		  xdisplacement += gdlDrawAxis(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, Opt, modifierCode, TickLayout, &tickdata, doplot);
+		else ydisplacement += gdlDrawAxis(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, Opt, modifierCode, TickLayout, &tickdata, doplot);
 	  } else {
 		  if (axisId == XAXIS) {
 		  a->plstream::vpor(boxxmin, boxxmax, boxymin - xdisplacement, boxymax);
@@ -3888,14 +3837,14 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
 
 	for (auto i = 0; i < tickdata.nTickUnits; ++i) //loop on TICKUNITS axis
 	{
-	  TickInterval = gdlComputeTickInterval(e, axisId, Start, End, Log, i);
+	  if (i > 0 || TickInterval==0 ) TickInterval = gdlComputeTickInterval(e, axisId, Start, End, Log, i);
 
 	  tickdata.nchars = 0; //set nchars to 0, at the end nchars will be the maximum size.
 	  if (i == 1) tickOpt = (TickLayout == 2) ? tickLayout2 : additionalAxesTickOpt;
       if (hasTickv) {
         int ntickv=MIN(Tickv->N_Elements(),Ticks+1);
-		if (axisId == XAXIS) xdisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, tickOpt, modifierCode, TickLayout, &tickdata, doplot); 
-		else 		ydisplacement += gdlDrawMultipleTicks(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, tickOpt, modifierCode, TickLayout, &tickdata, doplot); 
+		if (axisId == XAXIS) xdisplacement += gdlDrawAxis(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, tickOpt, modifierCode, TickLayout, &tickdata, doplot); 
+		else 		ydisplacement += gdlDrawAxis(e, a, axisId, &((*Tickv)[0]), ntickv, TickLen, tickOpt, modifierCode, TickLayout, &tickdata, doplot); 
       } else {
 		if (axisId == XAXIS) {
 		  a->plstream::vpor(boxxmin, boxxmax, boxymin - xdisplacement, boxymax);

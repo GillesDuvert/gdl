@@ -625,9 +625,7 @@ public:
   void setLineSpacing( PLFLT spacing );
   PLFLT getSymbolSize();
   void mtex( const char *side, PLFLT disp, PLFLT pos, PLFLT just,
-                         const char *text);
-  void mtex3( const char *side, PLFLT disp, PLFLT pos, PLFLT just,
-                         const char *text);
+                         const char *text, double *stringCharLength=NULL, double *stringCharHeight=NULL);
   void ptex( PLFLT x, PLFLT y, PLFLT dx, PLFLT dy, PLFLT just,
                          const char *text, double *stringCharLength=NULL );
   void setVariableCharacterSize( PLFLT charwidthpixel, PLFLT scale, PLFLT lineSpacingpixel, PLFLT xpxcm, PLFLT ypxcm);

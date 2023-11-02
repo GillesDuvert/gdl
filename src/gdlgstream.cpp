@@ -1055,7 +1055,7 @@ void GDLGStream::setLineSpacing(PLFLT newSpacing)
 }
 PLFLT GDLGStream::getSymbolSize(){return theCurrentSymSize;}
 void GDLGStream::mtex( const char *side, PLFLT disp, PLFLT posit, PLFLT just,
-                       const char *text)
+                       const char *text, double *stringCharLength, double *stringCharHeight)
 {
    //plot does not handle !C
   size_t len = strlen(text);
@@ -1064,7 +1064,8 @@ void GDLGStream::mtex( const char *side, PLFLT disp, PLFLT posit, PLFLT just,
     simple=false;
   }
   if (simple) {
-    plstream::mtex(side,disp,posit,just,TranslateFormatCodes(text).c_str());
+    plstream::mtex(side,disp,posit,just,TranslateFormatCodes(text,stringCharLength).c_str());
+	if (stringCharHeight!=NULL) *stringCharHeight = 1;
     return;
   }
   //complicated:
@@ -1087,8 +1088,10 @@ void GDLGStream::mtex( const char *side, PLFLT disp, PLFLT posit, PLFLT just,
     long l=pos-oldpos; 
     if (l<0) l=string::npos;
 //    std::cerr<<pos<<":"<<l<<" "<<s.substr(oldpos,l)<<std::endl;
-    plstream::mtex(side,disp,posit,just,TranslateFormatCodes(s.substr(oldpos,l).c_str()).c_str());
+    plstream::mtex(side,disp,posit,just,TranslateFormatCodes(s.substr(oldpos,l).c_str(),&d).c_str());
     disp+=ydisp;
+	if (stringCharLength!=NULL) *stringCharLength = std::max<double>(*stringCharLength, d);
+	if (stringCharHeight!=NULL) *stringCharHeight += 1;
   }
 }
 
