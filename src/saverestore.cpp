@@ -148,6 +148,7 @@ bool_t xdr_set_gdl_pos(XDR *x, long int y){
     }
   }
   
+  //we write only "normal" (i.e. no PROMOTE64) headers
   inline uint64_t writeNewRecordHeader(XDR *xdrs, int code){
     int32_t rectype=code;    
     xdr_int32_t(xdrs, &rectype); //-16
@@ -183,13 +184,12 @@ bool_t xdr_set_gdl_pos(XDR *x, long int y){
     }
     xdr_set_gdl_pos(xdrs, cur-12); //ptrs0
     //copy next (64 bit) as two 32 bits. Should be OK on 32 bit machines as next is uint64.
-    uint32_t first,second;
-    first = ((uint32_t *) &next)[0];
-    second = ((uint32_t *) &next)[1];
-    if (BigEndian()) { //swap: we write in LittleEndian
-	  xdr_uint32_t(xdrs, &second);
-      xdr_uint32_t(xdrs, &first);
+    if (BigEndian()) { //first 32 bit is low, second high (XDRS is BigEndian)
+	  xdr_uint64_t(xdrs, &next);
 	} else {
+	  uint32_t first, second;
+	  first = ((uint32_t *) & next)[0];
+	  second = ((uint32_t *) & next)[1];
 	  xdr_uint32_t(xdrs, &first);
       xdr_uint32_t(xdrs, &second);
 	}
@@ -1630,23 +1630,17 @@ bool_t xdr_set_gdl_pos(XDR *x, long int y){
       {
         uint64_t my_ulong64;
         if (!xdr_uint64_t(xdrs, &my_ulong64)) break;
-        nextptr = my_ulong64;
+        nextptr = my_ulong64; //HDR64 is followed by 2 longs.
         if (!xdr_int32_t(xdrs, &UnknownLong)) break;
         if (!xdr_int32_t(xdrs, &UnknownLong)) break;
       } else //the 2 pointers may point together to a l64 address, bug #1545
-      { //we read LittleEndian format
+      { //we read a sort of BigEndian format
 		if (!xdr_uint32_t(xdrs, &ptr_low)) break;
 		if (!xdr_uint32_t(xdrs, &ptr_high)) break;
-		if (BigEndian()) { //swap & merge
-		  nextptr = ptr_high;
-		  uint64_t tmp = ptr_low;
-		  nextptr |= (tmp << 32);
-		} else { //merge
-		  nextptr = ptr_low;
-		  uint64_t tmp = ptr_high;
-		  nextptr |= (tmp << 32);
-		}
-        if (!xdr_int32_t(xdrs, &UnknownLong)) break;
+		nextptr = ptr_low;
+		uint64_t tmp = ptr_high;
+		nextptr |= (tmp << 32);
+        if (!xdr_int32_t(xdrs, &UnknownLong)) break; //only 1 long following in non-HDR64 format
         if (nextptr <=LONG) e->Throw("error in pointers, please report.");
       }
 
@@ -1684,6 +1678,7 @@ bool_t xdr_set_gdl_pos(XDR *x, long int y){
           break;
       case PROMOTE64:
           isHdr64 = true;
+		  Message("Using unsupported PROMOTE64 pointers, expect problems.");
           break;
       case IDENTIFICATION:
           if (verbose)
@@ -1819,18 +1814,12 @@ bool_t xdr_set_gdl_pos(XDR *x, long int y){
         nextptr = my_ulong64;
         if (!xdr_int32_t(xdrs, &UnknownLong)) break;
         if (!xdr_int32_t(xdrs, &UnknownLong)) break;
-      } else {//we read LittleEndian format
+      } else {//we read a sort of BigEndian format
 		if (!xdr_uint32_t(xdrs, &ptr_low)) break;
 		if (!xdr_uint32_t(xdrs, &ptr_high)) break;
-		if (BigEndian()) { //swap & merge
-		  nextptr = ptr_high;
-		  uint64_t tmp = ptr_low;
-		  nextptr |= (tmp << 32);
-		} else { //merge
-		  nextptr = ptr_low;
-		  uint64_t tmp = ptr_high;
-		  nextptr |= (tmp << 32);
-		}
+		nextptr = ptr_low;
+		uint64_t tmp = ptr_high;
+		nextptr |= (tmp << 32);
 		if (!xdr_int32_t(xdrs, &UnknownLong)) break;
       }
 
