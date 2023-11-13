@@ -36,7 +36,7 @@ if ~FILE_TEST(file) then begin
    return
 endif
 ;
-RESTORE, file
+RESTORE, file, verbose=verbose
 MESSAGE, /continue, 'using file <<'+file+'>> for numeric tests READ BACK'
 ;
 GIVE_LIST_NUMERIC, list_numeric_types, list_numeric_names
@@ -94,6 +94,7 @@ end
 pro TEST_SAVE_NUMERIC, dim1, dim2, compress=compress, file=file, $
                        help=help, verbose=verbose, test=test
 ;
+common test_saverestore,toto,tata
 if KEYWORD_SET(help) then begin
    print, 'pro TEST_SAVE_NUMERIC, dim1, dim2, compress=compress, file=file, $'
    print, '                       help=help, verbose=verbose, test=test'
@@ -117,24 +118,28 @@ for ii=0,N_ELEMENTS(list_numeric_names)-1 do begin
 endfor
 ; This just to manage all options, and augment the coverage of our functions by the coverage programs.
 ; Does not test the accuracy of what is saved with the following options: /COMM /SYSTEM
-common test_saverestore,toto,tata
-toto=10
-tata=!X
-
+; need to save an object at least
+  ;; an object
+  s={o,a:0}
+  tutu=obj_new('o')
+; this make IDL complain (and yes, the objects are not the same) tutu=OBJ_NEW('IDLnetUrl') 
+; and a structure not in common
+tete=!Y
 ;
-SAVE, file=file, /COMM, /SYSTEM, DESCRIPTION="made by test_save_restore",  $
-      compress=compress, dim1, dim2, $
-      byte_s, byte_s_a1d, byte_s_a2d, $
-      int_s, int_s_a1d, int_s_a2d, $
-      long_s, long_s_a1d, long_s_a2d, $
-      float_s, float_s_a1d, float_s_a2d, $
-      double_s, double_s_a1d, double_s_a2d, $
-      complex_s, complex_s_a1d, complex_s_a2d, $
-      dcomplex_s, dcomplex_s_a1d, dcomplex_s_a2d, $
-      uint_s, uint_s_a1d, uint_s_a2d, $
-      ulong_s, ulong_s_a1d, ulong_s_a2d, $
-      long64_s, long64_s_a1d, long64_s_a2d, $
-      ulong64_s, ulong64_s_a1d, ulong64_s_a2d
+SAVE, file=file, verbose=verbose, DESCRIPTION="made by test_save_restore", /COMM, $  ;;; , /SYSTEM, $ //system will make IDL complain (#1670)
+     compress=compress, dim1, dim2, $
+     byte_s, byte_s_a1d, byte_s_a2d, $
+     int_s, int_s_a1d, int_s_a2d, $
+     long_s, long_s_a1d, long_s_a2d, $
+     float_s, float_s_a1d, float_s_a2d, $
+     double_s, double_s_a1d, double_s_a2d, $
+     complex_s, complex_s_a1d, complex_s_a2d, $
+     dcomplex_s, dcomplex_s_a1d, dcomplex_s_a2d, $
+     uint_s, uint_s_a1d, uint_s_a2d, $
+     ulong_s, ulong_s_a1d, ulong_s_a2d, $
+     long64_s, long64_s_a1d, long64_s_a2d, $
+     ulong64_s, ulong64_s_a1d, ulong64_s_a2d , $
+     tutu,tete,toto,tata
 ;
 MESSAGE, /continue, 'SAVE file <<'+file+'>>for numeric tests WRITTEN'
 ;
@@ -190,6 +195,9 @@ end
 ; -----------------------------------------------
 ;
 pro TEST_SAVE_RESTORE, help=help, test=test, verbose=verbose
+common test_saverestore,toto,tata
+toto=10
+tata=20
 ;
 if KEYWORD_SET(help) then begin
    print, 'pro TEST_SAVE_RESTORE, help=help, verbose=verbose, test=test'
