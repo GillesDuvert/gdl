@@ -1,6 +1,10 @@
 lexer grammar gdlLexer;
 
 @header{ #include "gdlParser.h" }
+
+tokens {END_U}
+
+
 DOT:'.';
 AND_OP_EQ: [aA] [nN] [dD] '='; 
 ASTERIX_EQ:'*=';
@@ -56,6 +60,8 @@ CASE:  [cC] [aA] [sS] [eE];
 COMMON: [cC] [oO] [mM] [mM] [oO] [nN];
 COMPILE_OPT: [cC] [oO] [mM] [pP] [iI] [lL] [eE] '_'  [oO] [pP] [tT];
 
+// tentative trap of "CONTINUE" as the real CONTINUE in the lexer.
+CONTINUE:  [cC] [oO] [nN] [tT] [iI] [nN] [uU] [eE] ;// SKIP_LINES ; //separately defined as token, not recognized per se by lexer
 
 
 DO:  [dD] [oO];
@@ -96,12 +102,18 @@ UNTIL: [uU] [nN] [tT] [iI] [lL];
 WHILE: [wW] [hH] [iI] [lL] [eE];
 XOR_OP: [xX] [oO] [rR];
 
+//fragment
+EOL:  '\r'? '\n' ->type(END_U) ;// {/* newline() */};
+
+fragment
+WS : [ \t\u000C] ; // [\p{White_Space}] ;
+
 fragment
 INCLUDE_FILENAME    : ( ~('\r'|'\n') )*
     ;
 
 INCLUDE
-      :    '@' INCLUDE_FILENAME
+      :    '@' INCLUDE_FILENAME -> skip
     ;
 
 fragment
@@ -135,12 +147,12 @@ fragment
 DBL
     : ([dD] ([+\-]? ( DIGIT)+)? )
     ;
-
+//HEX: NOT 'b' as B is part of (HEXADECIMAL) : ex: 0x3BAFB 
 CONSTANT_HEX_I:  ('0' [xX] (HEXADECIMAL)+ | '\'' (HEXADECIMAL)+ '\'' [xX] ); // DEFINT32
 CONSTANT_HEX_INT:     CONSTANT_HEX_I [sS];
 CONSTANT_HEX_UI:      CONSTANT_HEX_I  [uU];
 CONSTANT_HEX_UINT:    CONSTANT_HEX_I   [uU] [sS];
-CONSTANT_HEX_BYTE:    CONSTANT_HEX_I  ( [bB] |  [uU] [bB]);
+CONSTANT_HEX_BYTE:    CONSTANT_HEX_I  [uU] [bB];
 CONSTANT_HEX_LONG:    CONSTANT_HEX_I   [lL];
 CONSTANT_HEX_LONG64:  CONSTANT_HEX_I  [lL] [lL] ;
 CONSTANT_HEX_ULONG:   CONSTANT_HEX_I  [uU] [lL];
@@ -148,7 +160,7 @@ CONSTANT_HEX_ULONG64: CONSTANT_HEX_I  [uU] [lL] [lL];
 
 CONSTANT_OCT_I: ( '"' (OCTAL)+ | '\'' (OCTAL)+ '\'' [oO]);
 CONSTANT_OCT_INT:     CONSTANT_OCT_I [sS];
-CONSTANT_OCT_BYTE:    CONSTANT_OCT_I  (' [bB]|' [uU] [bB]);
+CONSTANT_OCT_BYTE:    CONSTANT_OCT_I  ([bB]|[uU] [bB]);
 CONSTANT_OCT_UI:      CONSTANT_OCT_I [uU];
 CONSTANT_OCT_UINT:    CONSTANT_OCT_I  [uU] [sS];
 CONSTANT_OCT_LONG:    CONSTANT_OCT_I  [lL];
@@ -165,10 +177,20 @@ CONSTANT_BIN_LONG:    CONSTANT_BIN_I  [lL];
 CONSTANT_BIN_LONG64:  CONSTANT_BIN_I  [lL] [lL] ;
 CONSTANT_BIN_ULONG:   CONSTANT_BIN_I  [uU] [lL];
 CONSTANT_BIN_ULONG64: CONSTANT_BIN_I  [uU] [lL] [lL];
+
+CONSTANT_I: ( DIGIT)+ ;
+CONSTANT_INT:     CONSTANT_I [sS];
+CONSTANT_BYTE:    CONSTANT_I  ([bB]|[uU] [bB]);
+CONSTANT_UINT:    CONSTANT_I  [uU]([sS])?;
+CONSTANT_LONG:    CONSTANT_I  [lL];
+CONSTANT_LONG64:  CONSTANT_I  [lL] [lL] ;
+CONSTANT_ULONG:   CONSTANT_I  [uU] [lL];
+CONSTANT_ULONG64: CONSTANT_I  [uU] [lL] [lL];
+
 STRING:
-      '"'  ( ~( '"'|'\r'|'\n') | '"'  '"'   )*  ( '"'  | ) 
-    | '\'' ( ~('\''|'\r'|'\n') | '\'' '\''  )*  ( '\'' | )
-    | '"' (OCTAL)+ '"'
+      '"'  ( ~( '"'|'\r'|'\n') | '"' '"'   )*  ( '"'  | )
+    | '\'' ( ~('\''|'\r'|'\n') | '\'' '\'' )*  ( '\'' | )
+    | '"' OCTAL (OCTAL)*? '"'
     ;
 CONSTANT_DOUBLE: 
         (
@@ -191,47 +213,48 @@ CONSTANT_FLOAT:
         | '.'( DIGIT)+(EXP)?) 
 ;
 
-CONSTANT_I: ( DIGIT)+ ;
-CONSTANT_INT:     CONSTANT_I [sS];
-CONSTANT_BYTE:    CONSTANT_I  ([bB]|[uU] [bB]);
-CONSTANT_UINT:    CONSTANT_I  [uU]([sS])?;
-CONSTANT_LONG:    CONSTANT_I  [lL];
-CONSTANT_LONG64:  CONSTANT_I  [lL] [lL] ;
-CONSTANT_ULONG:   CONSTANT_I  [uU] [lL];
-CONSTANT_ULONG64: CONSTANT_I  [uU] [lL] [lL];
 
-END_OF_LINE : ( '\r'? '\n' | '&' ( WS '&')* ) ; 
-
-COMMENT: ';' ~('\r'|'\n')*  ->skip;
+COMMENT: ';' ~('\r'|'\n')* ->skip;
 
 IDENTIFIER
     : (LETTER)(LETTER| DIGIT|'$')*
-    
     ;
 
 SYSVARNAME
     : ('!') (LETTER| DIGIT|'$')+
     ;
 
-WS : [\p{White_Space}] ->skip ;
+STATEMENT_SEPARATOR: '&' ->type(END_U) ;
+
+WHITESPACE
+  : (WS)+ ->skip
+  ;
 
 
 // this subrule eats lines to skip
 // 1. comment only lines
 // 2. blank lines
 
-fragment SKIP_LINES
+fragment 
+SKIP_LINES
   : ( COMMENT
     | WS
-    | END_OF_LINE
+    | EOL
     )*
   ;
 
 // IDL ignores everything on the line after the $.
 // Note: The '$' command in interactive mode is filtered by GDL in DInterpreter::ExecuteLine
-CONT_STATEMENT: '$' ~('\r'|'\n')* SKIP_LINES -> skip;
-CONTINUE:  [cC] [oO] [nN] [tT] [iI] [nN] [uU] [eE] SKIP_LINES ; //separately defined as token, not recognized per se by lexer
+CONT_STATEMENT: '$' (~('\r'|'\n'))* EOL SKIP_LINES -> skip;
+
+END_OF_LINE 
+  :  EOL SKIP_LINES ->type(END_U)
+  ;
+
+
+
 ANY: . { std::cerr<<"SOMETHING IS BAD IN THE ANTLR RULES"<<std::endl; assert(false);}; //catchall meaning something was not correctly parsed by the other rules.
+
 
 //// just to know how many tokens are there
 fragment

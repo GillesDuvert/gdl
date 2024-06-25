@@ -124,7 +124,7 @@ tokens {
      | CASE 
      | COMMON 
      | COMPILE_OPT
-//     | CONTINUE
+     | CONTINUE
      | DO 
      | ELSE 
      | END 
@@ -163,35 +163,47 @@ tokens {
      | XOR_OP 
      ;
 
+
+authorizedProcedureName:
+       IDENTIFIER
+     | CONTINUE
+     | INHERITS
+     | BREAK
+     ;
+
 // whereever one END_U is there might be more
 // end_unit is syntactical necessary, but not for the AST
-endUnit:   (END_OF_LINE)+
+endUnit:   (END_U)+ //(END_OF_LINE)+
 	 ;
-
+includeFileStatement: INCLUDE;
 translation_unit
-   :    ( forwardFunction endUnit
-        | commonBlock
+   :    ( endUnit
+   	| forwardFunction endUnit
         | procedureDefinition
         | functionDefinition
-        | endUnit
+        | commonBlock
         )* // optional - only main program is also ok
-        (  statementList END)? // $MAIN$ program
-//	(endUnit)*
-//        EOF
+        (  statementList END (endUnit)? )? // $MAIN$ program
+        (EOF)  // braces necessary because goto crosses initialization otherwise
 { bailOut:;} // bailout jump label
     ;
 //    catch[...] { /* catching translation_unit errors here */ }
 
 // interactive compilation is not allowed
 warnInteractiveCompile
-    : (FUNCTION | PRO)       IDENTIFIER        (METHOD IDENTIFIER)?      (COMMA keywordDeclaration)?    endUnit
+    : (FUNCTION | PRO)      authorizedProcedureName
+       {
+           /* throw GDLException( "Programs can't be compiled from "
+                "single statement mode."); */
+        }
+	(METHOD IDENTIFIER)?      (COMMA keywordDeclaration)?    endUnit
     ;
 
 // interactive usage: analyze one line = statement or statementList with '&'. Must catch any PRO or FUNCTION definition as this is not yet programmed.
 interactive
-    :   ( warnInteractiveCompile
+    :   (  endUnit (anyEndMark)?
+    	| warnInteractiveCompile
         | interactiveStatement
-	| endUnit (anyEndMark)? 
         )+
     ;
 //    catch[...] { /* catching interactive errors here */ }
@@ -218,6 +230,7 @@ statement:
     | procedureCall       
     | assignmentStatement 
     | specialHandlingOfOutOfLoopsJumps 
+    | includeFileStatement
     ;
 
 conditionalStatement
@@ -290,21 +303,12 @@ label:  IDENTIFIER COLON;
 
 labelledStatement: (label)+  (compoundStatement)?;
 
-labellableStatement: (label)? statement;
-
 statementList
-    :  ( labelledStatement
-       | compoundStatement
-       | endUnit
+    :  ( endUnit
+       | compoundStatement endUnit
+       | labelledStatement endUnit
        )+
-    ;
-
-
-
-baseclass_method
-@init  { /*  here we translate IDL_OBJECT to GDL_OBJECT for source code compatibility */}
-    : s=IDENTIFIER METHOD
-    ;
+       ;
 
 compoundAssignment:
       AND_OP_EQ 
@@ -334,7 +338,10 @@ assignmentOperator:
     ;
     
 repeatExpression: expression;
-repeatStatement: REPEAT {inloop++;} repeatBlock UNTIL repeatExpression  {inloop--;} ;
+repeatStatement
+@init{ inloop ++;}
+@after{ inloop--;}
+: REPEAT repeatBlock UNTIL repeatExpression ;
 
 
 repeatBlock
@@ -344,7 +351,9 @@ repeatBlock
 
 whileExpression: expression;
 whileStatement
-    : WHILE  {inloop++;} whileExpression DO whileBlock  {inloop--;};
+@init{ inloop ++;}
+@after{ inloop--;}
+    : WHILE whileExpression DO whileBlock;
 
 
 whileBlock
@@ -368,7 +377,10 @@ forBlock
 foreachElement: IDENTIFIER;
 foreachVariable: expression;
 foreachIndex: IDENTIFIER;
-foreachStatement: FOREACH  {inloop++;} foreachElement COMMA foreachVariable (COMMA foreachIndex)? DO foreachBlock {inloop--;} ;
+foreachStatement
+@init{ inloop ++;}
+@after{ inloop--;}
+: FOREACH foreachElement COMMA foreachVariable (COMMA foreachIndex)? DO foreachBlock ;
 
 foreachBlock
     : BEGIN statementList (END | ENDFOREACH )
@@ -393,7 +405,7 @@ specialHandlingOfOutOfLoopsJumps:
 //      CONTINUE 
 //      |
       BREAK
-      ) endUnit
+      ) 
      ;
 
 ifExpression: expression;
@@ -456,12 +468,12 @@ keywordDeclarationList : keywordDeclaration ( COMMA keywordDeclaration )*    ;
     
 
 procedureDefinition :
-        PRO ( objectName | IDENTIFIER ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)*  END
+        PRO ( objectName | authorizedProcedureName ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)*  END
   ;
  
 
 functionDefinition:
-        FUNCTION ( objectName | IDENTIFIER ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)* END
+        FUNCTION ( objectName | authorizedProcedureName ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)* END
     ;
 
 objectName : IDENTIFIER METHOD IDENTIFIER ;    
@@ -480,7 +492,7 @@ arrayDefinition:
 
 
 namedStructure:
-	  LCURLY IDENTIFIER ( (COMMA inheritsOrTagDef)*
+	  LCURLY (IDENTIFIER|SYSVARNAME) ( (COMMA inheritsOrTagDef)*
 	                    | COMMA expressionList 
 	                    | ) RCURLY
 	;
@@ -580,7 +592,6 @@ numeric_constant:
  )
  ;
 
-// used in
 listOfArrayIndexes:
     LSQUARE arrayIndex (COMMA arrayIndex)* RSQUARE; // C++  LSQUARE arrayIndex ({++rank <= MAXRANK}? COMMA arrayIndex)* RSQUARE
 
@@ -663,12 +674,12 @@ nullVarMarker
     
 
 primaryLevelExpression:
-      functionCall
+      variableAccessByValueOrReference //variable is Named
     | implicitArray //always between '[]'
-    | structureDefinition
-    | variableAccessByValueOrReference //variable is Named
     | numeric_constant 	   
     | string
+    | structureDefinition
+    | functionCall
     | nullVarMarker
     ;
     
@@ -780,7 +791,7 @@ assignmentStatement
 
 autoPrintStatement: expressionList;
 interactiveStatement
-    : (IDENTIFIER COLON)*
+    : (BEGIN | IDENTIFIER COLON)*
         ( assignmentStatement
 	| compoundStatement
         | ifStatement
