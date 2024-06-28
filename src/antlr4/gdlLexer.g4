@@ -2,8 +2,94 @@ lexer grammar gdlLexer;
 
 @header{ #include "gdlParser.h" }
 
-tokens {END_U}
-
+tokens {
+//CONSTANT_BIN_BYTE,
+//
+//CONSTANT_BIN_LONG,
+//
+//CONSTANT_BIN_LONG64,
+//
+//CONSTANT_BIN_I, // integer or larger
+//
+//CONSTANT_BIN_INT,
+//
+//CONSTANT_BIN_ULONG,
+//
+//CONSTANT_BIN_ULONG64,
+//
+//CONSTANT_BIN_UI,
+//
+//CONSTANT_BIN_UINT,
+//
+//CONSTANT_BIN_BYTE,
+//
+//CONSTANT_BIN_LONG,
+//
+//CONSTANT_BIN_LONG64,
+//
+//CONSTANT_HEX_I, // integer or larger
+//
+//CONSTANT_HEX_BYTE,
+//
+//CONSTANT_HEX_INT,
+//
+//CONSTANT_HEX_LONG,
+//
+//CONSTANT_HEX_LONG64,
+//
+//CONSTANT_HEX_ULONG,
+//
+//CONSTANT_HEX_ULONG64,
+//
+//CONSTANT_HEX_UI,
+//
+//CONSTANT_HEX_UINT,
+//
+//CONSTANT_BYTE,
+//
+//CONSTANT_LONG,
+//
+//CONSTANT_LONG64,
+//
+//CONSTANT_I, // integer or larger if necessary
+//
+//CONSTANT_INT,
+//
+//CONSTANT_ULONG,
+//
+//CONSTANT_ULONG64,
+//
+//CONSTANT_UI,
+//
+//CONSTANT_UINT,
+//
+//CONSTANT_OCT_BYTE,
+//
+//CONSTANT_OCT_LONG,
+//
+//CONSTANT_OCT_LONG64,
+//
+//CONSTANT_OCT_I, // integer or larger if necessary
+//
+//CONSTANT_OCT_INT,
+//
+//CONSTANT_OCT_ULONG,
+//
+//CONSTANT_OCT_ULONG64,
+//
+//CONSTANT_OCT_UI,
+//
+//CONSTANT_OCT_UINT,
+//
+//CONSTANT_FLOAT,
+//
+//CONSTANT_DOUBLE,
+//
+//STRING_LITERAL,
+//
+//DOT,
+STRING,
+END_U}
 
 DOT:'.';
 AND_OP_EQ: [aA] [nN] [dD] '='; 
@@ -147,26 +233,115 @@ fragment
 DBL
     : ([dD] ([+\-]? ( DIGIT)+)? )
     ;
-//HEX: NOT 'b' as B is part of (HEXADECIMAL) : ex: 0x3BAFB 
-CONSTANT_HEX_I:  ('0' [xX] (HEXADECIMAL)+ | '\'' (HEXADECIMAL)+ '\'' [xX] ); // DEFINT32
-CONSTANT_HEX_INT:     CONSTANT_HEX_I [sS];
-CONSTANT_HEX_UI:      CONSTANT_HEX_I  [uU];
-CONSTANT_HEX_UINT:    CONSTANT_HEX_I   [uU] [sS];
-CONSTANT_HEX_BYTE:    CONSTANT_HEX_I  [uU] [bB];
-CONSTANT_HEX_LONG:    CONSTANT_HEX_I   [lL];
-CONSTANT_HEX_LONG64:  CONSTANT_HEX_I  [lL] [lL] ;
-CONSTANT_HEX_ULONG:   CONSTANT_HEX_I  [uU] [lL];
-CONSTANT_HEX_ULONG64: CONSTANT_HEX_I  [uU] [lL] [lL];
 
-CONSTANT_OCT_I: ( '"' (OCTAL)+ | '\'' (OCTAL)+ '\'' [oO]);
-CONSTANT_OCT_INT:     CONSTANT_OCT_I [sS];
-CONSTANT_OCT_BYTE:    CONSTANT_OCT_I  ([bB]|[uU] [bB]);
-CONSTANT_OCT_UI:      CONSTANT_OCT_I [uU];
-CONSTANT_OCT_UINT:    CONSTANT_OCT_I  [uU] [sS];
-CONSTANT_OCT_LONG:    CONSTANT_OCT_I  [lL];
-CONSTANT_OCT_LONG64:  CONSTANT_OCT_I  [lL] [lL] ;
-CONSTANT_OCT_ULONG:   CONSTANT_OCT_I  [uU] [lL];
-CONSTANT_OCT_ULONG64: CONSTANT_OCT_I  [uU] [lL] [lL];
+//CONSTANT_OR_STRING_LITERAL
+//    // returns everything 'cleaned', ready to use
+//    // could be a string, but octals have priority
+//    // but '012345' is a string because of ending "
+//    :
+//      ('0x' (HEXADECIMAL)+          {setType(CONSTANT_HEX_I); } // DEFINT32
+//            ( 's'        {setType(CONSTANT_HEX_INT); }
+//            | 'u'        {setType(CONSTANT_HEX_UI); }   // DEFINT32
+//            | 'us'        {setType(CONSTANT_HEX_UINT); } 
+//            | 'ub'        {setType(CONSTANT_HEX_BYTE); }
+//            | 'l'            {setType(CONSTANT_HEX_LONG); }
+//            | 'll'        {setType(CONSTANT_HEX_LONG64); }
+//            | 'ul'           {setType(CONSTANT_HEX_ULONG); }
+//            | 'ull'    {setType(CONSTANT_HEX_ULONG64); }
+//            )?
+//      )
+//    | ('"' (OCTAL)+        {setType(CONSTANT_OCT_I); }  // DEFINT32
+//            ( 's'        {setType(CONSTANT_OCT_INT); }
+//            | 'b'        {setType(CONSTANT_OCT_BYTE); }
+//            | 'u'         {setType(CONSTANT_OCT_UI); }   // DEFINT32
+//            | 'us'        {setType(CONSTANT_OCT_UINT); } 
+//            | 'ub'        {setType(CONSTANT_OCT_BYTE); }
+//            | 'l'         {setType(CONSTANT_OCT_LONG); }
+//            | 'll'        {setType(CONSTANT_OCT_LONG64); }
+//            | 'ul'        {setType(CONSTANT_OCT_ULONG); }
+//            | 'ull'    {setType(CONSTANT_OCT_ULONG64); }
+//            | '"'            {setType(STRING_LITERAL); }
+//            )??
+//      )
+//    | ('\'' (HEXADECIMAL)+ '\'' 'x'
+//          (                  {setType(CONSTANT_HEX_I); } // DEFINT32
+//            | 's'        {setType(CONSTANT_HEX_INT); }
+//            | 'b'        {setType(CONSTANT_HEX_BYTE); }
+//            | 'u'        {setType(CONSTANT_HEX_UI); }   // DEFINT32
+//            | 'us'        {setType(CONSTANT_HEX_UINT); } 
+//            | 'ub'        {setType(CONSTANT_HEX_BYTE); }
+//            | 'l'            {setType(CONSTANT_HEX_LONG); }
+//            | 'll'        {setType(CONSTANT_HEX_LONG64); }
+//            | 'ul'           {setType(CONSTANT_HEX_ULONG); }
+//            | 'ull'    {setType(CONSTANT_HEX_ULONG64); }
+//            )
+//      )
+//    | ('\'' (OCTAL)+ '\'' 'o'
+//            (           {setType(CONSTANT_OCT_I); } // DEFINT32
+//            | 's'         {setType(CONSTANT_OCT_INT); }
+//            | 'b'         {setType(CONSTANT_OCT_BYTE); }
+//            | 'u'         {setType(CONSTANT_OCT_UI); }   // DEFINT32
+//            | 'us'        {setType(CONSTANT_OCT_UINT); } 
+//            | 'ub'        {setType(CONSTANT_OCT_BYTE); }
+//            | 'l'         {setType(CONSTANT_OCT_LONG); }
+//            | 'll'     {setType(CONSTANT_OCT_LONG64); }
+//            | 'ul'        {setType(CONSTANT_OCT_ULONG); }
+//            | 'ull'    {setType(CONSTANT_OCT_ULONG64); }
+//            )
+//      )
+//    | ('\'' (BINARY)+ '\'' 'b'
+//            (           {setType(CONSTANT_BIN_I); } // DEFINT32
+//            | 's'         {setType(CONSTANT_BIN_INT); }
+//            | 'b'         {setType(CONSTANT_BIN_BYTE); }
+//            | 'u'         {setType(CONSTANT_BIN_UI); }   // DEFINT32
+//            | 'us'        {setType(CONSTANT_BIN_UINT); } 
+//            | 'ub'        {setType(CONSTANT_BIN_BYTE); }
+//            | 'l'         {setType(CONSTANT_BIN_LONG); }
+//            | 'll'         {setType(CONSTANT_BIN_LONG64); }
+//            | 'ul'        {setType(CONSTANT_BIN_ULONG); }
+//            | 'ull'    {setType(CONSTANT_BIN_ULONG64); }
+//            )
+//       )
+//    // strings in the original do not need trailing " or '    
+//    | '"' (~('"'|'\r'|'\n')| '"' '"' )* 
+//        ( '"'
+//        |         
+//        )                  {setType(STRING_LITERAL); }
+//    | '\'' (~('\''|'\r'|'\n')| '\'' '\''  )* 
+//        ( '\''
+//        |         
+//        )                  {setType(STRING_LITERAL); }
+//    |  (
+//            (
+//                (DIGIT)+ 
+//                ( DBL 
+//                | '.'(DIGIT)*(DBL)
+//                )
+//            ) 
+//        | '.'(DIGIT)+(DBL)) 
+//                        {setType(CONSTANT_DOUBLE); }
+//    |  (
+//            (
+//                (DIGIT)+ 
+//                ( EXP 
+//                | '.'(DIGIT)*(EXP)?
+//                )
+//            ) 
+//        | '.'(DIGIT)+(EXP)?)   {setType(CONSTANT_FLOAT); }
+//    | '.'                 {setType(DOT); }
+//    | (DIGIT)+                   {setType(CONSTANT_I); }
+//        ( 's'          {setType(CONSTANT_INT); }
+//        | 'b'            {setType(CONSTANT_BYTE); }
+//        | 'u'('s')?    {setType(CONSTANT_UINT); }
+//        | 'ub'            {setType(CONSTANT_BYTE); }
+//        | 'l'            {setType(CONSTANT_LONG); }
+//        | 'll'            {setType(CONSTANT_LONG64); }
+//        | 'ul'            {setType(CONSTANT_ULONG); }
+//        | 'ull'           {setType(CONSTANT_ULONG64); }
+//        )?    
+//    ;    
+//
+//
 
 CONSTANT_BIN_I: '\'' (BINARY)+ '\'' [bB];
 CONSTANT_BIN_INT:     CONSTANT_BIN_I [sS];
@@ -178,7 +353,38 @@ CONSTANT_BIN_LONG64:  CONSTANT_BIN_I  [lL] [lL] ;
 CONSTANT_BIN_ULONG:   CONSTANT_BIN_I  [uU] [lL];
 CONSTANT_BIN_ULONG64: CONSTANT_BIN_I  [uU] [lL] [lL];
 
-CONSTANT_I: ( DIGIT)+ ;
+//hexadecimal variant 1: NOT 'b' as B is part of (HEXADECIMAL) : ex: 0x3BAFB 
+CONSTANT_HEX_I:  '0' [xX] (HEXADECIMAL)+ ; // DEFINT32
+CONSTANT_HEX_INT:     CONSTANT_HEX_I  [sS];
+CONSTANT_HEX_UI:      CONSTANT_HEX_I  [uU];
+CONSTANT_HEX_UINT:    CONSTANT_HEX_I  [uU] [sS];
+CONSTANT_HEX_BYTE:    CONSTANT_HEX_I  [uU] [bB];
+CONSTANT_HEX_LONG:    CONSTANT_HEX_I  [lL];
+CONSTANT_HEX_LONG64:  CONSTANT_HEX_I  [lL] [lL] ;
+CONSTANT_HEX_ULONG:   CONSTANT_HEX_I  [uU] [lL];
+CONSTANT_HEX_ULONG64: CONSTANT_HEX_I  [uU] [lL] [lL];
+
+VariantConstant_hex_i:  '\'' (HEXADECIMAL)+ '\'' [xX] ->type(CONSTANT_HEX_I); // DEFINT32
+VariantConstant_hex_int:     VariantConstant_hex_i  [sS]->type(CONSTANT_HEX_INT);
+VariantConstant_hex_ui:      VariantConstant_hex_i  [uU]->type(CONSTANT_HEX_UI);
+VariantConstant_hex_uint:    VariantConstant_hex_i  [uU] [sS]->type(CONSTANT_HEX_UINT);
+VariantConstant_hex_byte:    VariantConstant_hex_i  ([bB] | [uU] [bB])->type(CONSTANT_HEX_BYTE);
+VariantConstant_hex_long:    VariantConstant_hex_i  [lL]->type(CONSTANT_HEX_LONG);
+VariantConstant_hex_long64:  VariantConstant_hex_i  [lL] [lL]->type(CONSTANT_HEX_LONG64) ;
+VariantConstant_hex_ulong:   VariantConstant_hex_i  [uU] [lL]->type(CONSTANT_HEX_ULONG);
+VariantConstant_hex_ulong64: VariantConstant_hex_i  [uU] [lL] [lL]->type(CONSTANT_HEX_ULONG64);
+
+CONSTANT_OCT_I: '\'' (OCTAL)+ '\'' [oO];
+CONSTANT_OCT_INT:     CONSTANT_OCT_I [sS];
+CONSTANT_OCT_BYTE:    CONSTANT_OCT_I  ([bB]|[uU] [bB]);
+CONSTANT_OCT_UI:      CONSTANT_OCT_I [uU];
+CONSTANT_OCT_UINT:    CONSTANT_OCT_I  [uU] [sS];
+CONSTANT_OCT_LONG:    CONSTANT_OCT_I  [lL];
+CONSTANT_OCT_LONG64:  CONSTANT_OCT_I  [lL] [lL] ;
+CONSTANT_OCT_ULONG:   CONSTANT_OCT_I  [uU] [lL];
+CONSTANT_OCT_ULONG64: CONSTANT_OCT_I  [uU] [lL] [lL];
+
+CONSTANT_I: (DIGIT)+ ;
 CONSTANT_INT:     CONSTANT_I [sS];
 CONSTANT_BYTE:    CONSTANT_I  ([bB]|[uU] [bB]);
 CONSTANT_UINT:    CONSTANT_I  [uU]([sS])?;
@@ -187,11 +393,6 @@ CONSTANT_LONG64:  CONSTANT_I  [lL] [lL] ;
 CONSTANT_ULONG:   CONSTANT_I  [uU] [lL];
 CONSTANT_ULONG64: CONSTANT_I  [uU] [lL] [lL];
 
-STRING:
-      '"'  ( ~( '"'|'\r'|'\n') | '"' '"'   )*  ( '"'  | )
-    | '\'' ( ~('\''|'\r'|'\n') | '\'' '\'' )*  ( '\'' | )
-    | '"' OCTAL (OCTAL)*? '"'
-    ;
 CONSTANT_DOUBLE: 
         (
             (
@@ -214,6 +415,13 @@ CONSTANT_FLOAT:
 ;
 
 
+
+
+Trap_null_quoted_string: ('""'|'"' '\r'?'\n') -> type(STRING); 
+Trap_old_octal_form:  '"' OCTAL -> more, pushMode(Old_octal_notation);
+Trap_quoted_string: '"' ~('0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'"' |'\r'|'\n') -> more, pushMode(Quoted_string);
+Single_quoted_string:   '\'' ( '\'\''| ~('\''|'\r'|'\n') )*  ( '\'' | )   -> type(STRING) ;
+
 COMMENT: ';' ~('\r'|'\n')* ->skip;
 
 IDENTIFIER
@@ -226,7 +434,7 @@ SYSVARNAME
 
 STATEMENT_SEPARATOR: '&' ->type(END_U) ;
 
-WHITESPACE
+  WHITESPACE
   : (WS)+ ->skip
   ;
 
@@ -253,9 +461,25 @@ END_OF_LINE
 
 
 
-ANY: . { std::cerr<<"SOMETHING IS BAD IN THE ANTLR RULES"<<std::endl; assert(false);}; //catchall meaning something was not correctly parsed by the other rules.
+ANY: . { std::cerr<<"SOMETHING IS BAD IN THE ANTLR RULES OR THE SOURCE CODE!"<<std::endl; assert(false);} ->skip; //catchall meaning something was not correctly parsed by the other rules.
 
-
-//// just to know how many tokens are there
+// just to know how many tokens are there
 fragment
 MAX_TOKEN_NUMBER :;
+
+mode Old_octal_notation;
+Old_constant_oct_i:          (OCTAL)* ->type(CONSTANT_OCT_I), popMode;
+Old_constant_oct_int:        Old_constant_oct_i [sS] ->type(CONSTANT_OCT_INT), popMode;
+Old_constant_oct_byte:       Old_constant_oct_i ([bB]|[uU] [bB]) ->type(CONSTANT_OCT_BYTE), popMode;
+Old_constant_oct_ui:         Old_constant_oct_i [uU] ->type(CONSTANT_OCT_UI), popMode;
+Old_constant_oct_uint:       Old_constant_oct_i [uU] [sS] ->type(CONSTANT_OCT_UINT), popMode;
+Old_constant_oct_long:       Old_constant_oct_i [lL] ->type(CONSTANT_OCT_LONG), popMode;
+Old_constant_oct_long64:     Old_constant_oct_i [lL] [lL] ->type(CONSTANT_OCT_LONG64), popMode ;
+Old_constant_oct_ulong:      Old_constant_oct_i [uU] [lL] ->type(CONSTANT_OCT_ULONG), popMode;
+Old_constant_oct_ulong64:    Old_constant_oct_i [uU] [lL] [lL] ->type(CONSTANT_OCT_ULONG64), popMode;
+Old_constant_oct_is_string:  Old_constant_oct_i '"' ->type(STRING), popMode;
+
+mode Quoted_string;
+IsAQuotedString: ( '""' | ~('"'|'\r'|'\n') )*  '"' ->type(STRING), popMode;
+
+

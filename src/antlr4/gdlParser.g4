@@ -164,7 +164,7 @@ tokens {
      ;
 
 
-authorizedProcedureName:
+validIdentifier:
        IDENTIFIER
      | CONTINUE
      | INHERITS
@@ -191,12 +191,12 @@ translation_unit
 
 // interactive compilation is not allowed
 warnInteractiveCompile
-    : (FUNCTION | PRO)      authorizedProcedureName
+    : (FUNCTION | PRO)      validIdentifier
        {
            /* throw GDLException( "Programs can't be compiled from "
                 "single statement mode."); */
         }
-	(METHOD IDENTIFIER)?      (COMMA keywordDeclaration)?    endUnit
+	(METHOD validIdentifier)?      (COMMA keywordDeclaration)?    endUnit
     ;
 
 // interactive usage: analyze one line = statement or statementList with '&'. Must catch any PRO or FUNCTION definition as this is not yet programmed.
@@ -209,13 +209,13 @@ interactive
 //    catch[...] { /* catching interactive errors here */ }
 
 
-identifierList : listOfIdentifiers+=IDENTIFIER (COMMA listOfIdentifiers+=IDENTIFIER)*    ; //create std::vector<antlr4::Token *> listOfIdentifiers to hold the tokens.
+identifierList : listOfIdentifiers+=validIdentifier (COMMA listOfIdentifiers+=validIdentifier)*    ; //create std::vector<antlr4::Token *> listOfIdentifiers to hold the tokens.
 
 forwardFunction : FORWARD_FUNCTION identifierList;
 
 compileOpt : COMPILE_OPT identifierList {  setRelaxed(false);};
 
-commonBlock : COMMON IDENTIFIER  (COMMA identifierList)?  //should use a semantic predicate to say "% Common block ZZZZ must contain variables." if ZZZ is not defined
+commonBlock : COMMON validIdentifier  (COMMA identifierList)?  //should use a semantic predicate to say "% Common block ZZZZ must contain variables." if ZZZ is not defined
     ;
 
 
@@ -299,7 +299,7 @@ compoundStatement
     | statement
     ;
     
-label:  IDENTIFIER COLON;
+label:  validIdentifier COLON;
 
 labelledStatement: (label)+  (compoundStatement)?;
 
@@ -374,9 +374,9 @@ forBlock
     | statement
     ;    
 
-foreachElement: IDENTIFIER;
+foreachElement: validIdentifier;
 foreachVariable: expression;
-foreachIndex: IDENTIFIER;
+foreachIndex: validIdentifier;
 foreachStatement
 @init{ inloop ++;}
 @after{ inloop--;}
@@ -397,8 +397,8 @@ jumpStatement
    )
    ;
 
-gotoStatement:  GOTO COMMA IDENTIFIER;
-onIoErrorStatement: ON_IOERROR COMMA IDENTIFIER;
+gotoStatement:  GOTO COMMA validIdentifier;
+onIoErrorStatement: ON_IOERROR COMMA validIdentifier;
 
 specialHandlingOfOutOfLoopsJumps:
       (
@@ -423,9 +423,9 @@ elseBlock
     | statement
     ;
 
-valuedParameter    :<assoc=right> (IDENTIFIER | reservedWords) ASSIGN expression;
-setParameter: SLASH (IDENTIFIER | reservedWords);
-simpleParameter: (IDENTIFIER | reservedWords | expression);
+valuedParameter    :<assoc=right> (validIdentifier | reservedWords) ASSIGN expression;
+setParameter: SLASH (validIdentifier | reservedWords);
+simpleParameter: (validIdentifier | reservedWords | expression);
 
 callParameter:
       valuedParameter
@@ -440,25 +440,25 @@ continueCall: CONTINUE;
 
 formalProcedureCall :
 { inside() }? continueCall
-| IDENTIFIER (COMMA parameterList)? 
+| validIdentifier (COMMA parameterList)? 
 ;
 
-memberProcedureCall: variableAccessByValueOrReference (MEMBER|DOT) (IDENTIFIER METHOD)? formalProcedureCall;
+memberProcedureCall: variableAccessByValueOrReference (MEMBER|DOT) (validIdentifier METHOD)? formalProcedureCall;
 
 procedureCall:
     memberProcedureCall
   | formalProcedureCall
   ;
 
-formalFunctionCall : IDENTIFIER LBRACE (parameterList)? RBRACE  ;
-memberFunctionCall : variableAccessByValueOrReference (MEMBER|DOT) (IDENTIFIER METHOD)? formalFunctionCall;
+formalFunctionCall : validIdentifier LBRACE (parameterList)? RBRACE  ;
+memberFunctionCall : variableAccessByValueOrReference (MEMBER|DOT) (validIdentifier METHOD)? formalFunctionCall;
 functionCall:
        memberFunctionCall
      | formalFunctionCall
      ;
 
-valuedKeyword:<assoc=right> (IDENTIFIER | reservedWords) ASSIGN  (IDENTIFIER | reservedWords);
-simpleKeyword: (IDENTIFIER | reservedWords);
+valuedKeyword:<assoc=right> (validIdentifier | reservedWords) ASSIGN  (validIdentifier | reservedWords);
+simpleKeyword: (validIdentifier | reservedWords);
 keywordDeclaration:
          valuedKeyword
 	|simpleKeyword
@@ -468,15 +468,15 @@ keywordDeclarationList : keywordDeclaration ( COMMA keywordDeclaration )*    ;
     
 
 procedureDefinition :
-        PRO ( objectName | authorizedProcedureName ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)*  END
+        PRO ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)*  END
   ;
  
 
 functionDefinition:
-        FUNCTION ( objectName | authorizedProcedureName ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)* END
+        FUNCTION ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)* END
     ;
 
-objectName : IDENTIFIER METHOD IDENTIFIER ;    
+objectName : validIdentifier METHOD validIdentifier ;    
 
 
 expressionList: expression  ( COMMA expression )* ;
@@ -492,7 +492,7 @@ arrayDefinition:
 
 
 namedStructure:
-	  LCURLY (IDENTIFIER|SYSVARNAME) ( (COMMA inheritsOrTagDef)*
+	  LCURLY (validIdentifier|SYSVARNAME) ( (COMMA inheritsOrTagDef)*
 	                    | COMMA expressionList 
 	                    | ) RCURLY
 	;
@@ -503,8 +503,8 @@ inheritsOrTagDef
     | normalTag
     ;
 
-inheritsStructure: INHERITS IDENTIFIER;
-normalTag:  IDENTIFIER COLON expression ;
+inheritsStructure: INHERITS validIdentifier;
+normalTag:  validIdentifier COLON expression ;
 
 structureDefinition
     : namedStructure
@@ -611,7 +611,7 @@ arrayIndex: ( allElements  | stepRange | range | index) ;
 // system variable name
 systemVariableName  : SYSVARNAME  ;
 
-variableName : IDENTIFIER; //not SYSVARNAME
+variableName : validIdentifier; //not SYSVARNAME
 
 // this is SYNTATICALLY ok as an lvalue, but if one try to assign
 // something to an non-var an error is raised
@@ -628,7 +628,7 @@ varDesignator
     |  LBRACE expression RBRACE //bracedExpression
     ;
 
-varSubset:   varDesignator ( listOfArrayIndexes  |  { IsRelaxed()}? relaxedListOfArrayIndexes );
+varSubset:   varDesignator ( listOfArrayIndexes );// |  { IsRelaxed()}? relaxedListOfArrayIndexes );
 existingVariable
 	: varSubset
 	| varDesignator
@@ -641,7 +641,7 @@ tagNumberIndicator: LBRACE expression RBRACE;
 tagIdentifier
     : tagNumberIndicator
     | SYSVARNAME  
-    | IDENTIFIER
+    | validIdentifier
     | EXCLAMATION // IDL allows '!' as tag despite the documentation.
     ;
 
@@ -791,7 +791,7 @@ assignmentStatement
 
 autoPrintStatement: expressionList;
 interactiveStatement
-    : (BEGIN | IDENTIFIER COLON)*
+    : (BEGIN | validIdentifier COLON)*
         ( assignmentStatement
 	| compoundStatement
         | ifStatement
