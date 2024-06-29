@@ -2,6 +2,9 @@ parser grammar gdlParser;
 options {
         tokenVocab = gdlLexer;
 }
+// following are in conjunction with main() and used to present a relatively correct parsing
+// in absence of proper management of variables that inerefere with  the parsing ( inside() and IsRelaxed())
+// inside is probably well treated. STRICTARR cannot be enforced at this stage.
 @parser::context {
 extern bool amIRelaxed;
 static bool IsRelaxed() {return amIRelaxed;}
@@ -83,7 +86,7 @@ tokens {
     NSTRUC_REF, // named struct reference
     ON_IOERROR_NULL,
     PCALL,
-    PCALL_LIB, // libraray procedure call
+    PCALL_LIB, // library procedure call
     PARADECL,
     PARAEXPR,  // parameter
     PARAEXPR_VN, // _VN Variable Number of parameters version
@@ -176,6 +179,7 @@ validIdentifier:
 endUnit:   (END_U)+ //(END_OF_LINE)+
 	 ;
 includeFileStatement: INCLUDE;
+
 translation_unit
    :    ( endUnit
    	| forwardFunction endUnit
@@ -213,7 +217,7 @@ identifierList : listOfIdentifiers+=validIdentifier (COMMA listOfIdentifiers+=va
 
 forwardFunction : FORWARD_FUNCTION identifierList;
 
-compileOpt : COMPILE_OPT identifierList {  setRelaxed(false);};
+compileOpt : COMPILE_OPT identifierList;
 
 commonBlock : COMMON validIdentifier  (COMMA identifierList)?  //should use a semantic predicate to say "% Common block ZZZZ must contain variables." if ZZZ is not defined
     ;
@@ -468,12 +472,12 @@ keywordDeclarationList : keywordDeclaration ( COMMA keywordDeclaration )*    ;
     
 
 procedureDefinition :
-        PRO ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)*  END
+        PRO ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {/*setRelaxed(true);*/} (statementList)*  END
   ;
  
 
 functionDefinition:
-        FUNCTION ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {setRelaxed(true);} (statementList)* END
+        FUNCTION ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {/*setRelaxed(true);*/} (statementList)* END
     ;
 
 objectName : validIdentifier METHOD validIdentifier ;    
@@ -597,9 +601,6 @@ listOfArrayIndexes:
 
 relaxedListOfArrayIndexes: LBRACE arrayIndex ( COMMA arrayIndex)* RBRACE; 
 
-//    | LBRACE arrayIndex ( COMMA arrayIndex)* RBRACE
-    
-
 allElements : ASTERIX ;
 index : expression;
 range:   expression COLON (allElements | expression );
@@ -628,13 +629,17 @@ varDesignator
     |  LBRACE expression RBRACE //bracedExpression
     ;
 
-varSubset:   varDesignator ( listOfArrayIndexes );// |  { IsRelaxed()}? relaxedListOfArrayIndexes );
-existingVariable
-	: varSubset
-	| varDesignator
-	;
+//relaxed mode slows terribly the parser, for a few rare cases. MUST use a two-pass parsing, where relaxed mode is enabled only of there is a problem
+varSubset: //{IsRelaxed()}? oldVarSubsetConfusionWithFunctionCall
+	   //|
+	   formalVarSubset
+	   ;
 
-implicitArray:  listOfArrayIndexes;
+formalVarSubset: varDesignator listOfArrayIndexes ;
+oldVarSubsetConfusionWithFunctionCall: varDesignator relaxedListOfArrayIndexes ;
+
+undefined:  UNDEFINED;
+implicitArray: ( undefined | listOfArrayIndexes);
 
 tagNumberIndicator: LBRACE expression RBRACE;
 
@@ -664,23 +669,18 @@ taggedEntry    :
     ;
 pointedVariable : ASTERIX variableAccessByValueOrReference ;
 
-string: STRING ;
 
-// only here a function call is ok also (all other places must be an array)
-nullVarMarker
-    : LSQUARE RSQUARE
-    | LCURLY RCURLY 
-    ;
-    
+normalString: STRING ;
+nullString: NULLSTRING ;
+string: (nullString | normalString );
 
 primaryLevelExpression:
-      variableAccessByValueOrReference //variable is Named
-    | implicitArray //always between '[]'
-    | numeric_constant 	   
+      numeric_constant 	   
     | string
     | structureDefinition
+    | implicitArray //always between '[]'
+    | variableAccessByValueOrReference //variable is Named
     | functionCall
-    | nullVarMarker
     ;
     
 decincExpression:  primaryLevelExpression ( INC | DEC )?
@@ -763,26 +763,7 @@ logicalExpression : // '&&' | '||'  //level 8
         )*
     ;
 
-trinaryLogicalExpression:<assoc=right> logicalExpression QUESTION expression COLON expression ;  //' ?:' // level 9
-
-expression :
-     LBRACE expression RBRACE                         #groupingExpression
-   | trinaryLogicalExpression                         #trinaryOperationExpression
-   | logicalExpression                                #binaryOperationExpression
-   ;
-
-//expression
-//    : LBRACE expression RBRACE                                                              #groupingExpression
-//    | local_operator=compoundAssignment operand=expression                                           #unaryOperationExpression
-//    | left=expression local_operator=(ASTERIX|SLASH) right=expression                                #binaryOperationExpression
-//    | left=expression local_operator=(PLUS|MINUS) right=expression                                   #binaryOperationExpression
-//    | left=expression local_operator=(LT_OP|GT_OP|GE_OP|LE_OP) right=expression                      #binaryOperationExpression
-//    | left=expression local_operator=(EQ_OP|NE_OP) right=expression                                  #binaryOperationExpression
-//    | variableName                                                                             #namedVariable
-//    | target=NAME LPAREN (arguments+=expression (COMMA arguments+=expression)*)? RPAREN     #invocationExpression
-//    | target=NAME                                                                           #referenceExpression
-//    | value=NUMBER                                                                          #literalExpression                        
-//    ;
+expression:<assoc=right> logicalExpression (QUESTION expression COLON expression)? ;  //' ?:' // level 9
 
 assignmentStatement
     : variableAccessByValueOrReference assignmentOperator expression
