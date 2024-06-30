@@ -472,19 +472,21 @@ objectName : validIdentifier METHOD validIdentifier ;
 
 
 expressionList: expression  ( COMMA expression )* ;
-arrayListDefinition:          LSQUARE expressionList RSQUARE    ;
-arrayAutoDefinition:          LSQUARE expression COLON expression RSQUARE    ;
-arrayAutoIncrementDefinition: LSQUARE expression COLON expression COLON expression RSQUARE    ;
 
-arrayDefinition:
- | arrayListDefinition        
- | arrayAutoDefinition        
- | arrayAutoIncrementDefinition
-;
+//arrayListDefinition:          LSQUARE expressionList RSQUARE    ;
+//arrayAutoDefinition:          LSQUARE expression COLON expression RSQUARE    ;
+//arrayAutoIncrementDefinition: LSQUARE expression COLON expression COLON expression RSQUARE    ;
+//
+//arrayDefinition:
+// | arrayListDefinition        
+// | arrayAutoDefinition        
+// | arrayAutoIncrementDefinition
+//;
 
 
 namedStructure:
-	  LCURLY (validIdentifier|SYSVARNAME) ( (COMMA inheritsOrTagDef)*
+	  LCURLY (validIdentifier|SYSVARNAME)
+	                    ( (COMMA inheritsOrTagDef)*
 	                    | COMMA expressionList 
 	                    | ) RCURLY
 	;
@@ -504,84 +506,83 @@ structureDefinition
     ;
 
 
-constant_hex_byte    	:  CONSTANT_HEX_BYTE    ;
-constant_hex_long 	:  CONSTANT_HEX_LONG ;
-constant_hex_long64 	:  CONSTANT_HEX_LONG64 ;
-constant_hex_int 	:  CONSTANT_HEX_INT ;
-constant_hex_i 		:  CONSTANT_HEX_I ;  // DEFINT32
-constant_hex_ulong 	:  CONSTANT_HEX_ULONG ;
-constant_hex_ulong64	:  CONSTANT_HEX_ULONG64;
-constant_hex_ui		:  CONSTANT_HEX_UI;        // DEFINT32
-constant_hex_uint	:  CONSTANT_HEX_UINT;
-constant_byte  		:  CONSTANT_BYTE  ;
-constant_long 		:  CONSTANT_LONG ;
-constant_long64 	:  CONSTANT_LONG64 ;
-constant_int		:  CONSTANT_INT;
-constant_i		:  CONSTANT_I;        // DEFINT32
-constant_ulong 		:  CONSTANT_ULONG ;
-constant_ulong64 	:  CONSTANT_ULONG64 ;
-constant_uint		:  CONSTANT_UINT;
-constant_oct_byte  	:  CONSTANT_OCT_BYTE  ;
-constant_oct_long 	:  CONSTANT_OCT_LONG ;
-constant_oct_long64 	:  CONSTANT_OCT_LONG64 ;
-constant_oct_int	:  CONSTANT_OCT_INT;
-constant_oct_i		:  CONSTANT_OCT_I;        // DEFINT32
-constant_oct_ulong 	:  CONSTANT_OCT_ULONG ;
-constant_oct_ulong64 	:  CONSTANT_OCT_ULONG64 ;
-constant_oct_ui		:  CONSTANT_OCT_UI;
-constant_oct_uint	:  CONSTANT_OCT_UINT;
-constant_float     	:  CONSTANT_FLOAT     ;
-constant_double		:  CONSTANT_DOUBLE;
-constant_bin_byte  	:  CONSTANT_BIN_BYTE  ;
-constant_bin_long 	:  CONSTANT_BIN_LONG ;
-constant_bin_long64 	:  CONSTANT_BIN_LONG64 ;
-constant_bin_int	:  CONSTANT_BIN_INT;
-constant_bin_i		:  CONSTANT_BIN_I;        // DEFINT32
-constant_bin_ulong 	:  CONSTANT_BIN_ULONG ;
-constant_bin_ulong64 	:  CONSTANT_BIN_ULONG64 ;
-constant_bin_ui		:  CONSTANT_BIN_UI;        // DEFINT32
-constant_bin_uint	:  CONSTANT_BIN_UINT;
+//constant_hex_byte    	:  CONSTANT_HEX_BYTE    ;
+//constant_hex_long 	:  CONSTANT_HEX_LONG ;
+//constant_hex_long64 	:  CONSTANT_HEX_LONG64 ;
+//constant_hex_int 	:  CONSTANT_HEX_INT ;
+//constant_hex_i 		:  CONSTANT_HEX_I ;  // DEFINT32
+//constant_hex_ulong 	:  CONSTANT_HEX_ULONG ;
+//constant_hex_ulong64	:  CONSTANT_HEX_ULONG64;
+//constant_hex_ui		:  CONSTANT_HEX_UI;        // DEFINT32
+//constant_hex_uint	:  CONSTANT_HEX_UINT;
+//constant_byte  		:  CONSTANT_BYTE  ;
+//constant_long 		:  CONSTANT_LONG ;
+//constant_long64 	:  CONSTANT_LONG64 ;
+//constant_int		:  CONSTANT_INT;
+//constant_i		:  CONSTANT_I;        // DEFINT32
+//constant_ulong 		:  CONSTANT_ULONG ;
+//constant_ulong64 	:  CONSTANT_ULONG64 ;
+//constant_uint		:  CONSTANT_UINT;
+//constant_oct_byte  	:  CONSTANT_OCT_BYTE  ;
+//constant_oct_long 	:  CONSTANT_OCT_LONG ;
+//constant_oct_long64 	:  CONSTANT_OCT_LONG64 ;
+//constant_oct_int	:  CONSTANT_OCT_INT;
+//constant_oct_i		:  CONSTANT_OCT_I;        // DEFINT32
+//constant_oct_ulong 	:  CONSTANT_OCT_ULONG ;
+//constant_oct_ulong64 	:  CONSTANT_OCT_ULONG64 ;
+//constant_oct_ui		:  CONSTANT_OCT_UI;
+//constant_oct_uint	:  CONSTANT_OCT_UINT;
+//constant_float     	:  CONSTANT_FLOAT     ;
+//constant_double		:  CONSTANT_DOUBLE;
+//constant_bin_byte  	:  CONSTANT_BIN_BYTE  ;
+//constant_bin_long 	:  CONSTANT_BIN_LONG ;
+//constant_bin_long64 	:  CONSTANT_BIN_LONG64 ;
+//constant_bin_int	:  CONSTANT_BIN_INT;
+//constant_bin_i		:  CONSTANT_BIN_I;        // DEFINT32
+//constant_bin_ulong 	:  CONSTANT_BIN_ULONG ;
+//constant_bin_ulong64 	:  CONSTANT_BIN_ULONG64 ;
+//constant_bin_ui		:  CONSTANT_BIN_UI;        // DEFINT32
+//constant_bin_uint	:  CONSTANT_BIN_UINT;
 
 numeric_constant:
- (
-   constant_hex_byte    
- | constant_hex_long    
- | constant_hex_long64  
- | constant_hex_int     
- | constant_hex_i 	     
- | constant_hex_ulong   
- | constant_hex_ulong64 
- | constant_hex_ui	     
- | constant_hex_uint    
- | constant_byte  	     
- | constant_long 	     
- | constant_long64      
- | constant_int	     
- | constant_i	     
- | constant_ulong 	     
- | constant_ulong64     
- | constant_uint	     
- | constant_oct_byte    
- | constant_oct_long    
- | constant_oct_long64  
- | constant_oct_int     
- | constant_oct_i	     
- | constant_oct_ulong   
- | constant_oct_ulong64 
- | constant_oct_ui	     
- | constant_oct_uint    
- | constant_float       
- | constant_double	     
- | constant_bin_byte    
- | constant_bin_long    
- | constant_bin_long64  
- | constant_bin_int     
- | constant_bin_i	     
- | constant_bin_ulong   
- | constant_bin_ulong64 
- | constant_bin_ui	     
- | constant_bin_uint
- )
+   CONSTANT_HEX_BYTE     #constant_hex_byte     
+ | CONSTANT_HEX_LONG     #constant_hex_long     
+ | CONSTANT_HEX_LONG64   #constant_hex_long64   
+ | CONSTANT_HEX_INT      #constant_hex_int      
+ | CONSTANT_HEX_I 	 #constant_hex_i 	     
+ | CONSTANT_HEX_ULONG    #constant_hex_ulong    
+ | CONSTANT_HEX_ULONG64  #constant_hex_ulong64  
+ | CONSTANT_HEX_UI	 #constant_hex_ui	     
+ | CONSTANT_HEX_UINT     #constant_hex_uint     
+ | CONSTANT_BYTE  	 #constant_byte  	     
+ | CONSTANT_LONG 	 #constant_long 	     
+ | CONSTANT_LONG64       #constant_long64       
+ | CONSTANT_INT	     	 #constant_int	     	 
+ | CONSTANT_I	     	 #constant_i	     	 
+ | CONSTANT_ULONG 	 #constant_ulong 	     
+ | CONSTANT_ULONG64      #constant_ulong64      
+ | CONSTANT_UINT	 #constant_uint	     
+ | CONSTANT_OCT_BYTE     #constant_oct_byte     
+ | CONSTANT_OCT_LONG     #constant_oct_long     
+ | CONSTANT_OCT_LONG64   #constant_oct_long64   
+ | CONSTANT_OCT_INT      #constant_oct_int      
+ | CONSTANT_OCT_I	 #constant_oct_i	     
+ | CONSTANT_OCT_ULONG    #constant_oct_ulong    
+ | CONSTANT_OCT_ULONG64  #constant_oct_ulong64  
+ | CONSTANT_OCT_UI	 #constant_oct_ui	     
+ | CONSTANT_OCT_UINT     #constant_oct_uint     
+ | CONSTANT_FLOAT        #constant_float        
+ | CONSTANT_DOUBLE	 #constant_double	     
+ | CONSTANT_BIN_BYTE     #constant_bin_byte     
+ | CONSTANT_BIN_LONG     #constant_bin_long     
+ | CONSTANT_BIN_LONG64   #constant_bin_long64   
+ | CONSTANT_BIN_INT      #constant_bin_int      
+ | CONSTANT_BIN_I	 #constant_bin_i	     
+ | CONSTANT_BIN_ULONG    #constant_bin_ulong    
+ | CONSTANT_BIN_ULONG64  #constant_bin_ulong64  
+ | CONSTANT_BIN_UI	 #constant_bin_ui	     
+ | CONSTANT_BIN_UINT     #constant_bin_uint      
+
  ;
 
 listOfArrayIndexes:
@@ -589,17 +590,14 @@ listOfArrayIndexes:
 
 relaxedListOfArrayIndexes: LBRACE arrayIndex ( COMMA arrayIndex)* RBRACE; // C++  LSBRACE arrayIndex ({++rank <= MAXRANK}? COMMA arrayIndex)* RBRACE
 
-allElements : ASTERIX ;
-index : expression;
-range:   expression COLON (allElements | expression );
-stepRange: expression COLON (allElements | expression ) COLON expression;
+//allElements : ASTERIX ;
+//index : expression;
+//range:   expression COLON (allElements | expression );
+//stepRange: expression COLON (allElements | expression ) COLON expression;
 //arrayIndex: ( allElements  | stepRange | range | index) ; 
 arrayIndex: ( ASTERIX|expression (COLON (ASTERIX|expression) (COLON expression)? )? ) ; 
 
 // the expressions *************************************
-
-// system variable name
-systemVariableName  : SYSVARNAME  ;
 
 variableName : validIdentifier; //not SYSVARNAME
 
@@ -612,7 +610,7 @@ operatedVariable : LBRACE variableAccessByValueOrReference assignmentOperator ex
 // sysvar or expression (first in struct access - therefore the name)
 // a variable MUST be already defined here
 varDesignator
-    :  systemVariableName
+    :  SYSVARNAME
     |  operatedVariable
     |  variableName
     |  LBRACE expression RBRACE //bracedExpression
@@ -622,8 +620,10 @@ varDesignator
 varSubset:  varDesignator  ( {IsRelaxed()}? relaxedListOfArrayIndexes | listOfArrayIndexes)
 	   ;
 
-undefined:  UNDEFINED;
-implicitArray: ( undefined | listOfArrayIndexes);
+implicitArray:
+  UNDEFINED
+| listOfArrayIndexes
+;
 
 tagNumberIndicator: LBRACE expression RBRACE;
 
@@ -653,10 +653,10 @@ taggedEntry    :
     ;
 pointedVariable : ASTERIX variableAccessByValueOrReference ;
 
-
-normalString: STRING ;
-nullString: NULLSTRING ;
-string: (nullString | normalString );
+string:
+   NULLSTRING
+   | STRING
+   ;
 
 primaryLevelExpression:
       numeric_constant 	   
@@ -667,17 +667,15 @@ primaryLevelExpression:
     | functionCall
     ;
     
-decincExpression:  primaryLevelExpression ( INC | DEC )?
-        | INC primaryLevelExpression
-	| DEC primaryLevelExpression
+decincExpression:
+          primaryLevelExpression ( INC | DEC )?
+        | (INC |DEC)  primaryLevelExpression
         ;
 	
 thirdLevelExpression:<assoc=right>
      decincExpression
      (
-       ( //pointer dereference
-         POW
-       ) decincExpression
+       POW decincExpression
      )*
      ;
      
@@ -694,9 +692,9 @@ multiplicativeExpression: // '*' | '#' | '##' | '/' | 'mod' // level 4
       ;
 
 signedMultiplicativeExpression:
-        PLUS multiplicativeExpression
-      | MINUS multiplicativeExpression
-      | multiplicativeExpression
+      ( PLUS
+      | MINUS
+      |      ) multiplicativeExpression
       ;
       
 additiveExpression: // '+' | '-' | '<' | '>' | 'not' | '~' // level 5
@@ -711,8 +709,8 @@ additiveExpression: // '+' | '-' | '<' | '>' | 'not' | '~' // level 5
 	 ;
 	    
 negativeExpression:
-      NOT_OP multiplicativeExpression
-    | LOG_NEG multiplicativeExpression // true precedence of ~ operator
+    (  NOT_OP 
+    | LOG_NEG ) multiplicativeExpression // true precedence of ~ operator
     ;
 
 relationalExpression: // 'eq' | 'ne' | 'le' | 'lt' | 'ge' | 'gt' // level 6
