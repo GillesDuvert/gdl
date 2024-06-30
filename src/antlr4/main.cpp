@@ -1,5 +1,5 @@
 bool amIRelaxed=true;
-int inloop=0;
+//int inloop=0;
 
 #include "gdlLexer.h"
 #include "gdlParser.h"

@@ -3,25 +3,18 @@ options {
         tokenVocab = gdlLexer;
 }
 // following are in conjunction with main() and used to present a relatively correct parsing
-// in absence of proper management of variables that inerefere with  the parsing ( inside() and IsRelaxed())
-// inside is probably well treated. STRICTARR cannot be enforced at this stage.
+// in absence of proper management of variables that interefere with  the parsing ( *_insideLoop() and IsRelaxed())
+// *_insideLoop() is probably well treated. STRICTARR cannot be enforced at this stage.
 @parser::context {
 extern bool amIRelaxed;
 static bool IsRelaxed() {return amIRelaxed;}
 static void setRelaxed(bool b){amIRelaxed=b;}
-extern int inloop;
-static bool inside(){return ( inloop > 0 );}
-static std::string StrUpCase(const std::string& s)
-{
-  unsigned len=s.length();
-  char const *sCStr=s.c_str();
-  char* r = new char[len+1];
-//  ArrayGuard<char> guard( r);
-  r[len]=0;
-  for(unsigned i=0;i<len;i++)
-  r[i]=std::toupper(sCStr[i]);
-  return std::string(r);
 }
+@parser::declarations{
+int inloop_include;
+int inloop_break;
+bool include_insideLoop(){return ( inloop_include > 0 );}
+bool break_insideLoop(){return ( inloop_break > 0 );}
 }
 // Actual grammar start.
 tokens {
@@ -215,12 +208,6 @@ interactive
 
 identifierList : listOfIdentifiers+=validIdentifier (COMMA listOfIdentifiers+=validIdentifier)*    ; //create std::vector<antlr4::Token *> listOfIdentifiers to hold the tokens.
 
-forwardFunction : FORWARD_FUNCTION identifierList;
-
-compileOpt : COMPILE_OPT identifierList;
-
-commonBlock : COMMON validIdentifier  (COMMA identifierList)?  //should use a semantic predicate to say "% Common block ZZZZ must contain variables." if ZZZ is not defined
-    ;
 
 
 
@@ -233,7 +220,6 @@ statement:
     | compileOpt          
     | procedureCall       
     | assignmentStatement 
-    | specialHandlingOfOutOfLoopsJumps 
     | includeFileStatement
     ;
 
@@ -242,13 +228,29 @@ conditionalStatement
     | caseStatement
     | switchStatement
     ;
+
 loopStatement
     : forStatement
     | foreachStatement
     | repeatStatement
     | whileStatement
     ;
- 
+
+jumpStatement
+   :
+   (gotoStatement
+   | onIoErrorStatement
+   | RETURN (COMMA expression)?
+   )
+   ;
+
+forwardFunction : FORWARD_FUNCTION identifierList;
+
+compileOpt : COMPILE_OPT identifierList;
+
+commonBlock : COMMON validIdentifier  (COMMA identifierList)?  //should use a semantic predicate to say "% Common block ZZZZ must contain variables." if ZZZ is not defined
+    ;
+
 anyEndMark
     : END
     | ENDIF
@@ -343,24 +345,28 @@ assignmentOperator:
     
 repeatExpression: expression;
 repeatStatement
-@init{ inloop ++;}
-@after{ inloop--;}
+@init{ inloop_include ++; inloop_break ++;}
+@after{ inloop_include--; inloop_break --;}
 : REPEAT repeatBlock UNTIL repeatExpression ;
 
 
 repeatBlock
+@init{ inloop_break ++;}
+@after{ inloop_break --;}
     : BEGIN statementList (ENDREP | END)
     | statement
     ;
 
 whileExpression: expression;
 whileStatement
-@init{ inloop ++;}
-@after{ inloop--;}
+@init{ inloop_include ++; inloop_break ++;}
+@after{ inloop_include--; inloop_break --;}
     : WHILE whileExpression DO whileBlock;
 
 
 whileBlock
+@init{ inloop_break ++;}
+@after{ inloop_break --;}
     : BEGIN statementList (ENDWHILE | END) 
     | statement
     ;
@@ -372,8 +378,8 @@ forStep: expression;
 forStatement : FOR forVariable ASSIGN forInit COMMA forLimit (COMMA forStep)? DO forBlock;
 
 forBlock
-@init{ inloop ++;}
-@after{ inloop--;}
+@init{ inloop_include ++; inloop_break ++;}
+@after{ inloop_include--; inloop_break --;}
     : BEGIN statementList ( ENDFOR | END )
     | statement
     ;    
@@ -382,8 +388,8 @@ foreachElement: validIdentifier;
 foreachVariable: expression;
 foreachIndex: validIdentifier;
 foreachStatement
-@init{ inloop ++;}
-@after{ inloop--;}
+@init{ inloop_include ++; inloop_break ++;}
+@after{ inloop_include--; inloop_break --;}
 : FOREACH foreachElement COMMA foreachVariable (COMMA foreachIndex)? DO foreachBlock ;
 
 foreachBlock
@@ -391,26 +397,9 @@ foreachBlock
     | statement
     ;    
 
-jumpStatement
-   :
-   (gotoStatement
-   | onIoErrorStatement
-   | RETURN (COMMA expression)?
-//   | BREAK // only valid in loops and switchs
-//   | CONTINUE // only valid in loops
-   )
-   ;
 
 gotoStatement:  GOTO COMMA validIdentifier;
 onIoErrorStatement: ON_IOERROR COMMA validIdentifier;
-
-specialHandlingOfOutOfLoopsJumps:
-      (
-//      CONTINUE 
-//      |
-      BREAK
-      ) 
-     ;
 
 ifExpression: expression;
 ifStatement: IF ifExpression THEN  ifBlock ( ELSE elseBlock )? ;
@@ -440,11 +429,10 @@ callParameter:
 
 parameterList : callParameter ( COMMA callParameter)*  ;
 
-continueCall: CONTINUE; 
-
 formalProcedureCall :
-{ inside() }? continueCall
-| validIdentifier (COMMA parameterList)? 
+  { include_insideLoop() }? CONTINUE
+| { break_insideLoop() }? BREAK
+|   validIdentifier (COMMA parameterList)?
 ;
 
 memberProcedureCall: variableAccessByValueOrReference (MEMBER|DOT) (validIdentifier METHOD)? formalProcedureCall;
@@ -472,12 +460,12 @@ keywordDeclarationList : keywordDeclaration ( COMMA keywordDeclaration )*    ;
     
 
 procedureDefinition :
-        PRO ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {/*setRelaxed(true);*/} (statementList)*  END
+        PRO ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit (statementList)*  END
   ;
  
 
 functionDefinition:
-        FUNCTION ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit {/*setRelaxed(true);*/} (statementList)* END
+        FUNCTION ( objectName | validIdentifier ) (COMMA keywordDeclarationList)? endUnit (statementList)* END
     ;
 
 objectName : validIdentifier METHOD validIdentifier ;    
@@ -599,13 +587,14 @@ numeric_constant:
 listOfArrayIndexes:
     LSQUARE arrayIndex (COMMA arrayIndex)* RSQUARE; // C++  LSQUARE arrayIndex ({++rank <= MAXRANK}? COMMA arrayIndex)* RSQUARE
 
-relaxedListOfArrayIndexes: LBRACE arrayIndex ( COMMA arrayIndex)* RBRACE; 
+relaxedListOfArrayIndexes: LBRACE arrayIndex ( COMMA arrayIndex)* RBRACE; // C++  LSBRACE arrayIndex ({++rank <= MAXRANK}? COMMA arrayIndex)* RBRACE
 
 allElements : ASTERIX ;
 index : expression;
 range:   expression COLON (allElements | expression );
 stepRange: expression COLON (allElements | expression ) COLON expression;
-arrayIndex: ( allElements  | stepRange | range | index) ; 
+//arrayIndex: ( allElements  | stepRange | range | index) ; 
+arrayIndex: ( ASTERIX|expression (COLON (ASTERIX|expression) (COLON expression)? )? ) ; 
 
 // the expressions *************************************
 
@@ -630,13 +619,8 @@ varDesignator
     ;
 
 //relaxed mode slows terribly the parser, for a few rare cases. MUST use a two-pass parsing, where relaxed mode is enabled only of there is a problem
-varSubset: //{IsRelaxed()}? oldVarSubsetConfusionWithFunctionCall
-	   //|
-	   formalVarSubset
+varSubset:  varDesignator  ( {IsRelaxed()}? relaxedListOfArrayIndexes | listOfArrayIndexes)
 	   ;
-
-formalVarSubset: varDesignator listOfArrayIndexes ;
-oldVarSubsetConfusionWithFunctionCall: varDesignator relaxedListOfArrayIndexes ;
 
 undefined:  UNDEFINED;
 implicitArray: ( undefined | listOfArrayIndexes);

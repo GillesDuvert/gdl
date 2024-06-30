@@ -1,7 +1,5 @@
 lexer grammar gdlLexer;
 
-@header{ #include "gdlParser.h" }
-
 tokens {
 NULLSTRING,
 STRING,
