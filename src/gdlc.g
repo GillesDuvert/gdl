@@ -2283,7 +2283,7 @@ CONSTANT_OR_STRING_LITERAL
             | "ll"!        { _ttype=CONSTANT_OCT_LONG64; }
             | "ul"!        { _ttype=CONSTANT_OCT_ULONG; }
             | "ull"!    { _ttype=CONSTANT_OCT_ULONG64; }
-            | "\""!            { _ttype=STRING_LITERAL; }
+            | "." (O)* "\""!            { _ttype=STRING_LITERAL; }
             )?)
     | ('\''(H)+'\'' ( 'x' | "xs" | "xb" | "xl" | "xu" | "xus" | "xub" | "xul" )) =>
         ('\''! (H)+ '\''! 'x'!
