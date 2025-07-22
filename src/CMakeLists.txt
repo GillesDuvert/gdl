@@ -285,10 +285,9 @@ if (NOT APPLE AND NOT OSX AND NOT MINGW)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic") # -fvisibility=hidden 
 endif()
 if (APPLE OR OSX )
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic") # -fvisibility=protected") #-exported_symbols_list ${EXPORTED_SYMBOLS_LIST}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fvisibility=protected") #-exported_symbols_list ${EXPORTED_SYMBOLS_LIST}")
 endif()
 if (MINGW )
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic")
   #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-all-symbols")
 endif()
 
