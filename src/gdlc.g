@@ -158,7 +158,7 @@ tokens {
     NSTRUC_REF; // named struct reference
     ON_IOERROR_NULL;
     PCALL;
-    PCALL_LIB; // libraray procedure call
+    PCALL_LIB; // library procedure call
     PARADECL;
     PARAEXPR;  // parameter
     PARAEXPR_VN; // _VN Variable Number of parameters version
@@ -538,7 +538,7 @@ end_unit!
 
 
 forward_function
-  : FORWARD^ identifier_list
+  : FORWARD! i:forward_identifier_list 
   ;
 
 
@@ -594,7 +594,8 @@ procedure_def
 			fussy=1; //set recoverable fussy mode
             if( subName == name && searchForPro == true) SearchedRoutineFound=true;
             #p->SetCompileOpt( compileOpt); 
-        }
+            #p->MemorizeUncompiledPro(name); //in case the Parser has to know that a procedure thus named exists. 
+         }
   ;
 
 function_def
@@ -617,7 +618,10 @@ function_def
 			recovery=false;
 //        	std::cerr<<"end fun "<<name<<" at "<<LastGoodPosition<<std::endl;
 			fussy=1; //set recoverable fussy mode
-            #f->SetCompileOpt( compileOpt); 
+            #f->SetCompileOpt( compileOpt);
+            #f->MemorizeUncompiledFun(name); //since a fun in the same .pro file is not yet 'compiled'
+            //at this time (Parser) but the Parser has to know that it has ben defined for disambiguation
+			//of function calls in the 'sloppy' mode
         }
     ;
 
@@ -645,6 +649,10 @@ common_block
 
 identifier_list
     : IDENTIFIER (COMMA! IDENTIFIER)*
+    ;
+
+forward_identifier_list
+    : i:IDENTIFIER! {std::string name=#i->getText();#i->MemorizeUncompiledFun(name);} (COMMA! j:IDENTIFIER! {std::string name=#j->getText();#j->MemorizeUncompiledFun(name);})*
     ;
 
 // no ASTs for end marks
@@ -925,7 +933,7 @@ else_block
     ;
 
 formal_procedure_call
-    : IDENTIFIER (COMMA! parameter_def_list)?
+    : IDENTIFIER (COMMA! parameter_def_list)? {std::cerr<<"Procedure Call."<<std::endl;}
     ;    
 
 // must handle RETURN, BREAK, CONTINUE also
@@ -950,9 +958,21 @@ procedure_call!//
                 #procedure_call = #id;
             }
         | (COMMA! pa:parameter_def_list)? 
-        { 
+        {
+// to be pursued: in combination with a change in gdlc.tree.g
+// (using another key such as IMPLIED_PRINT instead of PCALL)
+// one can trigger implied print when id is not a procedure
+//		   if (IsPro(id)){
             #procedure_call = #([PCALL, "pcall"], #id, #pa);
             #procedure_call->SetLine(id->getLine());
+//           } else {
+//			std::cerr<<"printable."<<std::endl;
+//			RefDNode print_AST = RefDNode(antlr::nullAST);
+//            print_AST = astFactory->create(id);
+//			print_AST->setText("PRINT");
+//            #procedure_call = #([PCALL, "pcall"], print_AST, #id, #pa);
+//            #procedure_call->SetLine(id->getLine());
+//           }
         }
         )
     ;    

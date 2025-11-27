@@ -140,10 +140,11 @@ public:
 	public: void case_body();
 	public: void endcase_mark();
 	public: void endcaseelse_mark();
-	public: void identifier_list();
+	public: void forward_identifier_list();
 	public: void keyword_declaration();
 	protected: std::string  object_name();
 	public: void compile_opt();
+	public: void identifier_list();
 	public: void endforeach_mark();
 	public: void endfor_mark();
 	public: void endrep_mark();

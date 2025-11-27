@@ -226,6 +226,7 @@ std::string StrUpCase(const std::string& s)
   r[i]=std::toupper(sCStr[i]);
   return std::string(r);
 }
+
 void StrUpCaseInplace( std::string& s)
 {
   unsigned len=s.length();
