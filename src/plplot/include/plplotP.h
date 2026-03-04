@@ -1224,7 +1224,8 @@ plfvect( PLFLT ( *plf2eval )( PLINT, PLINT, PLPointer ),
 //
 int
 plhershey2unicode( int in );
-
+PLUNICODE gdlHersheyToUnicode( int in );
+PLINT gdlUnicodeToHershey( PLUNICODE in );
 // struct used for FCI to FontName lookups.
 typedef struct
 {

@@ -415,20 +415,21 @@ void wxPLDevDC::PSDrawTextToDC( char* utf8_string, bool drawText )
 //--------------------------------------------------------------------------
 void wxPLDevDC::PSSetFont( PLUNICODE fci )
 {
-    unsigned char fontFamily, fontStyle, fontWeight;
-
-    plP_fci2hex( fci, &fontFamily, PL_FCI_FAMILY );
-    plP_fci2hex( fci, &fontStyle, PL_FCI_STYLE );
-    plP_fci2hex( fci, &fontWeight, PL_FCI_WEIGHT );
-
-    if ( m_font )
-        delete m_font;
-
-    m_font = wxFont::New( (int) ( fontSize * fontScale < 4 ? 4 : fontSize * fontScale ),
-        fontFamilyLookup[fontFamily],
-        fontStyleLookup[fontStyle] | fontWeightLookup[fontWeight] );
-    m_font->SetUnderlined( underlined );
-    m_dc->SetFont( *m_font );
+  return; //DO NOTHING
+//    unsigned char fontFamily, fontStyle, fontWeight;
+//
+//    plP_fci2hex( fci, &fontFamily, PL_FCI_FAMILY );
+//    plP_fci2hex( fci, &fontStyle, PL_FCI_STYLE );
+//    plP_fci2hex( fci, &fontWeight, PL_FCI_WEIGHT );
+//
+//    if ( m_font )
+//        delete m_font;
+//
+//    m_font = wxFont::New( (int) ( fontSize * fontScale < 4 ? 4 : fontSize * fontScale ),
+//        fontFamilyLookup[fontFamily],
+//        fontStyleLookup[fontStyle] | fontWeightLookup[fontWeight] );
+//    m_font->SetUnderlined( underlined );
+//    m_dc->SetFont( *m_font );
 }
 
 

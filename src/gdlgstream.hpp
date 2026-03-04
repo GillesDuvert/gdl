@@ -205,6 +205,7 @@ public:
     thePage.plyoff=0;
     theBox.initialized=false;
     plgpls( &pls);
+	plsesc('!');
     //you can debug plplot things with
 //     pls->debug=1;
 
@@ -441,11 +442,14 @@ public:
 //  //subpage to physical
 
   //use simple internal function
-  PLFLT gdlGetStringLength(const std::string &s)
+  PLFLT gdlGetStringLengthInMillimetres(const std::string &s)
   {
     return plstrl(s.c_str());
   }
-
+  PLFLT gdlGetStringLengthInMillimetres(const char* charstr)
+  {
+    return plstrl(charstr);
+  }
 //  void  currentPhysicalPos(PLFLT &x, PLFLT &y)
 //  {
 //    x=pls->currx; //Physical x-coordinate of current point
@@ -608,9 +612,6 @@ public:
   void UpdateCurrentCharWorldSize(); 
   void GetPlplotDefaultCharSize();
 
-  // SA: overloading plplot methods in order to handle IDL-plplot extended
-  // text formating syntax conversion
-  std::string TranslateFormatCodes(const char *text, double *stringLength);
   void setSymbolSize( PLFLT scale );
   void setLineSpacing( PLFLT spacing );
   PLFLT getSymbolSize();

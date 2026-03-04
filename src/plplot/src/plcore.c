@@ -2413,7 +2413,7 @@ c_plinit( void )
 
 // Load fonts
 
-    plsc->cfont = 1;
+    plsc->cfont = 3;
     plfntld( initfont );
 
 // Set up subpages

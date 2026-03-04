@@ -845,6 +845,29 @@ pdf_rd_4bytes( PDFstrm *pdfs, U_LONG *ps )
     return 0;
 }
 
+int
+pdf_rd_4nbytes( PDFstrm *pdfs, U_LONG *s, PLINT n )
+{
+    PLINT   i;
+     U_CHAR x[4];
+	 U_LONG l;
+     for ( i = 0; i < n; i++ )
+    {
+
+    if ( !pdf_rdx( x, 4, pdfs ) )
+        return PDF_RDERR;
+
+    l  = 0;
+    l |= (U_LONG) x[0];
+    l |= (U_LONG) x[1] << 8;
+    l |= (U_LONG) x[2] << 16;
+    l |= (U_LONG) x[3] << 24;
+	s[i]=l;
+	
+	 }
+    return 0;
+}
+
 //--------------------------------------------------------------------------
 // Here is the IEEE floating point specification in both 32 bit and 64 bit
 // precisions, from page 9 of "IEEE Standard for Binary Floating-Point

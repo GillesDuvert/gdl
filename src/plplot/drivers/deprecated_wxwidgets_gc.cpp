@@ -438,20 +438,26 @@ void wxPLDevGC::PSDrawTextToDC( char* utf8_string, bool drawText )
 
 void wxPLDevGC::PSSetFont( PLUNICODE fci )
 {
-    // Log_Verbose( "%s", __FUNCTION__ );
-
-    unsigned char fontFamily, fontStyle, fontWeight;
-
-    plP_fci2hex( fci, &fontFamily, PL_FCI_FAMILY );
-    plP_fci2hex( fci, &fontStyle, PL_FCI_STYLE );
-    plP_fci2hex( fci, &fontWeight, PL_FCI_WEIGHT );
-    if ( m_font )
-        delete m_font;
-    m_font = wxFont::New( static_cast<int>( fontSize * fontScale ),
-        fontFamilyLookup[fontFamily],
-        fontStyleLookup[fontStyle] | fontWeightLookup[fontWeight] );
-    m_font->SetUnderlined( underlined );
-    m_context->SetFont( *m_font, wxColour( textRed, textGreen, textBlue ) );
+//    if ( m_font )
+//        delete m_font;
+//    m_font=(wxFont*)(&( (wxMemoryDC *) m_dc )->GetFont());
+//    return; //DO NOTHING
+//    // Log_Verbose( "%s", __FUNCTION__ );
+//
+//    unsigned char fontFamily, fontStyle, fontWeight;
+// 
+//    plP_fci2hex( fci, &fontFamily, PL_FCI_FAMILY );
+//    plP_fci2hex( fci, &fontStyle, PL_FCI_STYLE );
+//    plP_fci2hex( fci, &fontWeight, PL_FCI_WEIGHT );
+//    if ( m_font )
+//        delete m_font;
+//    m_font = wxFont::New( static_cast<int>( fontSize * fontScale ),
+//        fontFamilyLookup[fontFamily],
+//        wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, //fontStyleLookup[fontStyle], fontWeightLookup[fontWeight] , 
+//        false, "Die Nasty");
+//    m_font->SetUnderlined( underlined );
+//    m_context->SetFont( *m_font, wxColour( textRed, textGreen, textBlue ) );
+    m_context->SetFont(m_dc->GetFont(), wxColour( textRed, textGreen, textBlue ));
 }
 
 
