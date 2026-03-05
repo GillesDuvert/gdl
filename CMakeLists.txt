@@ -932,11 +932,11 @@ endif(EXPAT)
 
 #currently duplicates src/plplot/modules/freetype as
   find_package(Freetype)
-  if (FREETYPE_FOUND)
+  if (Freetype_FOUND)
     set(LIBRARIES ${LIBRARIES} ${FREETYPE_LIBRARIES})
     include_directories(${FREETYPE_INCLUDE_DIRS})
     message(STATUS "Found Freetype.")
-  endif(FREETYPE_FOUND)
+  endif(Freetype_FOUND)
 
 #plplot minimum local
 set (ENABLE_cxx ON)

@@ -494,7 +494,7 @@ PLFLT GDLGStream::getSymbolSize(){return theCurrentSymSize;}
 void GDLGStream::mtex( const char *side, PLFLT disp, PLFLT posit, PLFLT just,
                        const char *text, double *stringCharLength, double *stringCharHeight)
 {
-  *stringCharLength=gdlGetStringLengthInMillimetres(text)/thePage.xsizemm;
+  if (stringCharLength!=NULL) *stringCharLength=gdlGetStringLengthInMillimetres(text)/thePage.xsizemm;
   plstream::mtex(side,disp,posit,just,text);
   if (stringCharHeight!=NULL) *stringCharHeight = 1;
 }
@@ -502,7 +502,7 @@ void GDLGStream::mtex( const char *side, PLFLT disp, PLFLT posit, PLFLT just,
 void GDLGStream::ptex( PLFLT x, PLFLT y, PLFLT dx, PLFLT dy, PLFLT just,
                        const char *text , double *stringCharLength)
 {
-    *stringCharLength=gdlGetStringLengthInMillimetres(text)/thePage.xsizemm;
+    if (stringCharLength!=NULL) *stringCharLength=gdlGetStringLengthInMillimetres(text)/thePage.xsizemm;
     plstream::ptex(x,y,dx,dy,just,text);
 }
 
