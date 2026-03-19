@@ -58,7 +58,7 @@ GDLWXStream::GDLWXStream( int width, int height )
   
   // in our copy of the stae of plplot trimmed for our useage, we use their old but fast driver.
   // we can then set the font to hershey or freetype. (the plplot new driver was buggy with hershey anyway)
-  PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
+  PLINT doFont = ((PLINT) SysVar::GetPFont() > -1) ? 1 : 0;
   pls->dev_text=doFont;
   
   

@@ -392,12 +392,17 @@ enum { AT_BOP, DRAWING, AT_EOP };
 
 #ifdef PLPLOT5_FONTS
 #define PL_XFONT    "plxtnd5.fnt"
-#define PL_SFONT    "plstnd5.fnt"
+#define PL_SFONT    "hersh1.chr"
 #else
 #define PL_XFONT    "plxtnd4.fnt"
 #define PL_SFONT    "plstnd4.fnt"
 #endif
 
+//to suffer from GDL drastic unicode support
+enum positionCode {PRIVATE_UNICODE_PLANE=1048576, //start of UNICODE <Plane 16 Private Use> 
+F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13,F14,F15,F16,F17,F18,F19,F20,//leave space for font number (see pldeco)
+A, 
+B, C, D,E,I,L,M,N,R,S,U,V,SP};
 //--------------------------------------------------------------------------
 // The following environment variables are defined:
 //
@@ -612,7 +617,8 @@ plabort( PLCHAR_VECTOR errormsg );
 
 void
 plfntld( PLINT fnt );
-
+void
+plfntld2();
 // Release memory for fonts.
 
 void
@@ -635,10 +641,9 @@ void
 plstik( PLFLT mx, PLFLT my, PLFLT dx, PLFLT dy );
 
 // Prints out a "string" at reference position with physical coordinates
-// (refx,refy).
-
-void
-plstr( PLINT base, PLFLT *xform, PLINT refx, PLINT refy, PLCHAR_VECTOR string );
+// (refx,refy). Return length if needed.
+PLFLT
+plstr( PLCHAR_VECTOR string , PLINT length_only, PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y, PLINT refx, PLINT refy);
 
 // Draws a tick parallel to x.
 
@@ -1225,7 +1230,6 @@ plfvect( PLFLT ( *plf2eval )( PLINT, PLINT, PLPointer ),
 int
 plhershey2unicode( int in );
 PLUNICODE gdlHersheyToUnicode( int in );
-PLINT gdlUnicodeToHershey( PLUNICODE in );
 // struct used for FCI to FontName lookups.
 typedef struct
 {

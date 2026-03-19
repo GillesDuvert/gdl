@@ -47,7 +47,6 @@ wxPLDevGC::wxPLDevGC( void ) : wxPLDevBase( wxBACKEND_GC )
     m_dc       = NULL;
     m_bitmap   = NULL;
     m_context  = NULL;
-    m_font     = NULL;
     underlined = false;
 }
 
@@ -56,18 +55,16 @@ wxPLDevGC::~wxPLDevGC()
 {
     // Log_Verbose( "%s", __FUNCTION__ );
 
-    if ( ownGUI )
-    {
-        if ( m_dc )
-        {
-            ( (wxMemoryDC *) m_dc )->SelectObject( wxNullBitmap );
-            delete m_dc;
-        }
-        if ( m_bitmap )
-            delete m_bitmap;
-    }
-
-    delete m_font;
+//    if ( ownGUI )
+//    {
+//        if ( m_dc )
+//        {
+//            ( (wxMemoryDC *) m_dc )->SelectObject( wxNullBitmap );
+//            delete m_dc;
+//        }
+//        if ( m_bitmap )
+//            delete m_bitmap;
+//    }
     delete m_context;
 }
 
@@ -234,17 +231,17 @@ void wxPLDevGC::CreateCanvas()
 {
     // Log_Verbose( "%s", __FUNCTION__ );
 
-    if ( ownGUI )
-    {
-        if ( !m_dc )
-            m_dc = new wxMemoryDC();
-
-        ( (wxMemoryDC *) m_dc )->SelectObject( wxNullBitmap ); // deselect bitmap
-        if ( m_bitmap )
-            delete m_bitmap;
-        m_bitmap = new wxBitmap( bm_width, bm_height, 32 );
-        ( (wxMemoryDC *) m_dc )->SelectObject( *m_bitmap ); // select new bitmap
-    }
+//    if ( ownGUI )
+//    {
+//        if ( !m_dc )
+//            m_dc = new wxMemoryDC();
+//
+//        ( (wxMemoryDC *) m_dc )->SelectObject( wxNullBitmap ); // deselect bitmap
+//        if ( m_bitmap )
+//            delete m_bitmap;
+//        m_bitmap = new wxBitmap( bm_width, bm_height, 32 );
+//        ( (wxMemoryDC *) m_dc )->SelectObject( *m_bitmap ); // select new bitmap
+//    }
 
     if ( m_dc )
     {
@@ -319,53 +316,8 @@ void wxPLDevGC::SetExternalBuffer( void* dc )
     if (do_antialias == NULL) m_context->SetAntialiasMode(wxANTIALIAS_NONE); //GD May 2022 force no antialias as antialiasing prevents erasing lines by redrawing them ontop by a color 0.
 	//NOTE: antialiasing and no double buffer makes plots very slow.
     ready     = true;
-    ownGUI    = false;
+//    ownGUI    = false;
 }
-
-
-#ifdef PL_HAVE_FREETYPE
-
-void wxPLDevGC::PutPixel( short x, short y, PLINT color )
-{
-    // Log_Verbose( "%s", __FUNCTION__ );
-
-    const wxPen oldpen = m_dc->GetPen();
-    m_context->SetPen( *( wxThePenList->FindOrCreatePen( wxColour( GetRValue( color ), GetGValue( color ), GetBValue( color ) ),
-                              1, wxPENSTYLE_SOLID ) ) );
-    //m_context->DrawPoint( x, y );
-    AddtoClipRegion( x, y, x, y );
-    m_context->SetPen( oldpen );
-}
-
-void wxPLDevGC::PutPixel( short x, short y )
-{
-    // Log_Verbose( "%s", __FUNCTION__ );
-
-    //m_dc->DrawPoint( x, y );
-    AddtoClipRegion( x, y, x, y );
-}
-
-PLINT wxPLDevGC::GetPixel( short x, short y )
-{
-    // Log_Verbose( "%s", __FUNCTION__ );
-
-  #ifdef __WXGTK__
-    // Cast function parameters to (void) to silence compiler warnings about unused parameters
-    (void) x;
-    (void) y;
-    // The GetPixel method is incredible slow for wxGTK. Therefore we set the colour
-    // always to the background color, since this is the case anyway 99% of the time.
-    PLINT bgr=0, bgg=0, bgb=0;           // red, green, blue
-    plgcolbg( &bgr, &bgg, &bgb );  // get background color information
-    return RGB( bgr, bgg, bgb );
-#else
-    wxColour col;
-    m_dc->GetPixel( x, y, &col );
-    return RGB( col.Red(), col.Green(), col.Blue() );
-#endif
-}
-
-#endif // PL_HAVE_FREETYPE
 
 
 void wxPLDevGC::PSDrawTextToDC( char* utf8_string, bool drawText )
@@ -436,28 +388,65 @@ void wxPLDevGC::PSDrawTextToDC( char* utf8_string, bool drawText )
 }
 
 
-void wxPLDevGC::PSSetFont( PLUNICODE fci )
+void wxPLDevGC::PSSetFont( PLUNICODE fci , PLFLT scale)
 {
-//    if ( m_font )
-//        delete m_font;
-//    m_font=(wxFont*)(&( (wxMemoryDC *) m_dc )->GetFont());
-//    return; //DO NOTHING
-//    // Log_Verbose( "%s", __FUNCTION__ );
-//
-//    unsigned char fontFamily, fontStyle, fontWeight;
-// 
-//    plP_fci2hex( fci, &fontFamily, PL_FCI_FAMILY );
-//    plP_fci2hex( fci, &fontStyle, PL_FCI_STYLE );
-//    plP_fci2hex( fci, &fontWeight, PL_FCI_WEIGHT );
-//    if ( m_font )
-//        delete m_font;
-//    m_font = wxFont::New( static_cast<int>( fontSize * fontScale ),
-//        fontFamilyLookup[fontFamily],
-//        wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, //fontStyleLookup[fontStyle], fontWeightLookup[fontWeight] , 
-//        false, "Die Nasty");
-//    m_font->SetUnderlined( underlined );
-//    m_context->SetFont( *m_font, wxColour( textRed, textGreen, textBlue ) );
-    m_context->SetFont(m_dc->GetFont(), wxColour( textRed, textGreen, textBlue ));
+  bool useName=true;
+  wxFont currentFont=m_dc->GetFont();
+  wxString faceName=currentFont.GetFaceName();
+  wxFontFamily family=currentFont.GetFamily();
+  wxFontStyle style=currentFont.GetStyle();
+  wxFontWeight weight=currentFont.GetWeight();
+  int flags=wxFONTFLAG_ANTIALIASED;
+  switch(fci){
+    case 1:
+    case 2:
+    case 3:
+      family=wxFONTFAMILY_SWISS; style=wxFONTSTYLE_NORMAL; weight=wxFONTWEIGHT_NORMAL;  useName=false; break;
+    case 4:
+      family=wxFONTFAMILY_SWISS; style=wxFONTSTYLE_NORMAL; weight=wxFONTWEIGHT_BOLD;  useName=false; break;
+    case 5:
+      family=wxFONTFAMILY_SWISS; style=wxFONTSTYLE_ITALIC; weight=wxFONTWEIGHT_NORMAL;  useName=false; break;
+    case 6:
+      family=wxFONTFAMILY_SWISS; style=wxFONTSTYLE_ITALIC; weight=wxFONTWEIGHT_BOLD;  useName=false; break;
+    case 7:
+      family=wxFONTFAMILY_ROMAN; style=wxFONTSTYLE_NORMAL; weight=wxFONTWEIGHT_NORMAL;  useName=false; break;
+    case 8:
+      family=wxFONTFAMILY_ROMAN; style=wxFONTSTYLE_ITALIC; weight=wxFONTWEIGHT_NORMAL;  useName=false; break;
+    case 9:
+      faceName="OpenSymbol";
+    case 10:
+      faceName="DejaVu Sans";
+    case 11:
+      family=wxFONTFAMILY_TELETYPE; style=wxFONTSTYLE_NORMAL; weight=wxFONTWEIGHT_NORMAL;  useName=false; break;
+    case 12:
+      family=wxFONTFAMILY_TELETYPE; style=wxFONTSTYLE_ITALIC; weight=wxFONTWEIGHT_NORMAL;  useName=false; break;
+    case 13:
+      family=wxFONTFAMILY_TELETYPE; style=wxFONTSTYLE_NORMAL; weight=wxFONTWEIGHT_BOLD;  useName=false; break;
+    case 14:
+      family=wxFONTFAMILY_TELETYPE; style=wxFONTSTYLE_ITALIC; weight=wxFONTWEIGHT_BOLD;  useName=false; break;
+    case 15:
+      family=wxFONTFAMILY_ROMAN; style=wxFONTSTYLE_NORMAL; weight=wxFONTWEIGHT_BOLD;  useName=false; break;
+    case 16:
+      family=wxFONTFAMILY_ROMAN; style=wxFONTSTYLE_ITALIC; weight=wxFONTWEIGHT_BOLD;  useName=false; break;
+    case 17:
+      faceName="DejaVu Sans"; flags |= wxFONTFLAG_BOLD; break;
+    case 18:
+      faceName="DejaVu Sans"; flags |= wxFONTFLAG_ITALIC; break;
+    case 19:
+      faceName="DejaVu Sans";flags |= wxFONTFLAG_ITALIC|wxFONTFLAG_BOLD; break;
+    case 20:
+      faceName="DejaVu Math TeX Gyre"; break;
+    default:
+      break;
+  }
+    if (useName) {
+      m_context->SetFont(m_context->CreateFont(fontSize * fontScale,faceName,flags , wxColour( textRed, textGreen, textBlue )));
+      return;
+    } else {
+      wxFont f(1, family, style, weight);
+      f.Scale(fontSize * fontScale);
+      m_context->SetFont(f, wxColour( textRed, textGreen, textBlue ));
+    }
 }
 
 
@@ -530,8 +519,8 @@ void wxPLDevGC::ProcessString( PLStream* pls, EscText* args )
     // Get the curent font
     fontScale = 1.0;
     yOffset   = 0.0;
-    plgfci( &fci );
-    PSSetFont( fci );
+    fci = -1;
+    PSSetFont( fci ); //use current font
     while ( lineStart != args->unicode_array + args->unicode_array_len )
     {
         while ( lineStart + lineLen != args->unicode_array + args->unicode_array_len
@@ -562,7 +551,7 @@ void wxPLDevGC::ProcessString( PLStream* pls, EscText* args )
         fontScale = startingFontScale;
         yOffset   = startingYOffset;
         fci       = startingFci;
-        PSSetFont( fci );
+        PSSetFont( fci, fontScale);
         m_context->PushState();                                              //save current position
         m_context->Translate( args->x / scalex, height - args->y / scaley ); //move to text starting position
         wxGraphicsMatrix matrix = m_context->CreateMatrix(

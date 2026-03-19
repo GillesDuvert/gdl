@@ -36,7 +36,12 @@
 
 #define NEED_PLDEBUG
 #include "plplotP.h"
-
+//for ntohl etc
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#include <winsock2.h>
+#else 
+#include <arpa/inet.h>
+#endif
 static void print_ieeef( float *, U_LONG * );
 static int  pdf_wrx( const U_CHAR *x, long nitems, PDFstrm *pdfs );
 
@@ -866,6 +871,27 @@ pdf_rd_4nbytes( PDFstrm *pdfs, U_LONG *s, PLINT n )
 	
 	 }
     return 0;
+}
+
+int
+pdf_rd_4nbytes_network(PDFstrm *pdfs, long *s, int n) {
+	int i;
+	char x[4];
+	long l;
+	for (i = 0; i < n; i++) {
+
+		if (!pdf_rdx(x, 4, pdfs))
+			return PDF_RDERR;
+
+		l = 0;
+		l |=  x[0];
+		l |=  x[1] << 8;
+		l |=  x[2] << 16;
+		l |=  x[3] << 24;
+		s[i] = ntohl(l);
+
+	}
+	return 0;
 }
 
 //--------------------------------------------------------------------------

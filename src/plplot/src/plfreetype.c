@@ -220,7 +220,7 @@ FT_StrX_YW( PLStream *pls, const PLUNICODE *text, short len, int *xx, int *yy, i
                 break;
             }
         }
-        else if ( text[i] & PL_FCI_MARK )
+        else if ( text[i] & PRIVATE_UNICODE_PLANE )
         {
             // FCI in text stream; change font accordingly.
             FT_SetFace( pls, text[i] );
@@ -383,7 +383,7 @@ FT_WriteStrW( PLStream *pls, const PLUNICODE *text, short len, int x, int y )
                 break;
             }
         }
-        else if ( text[i] & PL_FCI_MARK )
+        else if ( text[i] & PRIVATE_UNICODE_PLANE )
         {
             // FCI in text stream; change font accordingly.
             FT_SetFace( pls, text[i] );
@@ -1107,7 +1107,7 @@ void plD_render_freetype_text( PLStream *pls, EscText *args )
 //
 
             if ( ( args->unicode_array_len == 2 )
-                 && ( args->unicode_array[0] == ( PL_FCI_MARK | 0x004 ) ) )
+                 && ( args->unicode_array[0] == ( PRIVATE_UNICODE_PLANE | 0x004 ) ) )
             {
                 adjust.x = (FT_Pos) ( args->just * ROUND( (PLFLT) FT->face->glyph->metrics.width / 64.0 ) );
                 adjust.y = (FT_Pos) ROUND( (PLFLT) FT->face->glyph->metrics.height / 128.0 );

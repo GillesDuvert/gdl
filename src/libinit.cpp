@@ -671,6 +671,7 @@ void LibInit()
       "GET_WRITE_MASK", "COPY","GET_FONTNAMES","SET_FONT","FONT","USER_FONT","GET_CURRENT_FONT","GET_FONTNUM", //"FONT" is idem SET_FONT before IDL5.3
       "SET_PIXEL_DEPTH", //Z
       "SET_CHARACTER_SIZE", //(all)
+      "TT_FONT", //(METAFILE, PRINTER, X, PS, WIN, Z)
       KLISTEND
     };
   const string deviceWarnKey[] = {
@@ -716,7 +717,6 @@ void LibInit()
   "THRESHOLD", //X
   "TRANSLATION", //(WIN,X)
   "TRUE_COLOR", //(METAFILE, PRINTER, X)
-  "TT_FONT", //(METAFILE, PRINTER, X, PS, WIN, Z)
   //"TTY", (REGIS, TEK)
   //"VT240","VT241","VT340","VT341",(REGIS)
   //"XON_XOFF" (HP)

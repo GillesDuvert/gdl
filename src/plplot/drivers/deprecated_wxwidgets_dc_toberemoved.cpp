@@ -413,7 +413,7 @@ void wxPLDevDC::PSDrawTextToDC( char* utf8_string, bool drawText )
 //
 //  Set font defined by fci.
 //--------------------------------------------------------------------------
-void wxPLDevDC::PSSetFont( PLUNICODE fci )
+void wxPLDevDC::PSSetFont( PLUNICODE fci , PLFLT scale)
 {
   return; //DO NOTHING
 //    unsigned char fontFamily, fontStyle, fontWeight;
@@ -529,7 +529,7 @@ void wxPLDevDC::ProcessString( PLStream* pls, EscText* args )
         fontScale = startingFontScale;
         yOffset   = startingYOffset;
         fci       = startingFci;
-        PSSetFont( fci );
+        PSSetFont( fci , fontScale);
         posX = (PLINT) ( args->x / scalex - ( args->just * textWidth ) * cos_rot - ( 0.5 * textHeight - paraHeight * lineSpacing ) * sin_rot ); //move to set alignment
         posY = (PLINT) ( args->y / scaley - ( args->just * textWidth ) * sin_rot + ( 0.5 * textHeight - paraHeight * lineSpacing ) * cos_rot );
         PSDrawText( lineStart, lineLen, true );                                                                                                 //draw text

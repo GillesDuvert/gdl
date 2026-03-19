@@ -25,20 +25,20 @@
   hershey code, and is in decimal; the second is the unicode value, and is
   in hex; and the final field is font index. There are five possible font
   indices:
-       0        undefined/unknown
-       1        normal
-       2        roman
-       3        italic-roman
-       4        script
+	   0        undefined/unknown
+	   1        normal
+	   2        roman
+	   3        italic-roman
+	   4        script
   
   Font indices are used for approximating the appearence of the original
   hershey glyphs.
   
   Unicode values of 0x0000 signify unknowns.
   
-*/
+ */
 const int number_of_entries_in_hershey_to_unicode_table=1597;
-
+#include "hershey_mapping.h"
 typedef struct {
 	unsigned int Hershey;
 	PLUNICODE Unicode;
@@ -185,31 +185,31 @@ const Hershey_to_Unicode_table hershey_to_unicode_lookup_table[1597] = {
 {548,935,1},
 {549,936,1},
 {550,937,1},
-{551,65,1},
-{552,66,1},
-{553,67,1},
-{554,68,1},
-{555,69,1},
-{556,70,1},
-{557,71,1},
-{558,72,1},
-{559,73,1},
-{560,74,1},
-{561,75,1},
-{562,76,1},
-{563,77,1},
-{564,78,1},
-{565,79,1},
-{566,80,1},
-{567,81,1},
-{568,82,1},
-{569,83,1},
-{570,84,1},
-{571,85,1},
-{572,86,1},
-{573,87,1},
-{574,88,1},
-{575,89,1},
+{551,119964,1},
+{552,8492,1},
+{553,119966,1},
+{554,119967,1},
+{555,8496,1},
+{556,8497,1},
+{557,119970,1},
+{558,8459,1},
+{559,8464,1},
+{560,119973,1},
+{561,8466,1},
+{562,8499,1},
+{563,119977,1},
+{564,119978,1},
+{565,119979,1},
+{566,119980,1},
+{567,8475,1},
+{568,119982,1},
+{569,119983,1},
+{570,119984,1},
+{571,119985,1},
+{572,119986,1},
+{573,119987,1},
+{574,119988,1},
+{575,119988,1},
 {576,90,1},
 {583,8711,1},
 {601,97,1},

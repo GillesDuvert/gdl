@@ -27,7 +27,7 @@
 
 // some special wxWidgets headers
 #include <wx/spinctrl.h>
-
+#include <wx/graphics.h>
 // freetype headers and macros
 #ifdef PL_HAVE_FREETYPE
   #include "plfreetype.h"
@@ -77,10 +77,8 @@
 #define LOCATE_INVOKED_VIA_API       1
 #define LOCATE_INVOKED_VIA_DRIVER    2
 
-// Available backends
-#define wxBACKEND_DC                 0
-#define wxBACKEND_AGG                1
-#define wxBACKEND_GC                 2
+// Available backends: we use GC only
+#define wxBACKEND_GC                 2 // relic of plplot library that switched between various backends (something we cannot support)
 
 class wxPLplotFrame;
 
@@ -103,25 +101,14 @@ public: // methods
     virtual void SetColor0( PLStream *pls )        = 0;
     virtual void SetColor1( PLStream *pls )        = 0;
     virtual void SetExternalBuffer( void* buffer ) = 0;
-#ifdef PL_HAVE_FREETYPE
-    virtual void PutPixel( short x, short y, PLINT color ) = 0;
-    virtual void PutPixel( short x, short y )  = 0;
-    virtual PLINT GetPixel( short x, short y ) = 0;
-#endif // PL_HAVE_FREETYPE
     virtual void ProcessString( PLStream* pls, EscText* args ) = 0;
     virtual void PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText );
     virtual void PSDrawTextToDC( char* utf8_string, bool drawText ) = 0;
-    virtual void PSSetFont( PLUNICODE fci ) = 0;
+    virtual void PSSetFont( PLUNICODE fci, PLFLT scale=1) = 0;
 
 public: // variables
     const int    backend;
     bool         ready;
-    bool         ownGUI;
-    bool         showGUI;
-    bool         waiting;
-    bool         resizing;
-    bool         exit;
-    int          comcount;
 
     wxPLplotFrame* m_frame;
     PLINT        xpos;
@@ -163,7 +150,6 @@ public: // variables
 
     // font variables
     static const int max_string_length = 500;
-    wxFont           * m_font;
     bool             underlined;
     double           fontSize;
     double           fontScale;
@@ -179,136 +165,6 @@ public: // variables
     PLFLT            stride;
 };
 
-
-class wxPLDevDC : public wxPLDevBase
-{
-public: // methods
-    wxPLDevDC( void );
-    ~wxPLDevDC( void );
-
-    void DrawLine( short x1a, short y1a, short x2a, short y2a );
-    void DrawPolyline( short *xa, short *ya, PLINT npts );
-    void ClearBackground( PLINT bgr, PLINT bgg, PLINT bgb, PLINT x1 = -1, PLINT y1 = -1, PLINT x2 = -1, PLINT y2 = -1 );
-    void FillPolygon( PLStream *pls );
-    void BlitRectangle( wxDC* dc, int vX, int vY, int vW, int vH );
-    void CreateCanvas();
-    void SetWidth( PLStream *pls );
-    void SetColor0( PLStream *pls );
-    void SetColor1( PLStream *pls );
-    void SetExternalBuffer( void* buffer );
-#ifdef PL_HAVE_FREETYPE
-    void PutPixel( short x, short y, PLINT color );
-    void PutPixel( short x, short y );
-    PLINT GetPixel( short x, short y );
-#endif // PL_HAVE_FREETYPE
-    void ProcessString( PLStream* pls, EscText* args );
-    void PSDrawTextToDC( char* utf8_string, bool drawText );
-    void PSSetFont( PLUNICODE fci );
-
-private: // variables
-    wxBitmap* m_bitmap;
-    wxDC    * m_dc;
-};
-
-
-#ifdef HAVE_AGG
-// antigrain headers
-#include "agg2/agg_basics.h"
-#include "agg2/agg_rendering_buffer.h"
-#include "agg2/agg_rasterizer_scanline_aa.h"
-#include "agg2/agg_scanline_u.h"
-#include "agg2/agg_scanline_bin.h"
-#include "agg2/agg_conv_stroke.h"
-#include "agg2/agg_pixfmt_rgb.h"
-#include "agg2/agg_renderer_base.h"
-#include "agg2/agg_renderer_scanline.h"
-#include "agg2/agg_renderer_primitives.h"
-#include "agg2/agg_path_storage.h"
-#include "agg2/agg_conv_curve.h"
-#include "agg2/agg_conv_contour.h"
-#include "agg2/agg_font_freetype.h"
-
-class wxPLDevAGG : public wxPLDevBase
-{
-    // type definitions and enums
-    typedef agg::pixfmt_rgb24                                              pixFormat;
-    typedef agg::renderer_base<pixFormat>                                  rendererBase;
-    typedef agg::renderer_scanline_aa_solid<rendererBase>                  rendererSolid;
-    typedef agg::font_engine_freetype_int32                                fontEngineType;
-    typedef agg::font_cache_manager<fontEngineType>                        fontManagerType;
-    typedef agg::font_cache_manager<fontEngineType>::gray8_adaptor_type    fontRasterizer;
-    typedef agg::font_cache_manager<fontEngineType>::gray8_scanline_type   fontScanline;
-    typedef agg::conv_curve<agg::path_storage>                             convCurve;
-    typedef agg::conv_stroke<convCurve>                                    convStroke;
-    typedef agg::conv_transform<convCurve>                                 pathTransform;
-    typedef agg::conv_transform<convStroke>                                strokeTransform;
-
-    enum drawPathFlag { Fill, Stroke, FillAndStroke };
-
-public: // methods
-    wxPLDevAGG( void );
-    ~wxPLDevAGG( void );
-
-    void DrawLine( short x1a, short y1a, short x2a, short y2a );
-    void DrawPolyline( short *xa, short *ya, PLINT npts );
-    void ClearBackground( PLINT bgr, PLINT bgg, PLINT bgb, PLINT x1 = -1, PLINT y1 = -1, PLINT x2 = -1, PLINT y2 = -1 );
-    void FillPolygon( PLStream *pls );
-    void BlitRectangle( wxDC* dc, int vX, int vY, int vW, int vH );
-    void CreateCanvas();
-    void SetWidth( PLStream *pls );
-    void SetColor0( PLStream *pls );
-    void SetColor1( PLStream *pls );
-    void SetExternalBuffer( void* buffer );
-#ifdef PL_HAVE_FREETYPE
-    void PutPixel( short x, short y, PLINT color );
-    void PutPixel( short x, short y );
-    PLINT GetPixel( short x, short y );
-#endif // PL_HAVE_FREETYPE
-    void ProcessString( PLStream* pls, EscText* args );
-    void PSDrawTextToDC( char* utf8_string, bool drawText );
-    void PSSetFont( PLUNICODE fci );
-    void drawPath( drawPathFlag flag );
-    void AGGAddtoClipRegion( short x1, short y1, short x2, short y2 );
-
-private: // variables
-    wxDC * mDC;
-    wxImage               * mBuffer;
-    agg::rendering_buffer mRenderingBuffer;
-    fontEngineType        mFontEngine;
-    fontManagerType       mFontManager;
-    agg::conv_curve<fontManagerType::path_adaptor_type> mCurves;
-    agg::conv_contour<agg::conv_curve<fontManagerType::path_adaptor_type> > mContour;
-
-    pixFormat         mPixFormat;
-    rendererBase      mRendererBase;
-    rendererSolid     mRendererSolid;
-
-    agg::scanline_u8  mScanLine;
-    agg::rasterizer_scanline_aa<>                                           mRasterizer;
-    agg::path_storage mPath;
-    agg::trans_affine mTransform;
-
-    convCurve         mConvCurve;
-    convStroke        mConvStroke;
-    pathTransform     mPathTransform;
-    strokeTransform   mStrokeTransform;
-
-    double            mStrokeWidth;
-    wxUint8           mStrokeOpacity;
-    unsigned char     mColorRedStroke;
-    unsigned char     mColorGreenStroke;
-    unsigned char     mColorBlueStroke;
-    unsigned char     mColorRedFill;
-    unsigned char     mColorGreenFill;
-    unsigned char     mColorBlueFill;
-
-    double            textWidth, textHeight;
-    wxString          fontdir;
-};
-#endif
-
-
-#if wxUSE_GRAPHICS_CONTEXT
 #include <wx/graphics.h>
 
 class wxPLDevGC : public wxPLDevBase
@@ -327,14 +183,9 @@ public: // methods
     void SetColor0( PLStream *pls );
     void SetColor1( PLStream *pls );
     void SetExternalBuffer( void* buffer );
-#ifdef PL_HAVE_FREETYPE
-    void PutPixel( short x, short y, PLINT color );
-    void PutPixel( short x, short y );
-    PLINT GetPixel( short x, short y );
-#endif // PL_HAVE_FREETYPE
     void ProcessString( PLStream* pls, EscText* args );
     void PSDrawTextToDC( char* utf8_string, bool drawText );
-    void PSSetFont( PLUNICODE fci );
+    void PSSetFont( PLUNICODE fci, PLFLT scale=1 );
 
 private: // variables
     wxBitmap         * m_bitmap;
@@ -352,7 +203,6 @@ private: // variables
     unsigned char mColorGreenFill;
     unsigned char mColorBlueFill;
 };
-#endif
 
 
 struct dev_entry
@@ -368,31 +218,6 @@ struct dev_entry
 
 // after how many commands the window should be refreshed
 #define MAX_COMCOUNT    10000
-
-// wxwidgets application definition (if needed)
-WX_DEFINE_ARRAY( wxPLplotFrame *, wxArrayOfwxPLplotFrame );
-class wxPLplotApp : public wxApp
-{
-public:
-    virtual bool OnInit();
-    // virtual int OnExit();
-    void SetExitFlag( bool flag = true ) { exit = flag; };
-    bool GetExitFlag( void ) { return exit; };
-    void SetAdvanceFlag( bool flag = true ) { advance = flag; };
-    bool GetAdvanceFlag( void ) { return advance; };
-    void SetRefreshFlag( bool flag = true );
-    void AddFrame( wxPLplotFrame* frame ) { FrameArray.Add( frame ); };
-    void RemoveFrame( wxPLplotFrame* frame ) { FrameArray.Remove( frame ); };
-    size_t FrameCount( void ) { return FrameArray.GetCount(); }
-    void OnIdle( wxIdleEvent& event );
-
-private:
-    bool exit;
-    bool advance;
-    wxArrayOfwxPLplotFrame FrameArray;
-
-    DECLARE_EVENT_TABLE()
-};
 
 // definition of the actual window/frame shown
 class wxPLplotWindow : public wxWindow
@@ -471,22 +296,6 @@ private:
     DECLARE_EVENT_TABLE()
 };
 
-
-// Use this macro if you want to define your own main() or WinMain() function
-// and call wxEntry() from there.
-#define IMPLEMENT_PLAPP_NO_MAIN( appname )                                                                                                        \
-    wxAppConsole * wxPLCreateApp()                                                                                                                \
-    {                                                                                                                                             \
-        wxAppConsole::CheckBuildOptions( WX_BUILD_OPTIONS_SIGNATURE,                                                                              \
-            "your program" );                                                                                                                     \
-        return new appname;                                                                                                                       \
-    }                                                                                                                                             \
-    wxAppInitializer                                                                                                                              \
-    wxAppInitializer( (wxAppInitializerFunction) ( wxApp::GetInitializerFunction() == NULL ? wxPLCreateApp : wxApp::GetInitializerFunction() ) ); \
-    DECLARE_PLAPP( appname )                                                                                                                      \
-    appname & wxPLGetApp() { return *wx_static_cast( appname *, wxApp::GetInstance() ); }
-
-#define DECLARE_PLAPP( appname )    extern appname &wxPLGetApp();
 
 // workaround against warnings for unused variables
 static inline void Use( void * )

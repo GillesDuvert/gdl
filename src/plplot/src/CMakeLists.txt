@@ -30,7 +30,6 @@ set(plplot_LIB_SRCS
   pldtik.c
   plf2ops.c
   plfill.c
-  plfreetype.c
   plgradient.c
   plhist.c
   plimage.c
@@ -131,15 +130,6 @@ if(MATH_LIB)
   list(APPEND libplplot_LINK_LIBRARIES ${MATH_LIB})
 endif(MATH_LIB)
 
-if(WITH_FREETYPE)
-  get_source_file_property(PLFREETYPE_COMPILE_PROPS plfreetype.c COMPILE_FLAGS)
-  # Deal with NOTFOUND case.
-  if(NOT PLFREETYPE_COMPILE_PROPS)
-    set(PLFREETYPE_COMPILE_PROPS)
-  endif(NOT PLFREETYPE_COMPILE_PROPS)
-  set_source_files_properties(plfreetype.c PROPERTIES COMPILE_FLAGS "${PLFREETYPE_COMPILE_PROPS} ${FREETYPE_INCLUDE_CFLAGS}")
-  list(APPEND libplplot_LINK_LIBRARIES ${FREETYPE_LIBRARIES})
-endif(WITH_FREETYPE)
 
 # Copy current information in libplplot_LINK_LIBRARIES
 # into pc_libplplot_LINK_FLAGS, which contains the equivalent list information
