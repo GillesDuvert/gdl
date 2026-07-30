@@ -53,17 +53,13 @@ namespace lib {
     // 
     {
       static int set_fontIx = e->KeywordIx("SET_FONT");
-      if (e->KeywordPresent(set_fontIx)) {
+      static int fontIx = e->KeywordIx("FONT");
+      static int userfontIx = e->KeywordIx("USER_FONT");
+      if (e->KeywordPresent(set_fontIx)||e->KeywordPresent(fontIx)||e->KeywordPresent(userfontIx)) {
         setfontpresent = true;
         DStringGDL* pattern = e->GetKWAs<DStringGDL>(set_fontIx);
         if (!actDevice->SetFont((*pattern)[0])) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
       }
-    }
-    static int fontIx = e->KeywordIx("FONT"); //font is OLD keyword  for SET_FONT still accepted.
-    if (e->KeywordPresent(fontIx)) {
-      setfontpresent = true;
-      DStringGDL* pattern = e->GetKWAs<DStringGDL>(fontIx);
-      if (!actDevice->SetFont((*pattern)[0])) e->Throw("(Obsolete) Keyword FONT not allowed for call to: DEVICE");
     }
 
     //GET_FONTNAMES? 

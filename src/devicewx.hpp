@@ -304,9 +304,17 @@ if(hide) {
 
  DLong GetFontnum() {
   return GetWxFontnum(fontname);
- }
+	}
 
-    
+ bool SetFont(DString &f) {
+	 fontname=f;
+//	    this->GetStream(); //to open a window if none opened.
+        for (int i = 0; i < winList.size(); i++) {
+            if (winList[i] != NULL) winList[i]->SetCurrentFont(fontname);
+        }
+		return true;
+ }
+   
   bool CursorStandard(int cursorNumber) {
       cursorId = cursorNumber;
       this->GetStream(); //to open a window if none opened.

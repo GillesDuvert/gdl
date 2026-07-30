@@ -92,19 +92,6 @@ if(PLD_wxwidgets)
 
   option(OLD_WXWIDGETS "Use old version of wxwidgets device driver, binding, and example" OFF)
 
-    if(WITH_FREETYPE)
-	  message(STATUS "WARNING: old wxwidgets driver and binding components depending on AGG library have been dropped.")
-      set(
-	wxwidgets_COMPILE_FLAGS
-	"${wxwidgets_COMPILE_FLAGS} ${FREETYPE_INCLUDE_CFLAGS}"
-	)
-      set(
-	wxwidgets_LINK_FLAGS
-	${wxwidgets_LINK_FLAGS}
-	${FREETYPE_LIBRARIES}
-	)
-    endif(WITH_FREETYPE)
-
   set(DRIVERS_LINK_FLAGS
     ${DRIVERS_LINK_FLAGS}
     ${wxwidgets_LINK_FLAGS}

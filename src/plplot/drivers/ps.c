@@ -211,7 +211,7 @@ ps_init( PLStream *pls )
     if ( text )
     {
         pls->dev_text    = 1;                // want to draw text
-        pls->dev_unicode = 1;                // want unicode
+        pls->dev_unicode = 0;                // does not want unicode
         if ( hrshsym )
             pls->dev_hrshsym = 1;            // want Hershey symbols
     }

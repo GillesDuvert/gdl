@@ -24,18 +24,18 @@ set (WITH_FREETYPE ON)
 # Look for freetype libraries
 if (WITH_FREETYPE)
   find_package(Freetype)
-  if (FREETYPE_FOUND)
+  if (Freetype_FOUND)
     message(STATUS "FREETYPE_INCLUDE_DIRS = ${FREETYPE_INCLUDE_DIRS}")
     string(REGEX REPLACE ";" " -I" FREETYPE_INCLUDE_CFLAGS "-I${FREETYPE_INCLUDE_DIRS}")
     message(STATUS "FREETYPE_CFLAGS = ${FREETYPE_INCLUDE_CFLAGS}")
 
     message(STATUS "FREETYPE_LIBRARIES = ${FREETYPE_LIBRARIES}")
-  else (FREETYPE_FOUND)
+  else (Freetype_FOUND)
     set(WITH_FREETYPE OFF
       CACHE BOOL "Enable driver options for using freetype library for fonts"
       FORCE
       )
-  endif (FREETYPE_FOUND)
+  endif (Freetype_FOUND)
 endif (WITH_FREETYPE)
 
 if (WITH_FREETYPE)
@@ -101,21 +101,21 @@ if (WITH_FREETYPE)
       )
   endforeach(FONT_ENTRY PL_FREETYPE_FONT_LIST)
 
-  # Check a couple of fonts actually exists
-  if (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SANS})
-    if (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SYMBOL})
-    else (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SYMBOL})
-      message("Fonts not found - disabling freetype")
-      set(WITH_FREETYPE OFF CACHE BOOL
-	"Enable driver options for using freetype library for fonts" FORCE
-	)
-    endif (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SYMBOL})
-  else (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SANS})
-    message("Fonts not found - disabling freetype")
-    set(WITH_FREETYPE OFF CACHE BOOL
-      "Enable driver options for using freetype library for fonts" FORCE
-      )
-  endif (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SANS})
+###  # Check a couple of fonts actually exists
+###  if (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SANS})
+###    if (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SYMBOL})
+###    else (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SYMBOL})
+###      message("Fonts not found - disabling freetype")
+###      set(WITH_FREETYPE OFF CACHE BOOL
+###	"Enable driver options for using freetype library for fonts" FORCE
+###	)
+###    endif (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SYMBOL})
+###  else (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SANS})
+###    message("Fonts not found - disabling freetype")
+###    set(WITH_FREETYPE OFF CACHE BOOL
+###      "Enable driver options for using freetype library for fonts" FORCE
+###      )
+###  endif (EXISTS ${PL_FREETYPE_FONT_DIR}${PL_FREETYPE_SANS})
 
 endif (WITH_FREETYPE)
 

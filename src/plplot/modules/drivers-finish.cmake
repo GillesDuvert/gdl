@@ -90,8 +90,8 @@ foreach(DRIVERS_DEVICE ${DRIVERS_DEVICE_LIST})
       if(DRIVER STREQUAL "wxwidgets")
           set(${DRIVER}_SOURCE
             ${CMAKE_SOURCE_DIR}/src/plplot/drivers/deprecated_${DRIVER}.cpp
-            ${CMAKE_SOURCE_DIR}/src/plplot/drivers/deprecated_${DRIVER}_app.cpp
-            ${CMAKE_SOURCE_DIR}/src/plplot/drivers/deprecated_${DRIVER}_dc.cpp
+           # ${CMAKE_SOURCE_DIR}/src/plplot/drivers/deprecated_${DRIVER}_app.cpp #removed not used
+           # ${CMAKE_SOURCE_DIR}/src/plplot/drivers/deprecated_${DRIVER}_dc.cpp #removed not used
             ${CMAKE_SOURCE_DIR}/src/plplot/drivers/deprecated_${DRIVER}_gc.cpp
             ${${DRIVER}_SOURCE}
 	    )
