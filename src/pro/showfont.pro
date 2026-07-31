@@ -51,7 +51,7 @@
 ; (at your option) any later version.                                   
 ;-
 
-pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin
+pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, charsize=chrsz
   
     on_error, 2
   
@@ -64,6 +64,7 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin
   if not keyword_set(name) then name = ''
   if not keyword_set(offin) then offin = 0
   if not keyword_set(tt) then offin=0
+  if not keyword_set(chrsz) then chrsz=2
   ; save old decomposition
   device, get_decomposed=old
   device, decomposed=0
@@ -96,18 +97,23 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin
      ytickformat='(I8)',$
      xtitle='char mod ' + strtrim(string(base), 2), $
      ytitle=strtrim(string(base), 2) + ' * (char / ' + strtrim(string(base), 2) + ')'
-  ; plotting characters
+  ; conversion for characters
+  ; size of a character in user coord
+    correction=convert_coord(!D.X_CH_SIZE*chrsz,!D.Y_CH_SIZE*chrsz,0,/DEVICE,/TO_NORM)
+  ; ycorrespondence in data for normed value correction
+    sz=abs((!y.crange[1]-!y.crange[0])/(!Y.window[1]-!y.window[0]))*correction[1]
 
+  ; plotting characters
   if keyword_set(tt) then begin
      !P.FONT=1
      DEVICE, SET_FONT=num ;, /TT_FONT
      for i = offin, offin+255 do begin
         c=STRING(i, FORMAT='("!Z(",Z4.4,")")')
-        xyouts, (i mod base), base * (i / base), c,CHARSIZE=2
+        xyouts, (i mod base), base * (i / base) +sz/2 , c,CHARSIZE=chrsz
      end
   endif else begin
     for c = beg, fin do $
-      xyouts, (c mod base), base * (c / base), '!' + strtrim(string(num), 2) + string(byte(c)),CHARSIZE=2
+      xyouts, (c mod base), base * (c / base) +sz/2, '!' + strtrim(string(num), 2) + string(byte(c)),CHARSIZE=chrsz
   endelse
   ; reset
   !P.FONT=oldp
