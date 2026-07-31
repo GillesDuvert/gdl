@@ -719,7 +719,6 @@ typedef struct
 #define    plfill3                  c_plfill3
 #define    plflush                  c_plflush
 #define    plfont                   c_plfont
-#define    plfontld                 c_plfontld
 #define    plgchr                   c_plgchr
 #define    plgcmap1_range           c_plgcmap1_range
 #define    plgcol0                  c_plgcol0

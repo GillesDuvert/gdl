@@ -312,14 +312,6 @@ public:
 
     void flush( void );
 
-// Sets the global font flag to 'ifont'.
-
-    void font( PLINT ifont );
-
-// Load specified font set.
-
-    void fontld( PLINT fnt );
-
 // Get character default height and current (scaled) height.
 
     void gchr( PLFLT& p_def, PLFLT& p_ht );
@@ -355,10 +347,6 @@ public:
 // Retrieve current window into plot space.
 
     void gdiplt( PLFLT& xmin, PLFLT& ymin, PLFLT& xmax, PLFLT& ymax );
-
-// Get FCI (font characterization integer)
-
-    void gfci( PLUNICODE& pfci );
 
 // Get family file parameters.
 
@@ -759,10 +747,6 @@ public:
 // Set family file parameters
 
     void sfam( PLINT fam, PLINT num, PLINT bmax );
-
-// Set FCI (font characterization integer)
-
-    void sfci( PLUNICODE fci );
 
 // Set the output file name.
 

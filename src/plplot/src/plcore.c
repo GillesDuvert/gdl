@@ -1842,7 +1842,6 @@ c_plinit( void )
 // Load fonts
 
     plsc->cfont = 3;
-    plfntld( initfont );
 	plfntld2();
 
 // Set up subpages
@@ -2903,23 +2902,6 @@ plLoadDriver( void )
 #endif
 }
 
-//--------------------------------------------------------------------------
-// void plfontld()
-//
-// Load specified font set.
-//--------------------------------------------------------------------------
-
-void
-c_plfontld( PLINT ifont )
-{
-    if ( ifont != 0 )
-        ifont = 1;
-
-    if ( plsc->level > 0 )
-        plfntld( ifont );
-    else
-        initfont = ifont;
-}
 
 //--------------------------------------------------------------------------
 // void plreplot()

@@ -87,9 +87,6 @@ class DevicePS: public GraphicsDevice
     // no pause on destruction
     actStream->spause( false);
 
-    // extended fonts
-    actStream->fontld( 1);
-    
     PLINT r[ctSize], g[ctSize], b[ctSize];
     actCT.Get( r, g, b);
     actStream->SetColorMap0( r, g, b, ctSize);
@@ -132,8 +129,6 @@ class DevicePS: public GraphicsDevice
     // need to be called initially. permit to fix things
     actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
     actStream->plstream::adv(0); //-->this one is the 1st and only pladv
-    // load font
-    actStream->plstream::font(1);
     actStream->plstream::vpor(0, 1, 0, 1);
     actStream->plstream::wind(0, 1, 0, 1);
 

@@ -707,24 +707,6 @@ void plstream::flush()
     ::c_plflush();
 }
 
-// Sets the global font flag to 'ifont'.
-
-void plstream::font( PLINT ifont )
-{
-    set_stream();
-
-    plfont( ifont );
-}
-
-// Load specified font set.
-
-void plstream::fontld( PLINT fnt )
-{
-    set_stream();
-
-    plfontld( fnt );
-}
-
 // Get character default height and current (scaled) height.
 
 void plstream::gchr( PLFLT & p_def, PLFLT & p_ht )
@@ -804,15 +786,6 @@ void plstream::gdiplt( PLFLT & xmin, PLFLT & ymin, PLFLT & xmax, PLFLT & ymax )
     set_stream();
 
     plgdiplt( &xmin, &ymin, &xmax, &ymax );
-}
-
-// Get FCI (font characterization integer)
-
-void plstream::gfci( PLUNICODE & pfci )
-{
-    set_stream();
-
-    plgfci( &pfci );
 }
 
 // Get family file parameters.
@@ -1695,15 +1668,6 @@ void plstream::sfam( PLINT fam, PLINT num, PLINT bmax )
     plsfam( fam, num, bmax );
 }
 
-// Set FCI (font characterization integer)
-
-void plstream::sfci( PLUNICODE fci )
-{
-    set_stream();
-
-    plsfci( fci );
-}
-
 // Set the output file name.
 
 void plstream::sfnam( const char *fnam )
@@ -1720,15 +1684,6 @@ void plstream::sdevdata( void *data )
     set_stream();
 
     plsdevdata( data );
-}
-
-// Set the current font family, style and weight
-
-void plstream::sfont( PLINT family, PLINT style, PLINT weight )
-{
-    set_stream();
-
-    plsfont( family, style, weight );
 }
 
 // Shade region.

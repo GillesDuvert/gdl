@@ -69,8 +69,6 @@ static void     plLoadDriver( void );
 
 static PLINT xscl[PL_MAXPOLY], yscl[PL_MAXPOLY];
 
-static PLINT initfont = 1;      // initial font: extended by default
-
 static PLINT lib_initialized = 0;
 
 //--------------------------------------------------------------------------
