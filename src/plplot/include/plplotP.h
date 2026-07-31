@@ -1280,11 +1280,6 @@ plwytik( PLFLT x, PLFLT y, PLBOOL minor, PLBOOL invert );
 
 // get drivers directory
 
-#ifdef ENABLE_DYNDRIVERS
-PLDLLIMPEXP const char*
-plGetDrvDir( void );
-#endif
-
 #ifdef PL_HAVE_FREETYPE
 PLDLLIMPEXP void
 plD_FreeType_init( PLStream * );

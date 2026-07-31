@@ -44,14 +44,6 @@
 #define NEED_PLDEBUG
 #include "plcore.h"
 
-#ifdef ENABLE_DYNDRIVERS
-  #ifndef LTDL_WIN32
-    #include <ltdl.h>
-  #else
-    #include "ltdl_win32.h"
-  #endif
-#endif
-
 #if HAVE_DIRENT_H
 // The following conditional is a workaround for a bug in the MacOSX system.
 // When  the dirent.h file will be fixed upstream by Apple Inc, this should
@@ -1695,11 +1687,6 @@ pllib_init()
         return;
     lib_initialized = 1;
 
-#ifdef ENABLE_DYNDRIVERS
-// Create libltdl resources
-    lt_dlinit();
-#endif
-
 // Initialize the dispatch table with the info from the static drivers table
 // and the available dynamic drivers.
 
@@ -1921,30 +1908,7 @@ c_plend( void )
         }
     }
     plfontrel();
-#ifdef ENABLE_DYNDRIVERS
-// Release the libltdl resources
-    lt_dlexit();
-// Free up memory allocated to the dispatch tables
-    for ( i = 0; i < npldynamicdevices; i++ )
-    {
-        free_mem( loadable_device_list[i].devnam );
-        free_mem( loadable_device_list[i].description );
-        free_mem( loadable_device_list[i].drvnam );
-        free_mem( loadable_device_list[i].tag );
-    }
-    free_mem( loadable_device_list );
-    for ( i = 0; i < nloadabledrivers; i++ )
-    {
-        free_mem( loadable_driver_list[i].drvnam );
-    }
-    free_mem( loadable_driver_list );
-    for ( i = nplstaticdevices; i < npldrivers; i++ )
-    {
-        free_mem( dispatch_table[i]->pl_MenuStr );
-        free_mem( dispatch_table[i]->pl_DevName );
-        free_mem( dispatch_table[i] );
-    }
-#endif
+
     for ( i = 0; i < nplstaticdevices; i++ )
     {
         free_mem( dispatch_table[i] );
@@ -2298,8 +2262,6 @@ pllib_devinit()
 
     plSelectDev();
 
-    plLoadDriver();
-
 // offset by one since table is zero-based, but input list is not
     plsc->dispatch_table = dispatch_table[plsc->device - 1];
 }
@@ -2390,47 +2352,7 @@ int plInBuildTree()
     return inBuildTree;
 }
 
-#ifdef ENABLE_DYNDRIVERS
-
-PLCHAR_VECTOR
-plGetDrvDir()
-{
-    PLCHAR_VECTOR drvdir;
-
-// Get drivers directory in PLPLOT_DRV_DIR or DRV_DIR,
-//  on this order
-//
-
-    if ( plInBuildTree() == 1 )
-    {
-        drvdir = BUILD_DIR "/drivers";
-        pldebug( "plGetDrvDir", "Using %s as the driver directory.\n", drvdir );
-    }
-    else
-    {
-        pldebug( "plGetDrvDir", "Trying to read env var PLPLOT_DRV_DIR\n" );
-        drvdir = getenv( "PLPLOT_DRV_DIR" );
-
-        if ( drvdir == NULL )
-        {
-            pldebug( "plGetDrvDir",
-                "Will use drivers dir: " DRV_DIR "\n" );
-            drvdir = DRV_DIR;
-        }
-    }
-
-    return drvdir;
-}
-
-#endif
-
-
-//--------------------------------------------------------------------------
-// void plInitDispatchTable()
-//
-// ...
-//--------------------------------------------------------------------------
-
+// for sorting dispatch table
 static int plDispatchSequencer( const void *p1, const void *p2 )
 {
     const PLDispatchTable* t1 = *(const PLDispatchTable * const *) p1;
@@ -2447,103 +2369,10 @@ plInitDispatchTable()
 {
     int n;
 
-#ifdef ENABLE_DYNDRIVERS
-    char          buf[BUFFER2_SIZE];
-    PLCHAR_VECTOR drvdir;
-    char          *devnam, *devdesc, *devtype, *driver, *tag, *seqstr;
-    int           seq;
-    int           i, j, driver_found, done = 0;
-    FILE          *fp_drvdb   = NULL;
-    DIR           * dp_drvdir = NULL;
-    struct dirent * entry;
-    // lt_dlhandle dlhand;
-
-    // Make sure driver counts are zeroed
-    npldynamicdevices = 0;
-    nloadabledrivers  = 0;
-
-// Open a temporary file in which all the plD_DEVICE_INFO_<driver> strings
-// will be stored
-    fp_drvdb = pl_create_tempfile( NULL );
-    if ( fp_drvdb == NULL )
-    {
-        plabort( "plInitDispatchTable: Could not open temporary file" );
-        return;
-    }
-
-// Open the drivers directory
-    drvdir    = plGetDrvDir();
-    dp_drvdir = opendir( drvdir );
-    if ( dp_drvdir == NULL )
-    {
-        fclose( fp_drvdb );
-        plabort( "plInitDispatchTable: Could not open drivers directory" );
-        return;
-    }
-
-// Loop over each entry in the drivers directory
-
-    pldebug( "plInitDispatchTable", "Scanning dyndrivers dir\n" );
-    while ( ( entry = readdir( dp_drvdir ) ) != NULL )
-    {
-        char   * name = entry->d_name;
-        // Suffix .driver_info has a length of 12 letters.
-        size_t len = strlen( name ) - 12;
-
-        pldebug( "plInitDispatchTable",
-            "Consider file %s\n", name );
-
-// Only consider entries that have the ".driver_info" suffix
-        if ( ( len > 0 ) && ( strcmp( name + len, ".driver_info" ) == 0 ) )
-        {
-            char path[PLPLOT_MAX_PATH];
-            FILE * fd;
-
-// Open the driver's info file
-            snprintf( path, PLPLOT_MAX_PATH, "%s/%s", drvdir, name );
-            fd = fopen( path, "r" );
-            if ( fd == NULL )
-            {
-                closedir( dp_drvdir );
-                fclose( fp_drvdb );
-                snprintf( buf, BUFFER2_SIZE,
-                    "plInitDispatchTable: Could not open driver info file %s\n",
-                    name );
-                plabort( buf );
-                return;
-            }
-
-// Each line in the <driver>.driver_info file corresponds to a specific device.
-// Write it to the drivers db file and take care of leading newline
-// character
-
-            pldebug( "plInitDispatchTable",
-                "Opened driver info file %s\n", name );
-            while ( fgets( buf, BUFFER2_SIZE, fd ) != NULL )
-            {
-                fprintf( fp_drvdb, "%s", buf );
-                if ( buf [strlen( buf ) - 1] != '\n' )
-                    fprintf( fp_drvdb, "\n" );
-                npldynamicdevices++;
-            }
-            fclose( fd );
-        }
-    }
-
-// Make sure that the temporary file containing the drivers database
-// is ready to read and close the directory handle
-    fflush( fp_drvdb );
-    closedir( dp_drvdir );
-
-#endif
-
 // Allocate space for the dispatch table.
     if ( ( dispatch_table = (PLDispatchTable **)
                             malloc( (size_t) ( nplstaticdevices + npldynamicdevices ) * sizeof ( PLDispatchTable * ) ) ) == NULL )
     {
-#ifdef ENABLE_DYNDRIVERS
-        fclose( fp_drvdb );
-#endif
         plexit( "plInitDispatchTable: Insufficient memory" );
     }
 
@@ -2556,9 +2385,6 @@ plInitDispatchTable()
     {
         if ( ( dispatch_table[n] = (PLDispatchTable *) malloc( sizeof ( PLDispatchTable ) ) ) == NULL )
         {
-#ifdef ENABLE_DYNDRIVERS
-            fclose( fp_drvdb );
-#endif
             plexit( "plInitDispatchTable: Insufficient memory" );
         }
 
@@ -2570,100 +2396,6 @@ plInitDispatchTable()
         ( *static_device_initializers[n] )( dispatch_table[n] );
     }
     npldrivers = nplstaticdevices;
-
-#ifdef ENABLE_DYNDRIVERS
-
-// Allocate space for the device and driver specs.  We may not use all of
-// these driver descriptors, but we obviously won't need more drivers than
-// devices...
-    if ( ( ( loadable_device_list = malloc( (size_t) npldynamicdevices * sizeof ( PLLoadableDevice ) ) ) == NULL ) ||
-         ( ( loadable_driver_list = malloc( (size_t) npldynamicdevices * sizeof ( PLLoadableDriver ) ) ) == NULL ) )
-    {
-        fclose( fp_drvdb );
-        plexit( "plInitDispatchTable: Insufficient memory" );
-    }
-
-    rewind( fp_drvdb );
-
-    i    = 0;
-    done = !( i < npldynamicdevices );
-    while ( !done )
-    {
-        char *p = fgets( buf, BUFFER2_SIZE, fp_drvdb );
-
-        if ( p == 0 )
-        {
-            done = 1;
-            continue;
-        }
-
-        devnam  = strtok( buf, ":" );
-        devdesc = strtok( 0, ":" );
-        devtype = strtok( 0, ":" );
-        driver  = strtok( 0, ":" );
-        seqstr  = strtok( 0, ":" );
-        tag     = strtok( 0, "\n" );
-
-        if ( devnam == NULL || devdesc == NULL || devtype == NULL || driver == NULL ||
-             seqstr == NULL || tag == NULL )
-        {
-            continue; // Ill-formatted line, most probably not a valid driver information file
-        }
-
-        seq = atoi( seqstr );
-
-        n = npldrivers++;
-
-        if ( ( dispatch_table[n] = malloc( sizeof ( PLDispatchTable ) ) ) == NULL )
-        {
-            fclose( fp_drvdb );
-            plexit( "plInitDispatchTable: Insufficient memory" );
-        }
-
-        // Initialize to zero to force all function pointers to NULL.  That way optional capabilities
-        // (e.g. wait for user input) do not need to be explicitly set to NULL in the driver's
-        // initialization function nor do we need to do it in this function.
-        memset( dispatch_table[n], 0, sizeof ( PLDispatchTable ) );
-
-        // Fill in the dispatch table entries.
-        dispatch_table[n]->pl_MenuStr = plstrdup( devdesc );
-        dispatch_table[n]->pl_DevName = plstrdup( devnam );
-        dispatch_table[n]->pl_type    = atoi( devtype );
-        dispatch_table[n]->pl_seq     = seq;
-
-        // Add a record to the loadable device list
-        loadable_device_list[i].devnam      = plstrdup( devnam );
-        loadable_device_list[i].description = plstrdup( devdesc );
-        loadable_device_list[i].drvnam      = plstrdup( driver );
-        loadable_device_list[i].tag         = plstrdup( tag );
-
-        // Now see if this driver has been seen before.  If not, add a driver
-        // entry for it.
-        driver_found = 0;
-        for ( j = 0; j < nloadabledrivers; j++ )
-            if ( strcmp( driver, loadable_driver_list[j].drvnam ) == 0 )
-            {
-                driver_found = 1;
-                break;
-            }
-
-        if ( !driver_found )
-        {
-            loadable_driver_list[nloadabledrivers].drvnam = plstrdup( driver );
-            loadable_driver_list[nloadabledrivers].dlhand = 0;
-            nloadabledrivers++;
-        }
-
-        loadable_device_list[i].drvidx = j;
-
-        // Get ready for next loadable device spec
-        i++;
-    }
-
-// RML: close fp_drvdb
-    fclose( fp_drvdb );
-
-#endif
 
     if ( npldrivers == 0 )
     {
@@ -2789,119 +2521,6 @@ plSelectDev()
     plsc->device = dev;
     strcpy( plsc->DevName, dispatch_table[dev - 1]->pl_DevName );
 }
-
-//--------------------------------------------------------------------------
-// void plLoadDriver()
-//
-// Make sure the selected driver is loaded.  Static drivers are already
-// loaded, but if the user selected a dynamically loadable driver, we may
-// have to take care of that now.
-//--------------------------------------------------------------------------
-
-static void
-plLoadDriver( void )
-{
-#ifdef ENABLE_DYNDRIVERS
-    int  i, drvidx;
-    char sym[BUFFER_SIZE];
-    char *tag;
-
-    int  n = plsc->device - 1;
-    PLDispatchTable  *dev    = dispatch_table[n];
-    PLLoadableDriver *driver = 0;
-
-// If the dispatch table is already filled in, then either the device was
-// linked in statically, or else perhaps it was already loaded.  In either
-// case, we have nothing left to do.
-    if ( dev->pl_init )
-        return;
-
-    pldebug( "plLoadDriver", "Device not loaded!\n" );
-
-// Now search through the list of loadable devices, looking for the record
-// that corresponds to the requested device.
-    for ( i = 0; i < npldynamicdevices; i++ )
-        if ( strcmp( dev->pl_DevName, loadable_device_list[i].devnam ) == 0 )
-            break;
-
-// If we couldn't find such a record, then there is some sort of internal
-// logic flaw since plSelectDev is supposed to only select a valid device.
-//
-    if ( i == npldynamicdevices )
-    {
-        fprintf( stderr, "No such device: %s.\n", dev->pl_DevName );
-        plexit( "plLoadDriver detected device logic screwup" );
-    }
-
-// Note the device tag, and the driver index. Note that a given driver could
-// supply multiple devices, each with a unique tag to distinguish the driver
-// entry points for the different supported devices.
-    tag    = loadable_device_list[i].tag;
-    drvidx = loadable_device_list[i].drvidx;
-
-    pldebug( "plLoadDriver", "tag=%s, drvidx=%d\n", tag, drvidx );
-
-    driver = &loadable_driver_list[drvidx];
-
-// Load the driver if it hasn't been loaded yet.
-    if ( !driver->dlhand )
-    {
-        char drvspec[ DRVSPEC_SIZE ];
-#if defined ( LTDL_WIN32 ) || defined ( __CYGWIN__ )
-        snprintf( drvspec, DRVSPEC_SIZE, "%s", driver->drvnam );
-#else
-        snprintf( drvspec, DRVSPEC_SIZE, "%s/%s", plGetDrvDir(), driver->drvnam );
-#endif  // LTDL_WIN32
-
-        pldebug( "plLoadDriver", "Trying to load %s on %s\n",
-            driver->drvnam, drvspec );
-
-        driver->dlhand = lt_dlopenext( drvspec );
-
-        // A few of our drivers do not depend on other libraries.  So
-        // allow them to be completely removed by plend to give clean
-        // valgrind results.  However, the (large) remainder of our
-        // drivers do depend on other libraries so mark them resident
-        // to prevent problems with atexit handlers / library
-        // reinitialisation such as those seen with qt and cairo
-        // drivers.
-        if ( !( strcmp( driver->drvnam, "mem" ) == 0 ||
-                strcmp( driver->drvnam, "null" ) == 0 ||
-                strcmp( driver->drvnam, "plmeta" ) == 0 ||
-                strcmp( driver->drvnam, "ps" ) == 0 ||
-                strcmp( driver->drvnam, "svg" ) == 0 ||
-                strcmp( driver->drvnam, "xfig" ) == 0 ) )
-            lt_dlmakeresident( driver->dlhand );
-    }
-
-// If it still isn't loaded, then we're doomed.
-    if ( !driver->dlhand )
-    {
-        pldebug( "plLoadDriver", "lt_dlopenext failed because of "
-            "the following reason:\n%s\n", lt_dlerror() );
-        fprintf( stderr, "Unable to load driver: %s.\n", driver->drvnam );
-        plexit( "Unable to load driver" );
-    }
-
-// Now we are ready to ask the driver's device dispatch init function to
-// initialize the entries in the dispatch table.
-
-    snprintf( sym, BUFFER_SIZE, "plD_dispatch_init_%s", tag );
-    {
-        PLDispatchInit dispatch_init = (PLDispatchInit) lt_dlsym( driver->dlhand, sym );
-        if ( !dispatch_init )
-        {
-            fprintf( stderr,
-                "Unable to locate dispatch table initialization function for driver: %s.\n",
-                driver->drvnam );
-            return;
-        }
-
-        ( *dispatch_init )( dev );
-    }
-#endif
-}
-
 
 //--------------------------------------------------------------------------
 // void plreplot()

@@ -441,10 +441,8 @@ void plD_dispatch_init_wxwidgets( PLDispatchTable *pdt )
 {
     currDispatchTab=pdt;
     Status3D=0;
-#ifndef ENABLE_DYNDRIVERS
     pdt->pl_MenuStr = "wxWidgets DC";
     pdt->pl_DevName = "wxwidgets";
-#endif
     pdt->pl_type     = plDevType_Interactive;
     pdt->pl_seq      = 51;
     pdt->pl_init     = (plD_init_fp) plD_init_wxwidgets;
@@ -489,10 +487,8 @@ void plD_init_wxwidgets( PLStream* pls )
 //--------------------------------------------------------------------------
 void plD_dispatch_init_wxpng( PLDispatchTable *pdt )
 {
-#ifndef ENABLE_DYNDRIVERS
     pdt->pl_MenuStr = "wxWidgets PNG driver";
     pdt->pl_DevName = "wxpng";
-#endif
     pdt->pl_type     = plDevType_FileOriented;
     pdt->pl_seq      = 52;
     pdt->pl_init     = (plD_init_fp) plD_init_wxpng;

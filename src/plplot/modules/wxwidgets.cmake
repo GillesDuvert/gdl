@@ -28,8 +28,7 @@
 # 			    linker flags for dynamic wxwidgets device driver.
 # wxwidgets_RPATH	  - rpath (if needed) for anything linked to the
 #                           wxwidgets libraries.
-# DRIVERS_LINK_FLAGS  	  - list of device LINK_FLAGS for case
-# 			    when ENABLE_DYNDRIVERS OFF.
+# DRIVERS_LINK_FLAGS  	  - list of device LINK_FLAGS 
 # Find wxWidgets needed for driver and binding
 
 if(PLD_wxwidgets)

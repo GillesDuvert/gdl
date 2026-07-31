@@ -98,7 +98,6 @@ set(
 _output_results
 "${_output_results}
 
-ENABLE_DYNDRIVERS:	${ENABLE_DYNDRIVERS}
 DRIVERS_LIST: ${DRIVERS_LIST}
 DEVICES_LIST: ${DEVICES_LIST}
 

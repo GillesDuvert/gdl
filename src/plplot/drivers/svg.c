@@ -135,10 +135,8 @@ void plD_dispatch_init_svg( PLDispatchTable *pdt )
 {
   currDispatchTab = pdt;
   Status3D = 0;
-#ifndef ENABLE_DYNDRIVERS
     pdt->pl_MenuStr = "Scalable Vector Graphics (SVG 1.1)";
     pdt->pl_DevName = "svg";
-#endif
     pdt->pl_type     = plDevType_FileOriented;
     pdt->pl_seq      = 57;
     pdt->pl_init     = (plD_init_fp) plD_init_svg;
