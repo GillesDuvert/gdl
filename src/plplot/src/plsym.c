@@ -92,11 +92,7 @@ int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 static void
 pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode);
 static void
-plchar( signed char *xygrid, PLFLT *xform, PLINT base, 
-        PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
-        PLFLT *p_xorg, PLFLT *p_yorg, PLFLT *p_width );
-static void
-plchar2( short *xygrid, int len, PLFLT *xform, PLINT base, 
+plchar( short *xygrid, int len, PLFLT *xform, PLINT base, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width );
 static PLINT
@@ -1002,14 +998,8 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 							break; // do not draw anything
 						}
 						charPoints = &(hersheyFontVectors[ifont][offset]);
-						plchar2(charPoints, nvecs, xform, base, refx, refy, scale,
+						plchar(charPoints, nvecs, xform, base, refx, refy, scale,
 								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
-						/*
-											if ( plcvec(ch, &vxygrid)) { 
-												plchar(vxygrid, xform, base, refx, refy, scale,
-														plsc->xpmm, plsc->ypmm, &xorg, &yorg, &width);
-											}
-						 */
 					}
 					if (revert) {
 						revert = 0;
@@ -1034,7 +1024,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 // Plots out a given stroke font character.
 //--------------------------------------------------------------------------
 static void
-plchar2( short *vects, int len, PLFLT *xform, PLINT base, 
+plchar( short *vects, int len, PLFLT *xform, PLINT base, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
@@ -1087,81 +1077,6 @@ plchar2( short *vects, int len, PLFLT *xform, PLINT base,
 	free(llx);
 	free(lly);
     *p_xorg = *p_xorg + width * scale;
-}
-static void
-plchar( signed char *vxygrid, PLFLT *xform, PLINT base, 
-        PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
-        PLFLT *p_xorg, PLFLT *p_yorg, PLFLT *p_width )
-{
-    PLINT xbase, ybase, ydisp, lx, ly, cx, cy;
-    PLINT k, penup;
-    PLFLT x, y;
-    PLINT llx[STLEN], lly[STLEN], l = 0;
-    xbase    = vxygrid[2];
-    *p_width = vxygrid[3] - xbase;
-    if ( base == 0 )
-    {
-        ybase = 0;
-        ydisp = vxygrid[0];
-    }
-    else
-    {
-        ybase = vxygrid[0];
-        ydisp = 0;
-	}
-	printf("xbase = %d, ybase = %d, p_width=%f\n",xbase,ybase,*p_width);
-	
-    k     = 4;
-    penup = 1;
-
-    for (;; )
-    {
-        cx = vxygrid[k++];
-        cy = vxygrid[k++];
-        if ( cx == 64 && cy == 64 )
-        {
-            if ( l )
-            {
-                plP_draphy_poly( llx, lly, l );
-                l = 0;
-            }
-            break;
-        }
-        if ( cx == 64 && cy == 0 )
-        {
-            if ( l )
-            {
-                plP_draphy_poly( llx, lly, l );
-                l = 0;
-            }
-            penup = 1;
-        }
-        else
-        {
-            x  = *p_xorg + ( cx - xbase ) * scale;
-            y  = *p_yorg + ( cy - ybase ) * scale;
-            lx = refx + ROUND( xpmm * ( xform[0] * x + xform[1] * y ) );
-            ly = refy + ROUND( ypmm * ( xform[2] * x + xform[3] * y ) );
-            if ( penup == 1 )
-            {
-                if ( l )
-                {
-                    plP_draphy_poly( llx, lly, l );
-                    l = 0;
-                }
-                llx[l]   = lx;
-                lly[l++] = ly; // store 1st point !
-                plP_movphy( lx, ly );
-                penup = 0;
-            }
-            else
-            {
-                llx[l]   = lx;
-                lly[l++] = ly;
-            }
-        }
-    }
-    *p_xorg = *p_xorg + *p_width * scale;
 }
 
 //--------------------------------------------------------------------------
