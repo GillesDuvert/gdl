@@ -2108,11 +2108,11 @@ void plstream::syax( PLINT digmax, PLINT digits )
 
 // Plots array y against x for n points using Hershey symbol "code"
 
-void plstream::sym( PLINT n, const PLFLT *x, const PLFLT *y, PLINT code )
+void plstream::sym_remove( PLINT n, const PLFLT *x, const PLFLT *y, PLINT code )
 {
     set_stream();
 
-    plsym( n, x, y, code );
+    plsym_remove( n, x, y, code );
 }
 
 // Set z axis labeling parameters

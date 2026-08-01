@@ -850,7 +850,7 @@ typedef struct
 #define    plsvpa                   c_plsvpa
 #define    plsxax                   c_plsxax
 #define    plsyax                   c_plsyax
-#define    plsym                    c_plsym
+#define    plsym_remove                    c_plsym_remove
 #define    plszax                   c_plszax
 #define    pltext                   c_pltext
 #define    pltimefmt                c_pltimefmt
@@ -2015,7 +2015,7 @@ c_plsyax( PLINT digmax, PLINT digits );
 // Plots array y against x for n points using Hershey symbol "code"
 
 PLDLLIMPEXP void
-c_plsym( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
+c_plsym_remove( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
 
 // Set z axis labeling parameters
 

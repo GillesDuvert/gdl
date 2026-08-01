@@ -78,10 +78,10 @@ static long   indxleng;
 static short       fontloaded = 0;
 // moved to plstr.h, plsc->cfont  static PLINT font = 1;  current font
 
-#define PLMAXSTR    300
+//#define PLMAXSTR    300
 #define STLEN       250
 
-static PLUNICODE symbol_buffer[PLMAXSTR];
+//static PLUNICODE symbol_buffer[PLMAXSTR];
 static signed char xygrid[STLEN];
 
 int hershey2unicode( int in );
@@ -99,7 +99,7 @@ static PLINT
 plcvec( PLINT ch, signed char **xygr );
 
 static void
-plhrsh2( PLINT ch, PLINT x, PLINT y );
+plhrsh2_remove( PLINT ch, PLINT x, PLINT y );
 
 //--------------------------------------------------------------------------
 //! Plot a glyph at the specified points.  (This function largely
@@ -139,7 +139,7 @@ c_plstring( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLCHAR_VECTOR string )
 //--------------------------------------------------------------------------
 
 void
-c_plsym( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code )
+c_plsym_remove( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code )
 {
     PLINT i;
     PLFLT xt, yt;
@@ -158,7 +158,7 @@ c_plsym( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code )
     for ( i = 0; i < n; i++ )
     {
         TRANSFORM( x[i], y[i], &xt, &yt );
-        plhrsh( code, plP_wcpcx( xt ), plP_wcpcy( yt ) );
+        plhrsh_remove( code, plP_wcpcx( xt ), plP_wcpcy( yt ) );
     }
 }
 
@@ -218,7 +218,7 @@ c_plpoin( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code )
         for ( i = 0; i < n; i++ )
         {
             TRANSFORM( x[i], y[i], &xt, &yt );
-            plhrsh( sym, plP_wcpcx( xt ), plP_wcpcy( yt ) );
+            plhrsh_remove( sym, plP_wcpcx( xt ), plP_wcpcy( yt ) );
         }
     }
 }
@@ -295,7 +295,7 @@ c_plpoin3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT code )
             {
                 u = plP_wcpcx( plP_w3wcx( x[i], y[i], z[i] ) );
                 v = plP_wcpcy( plP_w3wcy( x[i], y[i], z[i] ) );
-                plhrsh( sym, (PLINT) u, (PLINT) v );
+                plhrsh_remove( sym, (PLINT) u, (PLINT) v );
             }
         }
     }
@@ -370,7 +370,7 @@ c_plstring3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLCHAR_VEC
 //--------------------------------------------------------------------------
 
 void
-plhrsh( PLINT ch, PLINT x, PLINT y )
+plhrsh_remove( PLINT ch, PLINT x, PLINT y )
 {
     EscText   args;
     int       idx;
@@ -399,7 +399,7 @@ plhrsh( PLINT ch, PLINT x, PLINT y )
         if ( ( unicode_char == 0 ) || ( idx == -1 ) )
         {
 #ifndef PL_TEST_FOR_MISSING_GLYPHS
-            plhrsh2( ch, x, y );
+            plhrsh2_remove( ch, x, y );
 #endif
         }
         else
@@ -475,7 +475,7 @@ plhrsh( PLINT ch, PLINT x, PLINT y )
     }
     else
     {
-        plhrsh2( ch, x, y );
+        plhrsh2_remove( ch, x, y );
     }
 }
 
@@ -486,7 +486,7 @@ plhrsh( PLINT ch, PLINT x, PLINT y )
 //--------------------------------------------------------------------------
 
 static void
-plhrsh2( PLINT ch, PLINT x, PLINT y )
+plhrsh2_remove( PLINT ch, PLINT x, PLINT y )
 {
     PLINT       cx, cy, k, penup, style;
     signed char *vxygrid = 0;
@@ -990,6 +990,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 							break;
 						}
 						if (hersheyNumberChars[ifont] == 0) break;
+						if ((ch-32) > hersheyNumberChars[ifont]) break;
 						int offset = hersheyFontLookupStruct[ifont][ch - 32].offset;
 						int nvecs = hersheyFontLookupStruct[ifont][ch - 32].nvecs;
 						width = hersheyFontLookupStruct[ifont][ch - 32].width;
@@ -1316,7 +1317,7 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode)
 {
     PLUNICODE     ch, ifont = plsc->cfont;
 	PLINT ig, j = 0, lentxt = (PLINT) strlen( text );
-    char      test, esc;
+    unsigned char      test, esc;
 
 #define SPACE 32
 	// Initialize parameters.
@@ -1330,14 +1331,8 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode)
 
     while ( j < lentxt )
     {
-        if ( *length >= PLMAXSTR )
-            return;
         test = text[j++];
         ch   = test;
-        if ( ch < 0 || ch > 175 )
-            ch = SPACE;
-
-        // Test for escape sequence (#)
 
         if ( ch == esc && ( lentxt - j ) >= 1 )
         {
@@ -1417,6 +1412,8 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode)
 						sym[*length] = 0;
 						while ( text[j] != ')' && ( lentxt - j ) >= 1 ) 
 						{
+							if ( text[j] == SPACE ) {j++;continue;}
+							if ( text[j] == ',' ) {j++; ( *length )++; sym[*length] = 0; continue;}
 							if ( '0' <= text[j] && text[j] <= '9' )	sym[*length] = (PLUNICODE) ( (int) sym[*length] * 16 + text[j] - '0' );
 							else if ( 'A' <= text[j] && text[j] <= 'F' )	sym[*length] = (PLUNICODE) ( (int) sym[*length] * 16 + 10 + text[j] - 'A' );
 							else if ( 'a' <= text[j] && text[j] <= 'f' )	sym[*length] = (PLUNICODE) ( (int) sym[*length] * 16 + 10 + text[j] - 'a' );
@@ -1435,179 +1432,10 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode)
 			if (ifont < 3) ifont=3;
 			if (ifont > numberfonts) ifont = 3;
 		} else {
-/*
-				if (ch == SPACE) sym[( *length )++] = SP; else sym[( *length )++] = doUnicode? gdlHersheyToUnicode (fontindex[ifont][ch-32]) : *(fntlkup + ( ifont - 1 ) * numberchars + ch );
-*/
-				if (ch == SPACE) sym[( *length )++] = SP; else sym[( *length )++] = doUnicode? gdlHersheyToUnicode (fontindex[ifont][ch-32]) : ch; // + ( ifont - 1 ) * numberchars + ch );
+				if (ch == SPACE) sym[( *length )++] = SP; else sym[( *length )++] = ch;
 		}
     }
 }
-
-static void
-pldecoNEW(PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode) {
-	PLUNICODE ch, ifont = plsc->cfont;
-	PLINT ig, j = 0, lentxt = (PLINT) strlen(text);
-	char test, esc;
-
-#define SPACE 32
-	// Initialize parameters.
-
-	*length = 0;
-
-	plgesc(&esc);
-	if (ifont > numberfonts || ifont < 3) {
-		plsc->cfont = 3;
-		ifont = 3;
-	}
-
-	// Get next character; treat non-printing characters as spaces.
-
-	while (j < lentxt) {
-		if (*length >= PLMAXSTR)
-			return;
-		test = text[j++];
-		ch = test;
-		if (ch < 0 || ch > 175)
-			ch = SPACE;
-
-		// Test for escape sequence (#)
-
-		if (ch == esc && (lentxt - j) >= 1) {
-			test = text[j++];
-			switch (test) {
-				case 0x21: sym[(*length)++] = doUnicode ? test: fontindex[ifont][test - 32];
-					break; //gdlHersheyToUnicode ( fontindex[ifont][test-32]):*( fntlkup + ( ifont - 1 ) * numberchars + ch ); break;
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-					ifont = (test - '0');
-					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
-					break;
-				case '1':
-					ifont = (test - '0');
-					test = text[j++];
-					switch (test) {
-						case '0':
-						case '1':
-						case '2':
-						case '3':
-						case '4':
-						case '5':
-						case '6':
-						case '7':
-						case '8':
-						case '9':
-							ifont *= 10;
-							ifont += (test - '0');
-							break;
-						default:
-							j--;
-					}
-					if (ifont < 3) ifont = 3;
-					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
-					break;
-				case '2':
-					ifont = 2;
-					test = text[j++];
-					switch (test) {
-						case '0':
-							ifont = 20;
-							break;
-						default:
-							j--;
-					}
-					if (ifont < 3) ifont = 3;
-					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
-					break;
-				case 'M':
-				case 'm':
-					test = text[j++];
-					sym[(*length)++] = doUnicode ? test : fontindex[9][test - 32];
-					break; //gdlHersheyToUnicode (fontindex[9][test-32]) : *( fntlkup + ( 9 - 1 ) * numberchars + test);break;
-				case 'G':
-				case 'g':
-					ifont = 11;
-					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
-					break;
-				case 'W':
-				case 'w':
-					ifont = 12;
-					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
-					break;
-				case 'V':
-				case 'v':
-					test = text[j++];
-					sym[(*length)++] = doUnicode ? test : fontindex[20][test - 32];
-					break; //gdlHersheyToUnicode (fontindex[20][test-32]) : *( fntlkup + ( 20 - 1 ) * numberchars + test );break;
-				case 'X':
-				case 'x':
-					ifont = plsc->cfont;
-					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
-					break;
-				case 'A': case 'a':sym[(*length)++] = A;
-					break;
-				case 'B': case 'b':sym[(*length)++] = B;
-					break;
-				case 'C': case 'c':sym[(*length)++] = C;
-					break;
-				case 'D': case 'd':sym[(*length)++] = D;
-					break;
-				case 'E': case 'e':sym[(*length)++] = E;
-					break;
-				case 'I': case 'i':sym[(*length)++] = I;
-					break;
-				case 'L': case 'l':sym[(*length)++] = L;
-					break;
-				case 'N': case 'n':sym[(*length)++] = N;
-					break;
-				case 'R': case 'r':sym[(*length)++] = R;
-					break;
-				case 'S': case 's':sym[(*length)++] = S;
-					break;
-				case 'U': case 'u':sym[(*length)++] = U;
-					break;
-				case 'Z': case 'z':
-					test = text[j++];
-					if (test == '(') {
-						sym[*length] = 0;
-						while (text[j] != ')' && (lentxt - j) >= 1) {
-							if ('0' <= text[j] && text[j] <= '9') sym[*length] = (PLUNICODE) ((int) sym[*length] * 16 + text[j] - '0');
-							else if ('A' <= text[j] && text[j] <= 'F') sym[*length] = (PLUNICODE) ((int) sym[*length] * 16 + 10 + text[j] - 'A');
-							else if ('a' <= text[j] && text[j] <= 'f') sym[*length] = (PLUNICODE) ((int) sym[*length] * 16 + 10 + text[j] - 'a');
-							j++;
-						}
-						(*length)++;
-						if (text[j] == ')') j++;
-						else {
-							fprintf(stderr, "Error using Hershey characters: Parentheses required for !Z\n");
-							return;
-						}
-					} else j--;
-					break;
-				default:
-					break;
-			}
-			if (ifont < 3) ifont = 3;
-			if (ifont > numberfonts) ifont = 3;
-		} else {
-			if (ch == SPACE) sym[(*length)++] = SP;
-			else sym[(*length)++] = doUnicode ? test : fontindex[ifont][ch - 32];
-			break; //gdlHersheyToUnicode (fontindex[ifont][ch-32]) : *( fntlkup + ( ifont - 1 ) * numberchars + ch );
-		}
-	}
-}
-//--------------------------------------------------------------------------
-// PLINT plP_strpos()
-//
-// Searches string str for first occurence of character chr.  If found
-// the position of the character in the string is returned (the first
-// character has position 0).  If the character is not found a -1 is
-// returned.
-//--------------------------------------------------------------------------
 
 PLINT
 plP_strpos( PLCHAR_VECTOR str, int chr )
@@ -1731,9 +1559,10 @@ plP_script_scale( PLBOOL ifupper, PLINT *level,
 
 #include <fcntl.h>
 
-void plfntld2() {
+void plfntld(char* file) {
 	long mask = 0x7fffffffUL;
-	int fd = open("/usr/local/share/gnudatalanguage/hersh1.chr", O_RDONLY);
+	int fd = open(file, O_RDONLY);
+	if (fd == -1) {printf("No fontfile %s available, exiting.\n",file); exit(1);}
 	numberfonts = NUMBERHERSHEYFONTS;
 	if (HersheyFontTableDirectory == NULL) HersheyFontTableDirectory = calloc(NUMBERHERSHEYFONTS * 2, sizeof (int32_t));
 	// Read HersheyFontTableDirectory[]	
@@ -1757,7 +1586,9 @@ void plfntld2() {
 		CTAB* ctab = (CTAB*) malloc(hersheyNumberChars[ifont] * sizeof (CTAB));
 		hersheyFontLookupStruct[ifont] = ctab; //memorize this
 		off_t pos = lseek(fd, HersheyFontTableDirectory[2 * ifont] & 0x0fffffffUL, SEEK_SET);
-		//printf("ifont=%d nchars=%d pos=%d,",ifont,hersheyNumberChars[ifont],pos); printf("\n");
+/*
+		printf("ifont=%d nchars=%d pos=%d,",ifont,hersheyNumberChars[ifont],pos); printf("\n");
+*/
 		ssize_t n = read(fd, ctab, hersheyNumberChars[ifont] * sizeof (CTAB)); //printf("read: %d\n",n);
 		int k = 0; //Current offset
 		for (int i = 0; i < hersheyNumberChars[ifont]; ++i) { //Un swap shorts

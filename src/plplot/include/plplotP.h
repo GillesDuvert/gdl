@@ -613,12 +613,10 @@ plwarn( PLCHAR_VECTOR errormsg );
 PLDLLIMPEXP void
 plabort( PLCHAR_VECTOR errormsg );
 
-// Loads either the standard or extended font.
+// Loads the font.
 
 void
-plfntld( PLINT fnt );
-void
-plfntld2();
+plfntld();
 // Release memory for fonts.
 
 void
@@ -695,7 +693,7 @@ plrestore_locale( char * save_lc_numeric_locale );
 
 // Writes the Hershey symbol "ch" centred at the physical coordinate (x,y).
 void
-plhrsh( PLINT ch, PLINT x, PLINT y );
+plhrsh_remove( PLINT ch, PLINT x, PLINT y );
 
 // where should structure definitions that must be seen by drivers and core source files, be?
 
@@ -1249,7 +1247,7 @@ plP_FreeDrvOpts( void );
 
 // Convert a ucs4 unichar to utf8 char string
 PLDLLIMPEXP int
-ucs4_to_utf8( PLUNICODE unichar, char *ptr );
+ucs4_to_utf8(unsigned char *ptr_to_utf , PLUNICODE unichar );
 
 //
 // Wrapper functions for the system IO routines fread, fwrite

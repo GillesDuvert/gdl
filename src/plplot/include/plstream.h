@@ -962,7 +962,7 @@ public:
 
 // Plots array y against x for n points using Hershey symbol "code"
 
-    void sym( PLINT n, const PLFLT *x, const PLFLT *y, PLINT code );
+    void sym_remove( PLINT n, const PLFLT *x, const PLFLT *y, PLINT code );
 
 // Set z axis labeling parameters
 

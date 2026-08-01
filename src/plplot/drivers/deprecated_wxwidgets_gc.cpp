@@ -320,7 +320,7 @@ void wxPLDevGC::SetExternalBuffer( void* dc )
 }
 
 
-void wxPLDevGC::PSDrawTextToDC( char* utf8_string, bool drawText )
+void wxPLDevGC::PSDrawTextToDC(unsigned char* utf8_string, bool drawText )
 {
     // Log_Verbose( "%s", __FUNCTION__ );
 
@@ -384,7 +384,6 @@ void wxPLDevGC::PSDrawTextToDC( char* utf8_string, bool drawText )
     else
         textHeight = textHeight > h ? textHeight : static_cast<int>( h );
 
-    memset( utf8_string, '\0', max_string_length );
 }
 
 
@@ -458,13 +457,6 @@ void wxPLDevGC::ProcessString( PLStream* pls, EscText* args )
     if ( args->unicode_array_len == 0 )
     {
         printf( "Non unicode string passed to a cairo driver, ignoring\n" );
-        return;
-    }
-
-    // Check that unicode string isn't longer then the max we allow
-    if ( args->unicode_array_len >= max_string_length )
-    {
-        printf( "Sorry, the wxWidgets drivers only handles strings of length < %d\n", max_string_length );
         return;
     }
 

@@ -231,9 +231,8 @@ void wxPLDevBase::PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText )
 {
     int  i = 0;
 
-    char utf8_string[max_string_length];
-    char utf8[5];
-    memset( utf8_string, '\0', max_string_length );
+    unsigned char utf8_string[ucs4Len*4];
+    memset( utf8_string, '\0', ucs4Len*4 );
 
     // Get PLplot escape character
     char plplotEsc;
@@ -245,35 +244,19 @@ void wxPLDevBase::PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText )
     superscriptHeight = 0;
     subscriptDepth    = 0;
 
+    int l=0;
+    int pos=0;
     while ( i < ucs4Len )
     {
         if ( ucs4[i] < PRIVATE_UNICODE_PLANE )                // not a font change
         {
-            if ( ucs4[i] != (PLUNICODE) plplotEsc ) // a character to display
-            {
-                ucs4_to_utf8( ucs4[i], utf8 );
-                strncat( utf8_string, utf8,
-                    sizeof ( utf8_string ) - strlen( utf8_string ) - 1 );
-                i++;
-                continue;
-            }
+            l=ucs4_to_utf8(&utf8_string[pos], ucs4[i]);  pos+=l;
             i++;
-            if ( ucs4[i] == (PLUNICODE) plplotEsc ) // a escape character to display
-            {
-                ucs4_to_utf8( ucs4[i], utf8 );
-                strncat( utf8_string, utf8,
-                    sizeof ( utf8_string ) - strlen( utf8_string ) - 1 );
-                i++;
-                continue;
-            }
-            else
-            {
-            }
         }
         else // a font change
         {
             // draw string so far
-            PSDrawTextToDC( utf8_string, drawText );
+            PSDrawTextToDC( utf8_string, drawText ); pos=0;
 
             // get new font
             fci = ucs4[i]-PRIVATE_UNICODE_PLANE;
@@ -282,7 +265,7 @@ void wxPLDevBase::PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText )
         }
     }
 
-    PSDrawTextToDC( utf8_string, drawText );
+    PSDrawTextToDC( utf8_string, drawText );pos=0;
 }
 
 

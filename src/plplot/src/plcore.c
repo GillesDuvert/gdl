@@ -748,54 +748,41 @@ utf8_to_ucs4( PLCHAR_VECTOR ptr, PLUNICODE *unichar )
 
 // convert ucs4 unichar to utf8 string
 int
-ucs4_to_utf8( PLUNICODE unichar, char *ptr )
+ucs4_to_utf8( unsigned char* utf8, PLUNICODE unichar )
 {
-    unsigned char *tmp;
     int           len;
-
-    tmp = (unsigned char *) ptr;
 
     if ( ( unichar & 0xffff80 ) == 0 ) // single byte
     {
-        *tmp = (unsigned char) unichar;
-        tmp++;
+        *utf8++ = (unsigned char) unichar;
         len = 1;
     }
     else if ( ( unichar & 0xfff800 ) == 0 ) // two bytes
     {
-        *tmp = (unsigned char) 0xc0 | (unsigned char) ( unichar >> 6 );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( unichar & (PLUINT) 0x3f ) );
-        tmp++;
+        *utf8++ = (unsigned char) 0xc0 | (unsigned char) ( unichar >> 6 );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( unichar & (PLUINT) 0x3f ) );
         len = 2;
     }
     else if ( ( unichar & 0xff0000 ) == 0 ) // three bytes
     {
-        *tmp = (unsigned char) 0xe0 | (unsigned char) ( unichar >> 12 );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | ( (unsigned char) unichar & 0x3f ) );
-        tmp++;
+        *utf8++ = (unsigned char) 0xe0 | (unsigned char) ( unichar >> 12 );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
+        *utf8++ = (unsigned char) ( 0x80 | ( (unsigned char) unichar & 0x3f ) );
         len = 3;
     }
     else if ( ( unichar & 0xe0000 ) == 0 ) // four bytes
     {
-        *tmp = (unsigned char) 0xf0 | (unsigned char) ( unichar >> 18 );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 12 ) & 0x3f ) );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( unichar & 0x3f ) );
-        tmp++;
+        *utf8++ = (unsigned char) 0xf0 | (unsigned char) ( unichar >> 18 );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 12 ) & 0x3f ) );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( unichar & 0x3f ) );
         len = 4;
     }
     else  // Illegal coding
     {
         len = 0;
     }
-    *tmp = '\0';
+    *utf8 = '\0';
 
     return len;
 }
@@ -1829,7 +1816,7 @@ c_plinit( void )
 // Load fonts
 
     plsc->cfont = 3;
-	plfntld2();
+	plfntld("/usr/local/share/gnudatalanguage/hersh1.chr");
 
 // Set up subpages
 

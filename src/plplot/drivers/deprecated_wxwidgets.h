@@ -103,7 +103,7 @@ public: // methods
     virtual void SetExternalBuffer( void* buffer ) = 0;
     virtual void ProcessString( PLStream* pls, EscText* args ) = 0;
     virtual void PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText );
-    virtual void PSDrawTextToDC( char* utf8_string, bool drawText ) = 0;
+    virtual void PSDrawTextToDC(unsigned char* utf8_string, bool drawText ) = 0;
     virtual void PSSetFont( PLUNICODE fci, PLFLT scale=1) = 0;
 
 public: // variables
@@ -149,7 +149,6 @@ public: // variables
     wxBitmapType bitmapType;
 
     // font variables
-    static const int max_string_length = 500;
     bool             underlined;
     double           fontSize;
     double           fontScale;
@@ -184,7 +183,7 @@ public: // methods
     void SetColor1( PLStream *pls );
     void SetExternalBuffer( void* buffer );
     void ProcessString( PLStream* pls, EscText* args );
-    void PSDrawTextToDC( char* utf8_string, bool drawText );
+    void PSDrawTextToDC(unsigned char* utf8_string, bool drawText );
     void PSSetFont( PLUNICODE fci, PLFLT scale=1 );
 
 private: // variables
