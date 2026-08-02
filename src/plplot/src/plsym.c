@@ -99,7 +99,7 @@ static PLINT
 plcvec( PLINT ch, signed char **xygr );
 
 static void
-plhrsh2_remove( PLINT ch, PLINT x, PLINT y );
+plhrsh2( PLINT ch, PLINT x, PLINT y );
 
 //--------------------------------------------------------------------------
 //! Plot a glyph at the specified points.  (This function largely
@@ -185,7 +185,7 @@ c_plpoin( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code )
         for ( i = 0; i < n; i++ )
         {
             TRANSFORM( x[i], y[i], &xt, &yt );
-            plhrsh_remove( sym, plP_wcpcx( xt ), plP_wcpcy( yt ) );
+            plhrsh( sym, plP_wcpcx( xt ), plP_wcpcy( yt ) );
         }
     }
 }
@@ -262,7 +262,7 @@ c_plpoin3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT code )
             {
                 u = plP_wcpcx( plP_w3wcx( x[i], y[i], z[i] ) );
                 v = plP_wcpcy( plP_w3wcy( x[i], y[i], z[i] ) );
-                plhrsh_remove( sym, (PLINT) u, (PLINT) v );
+                plhrsh( sym, (PLINT) u, (PLINT) v );
             }
         }
     }
@@ -337,7 +337,7 @@ c_plstring3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLCHAR_VEC
 //--------------------------------------------------------------------------
 
 void
-plhrsh_remove( PLINT ch, PLINT x, PLINT y )
+plhrsh( PLINT ch, PLINT x, PLINT y )
 {
     EscText   args;
     int       idx;
@@ -366,7 +366,7 @@ plhrsh_remove( PLINT ch, PLINT x, PLINT y )
         if ( ( unicode_char == 0 ) || ( idx == -1 ) )
         {
 #ifndef PL_TEST_FOR_MISSING_GLYPHS
-            plhrsh2_remove( ch, x, y );
+            plhrsh2( ch, x, y );
 #endif
         }
         else
@@ -442,7 +442,7 @@ plhrsh_remove( PLINT ch, PLINT x, PLINT y )
     }
     else
     {
-        plhrsh2_remove( ch, x, y );
+        plhrsh2( ch, x, y );
     }
 }
 
@@ -453,7 +453,7 @@ plhrsh_remove( PLINT ch, PLINT x, PLINT y )
 //--------------------------------------------------------------------------
 
 static void
-plhrsh2_remove( PLINT ch, PLINT x, PLINT y )
+plhrsh2( PLINT ch, PLINT x, PLINT y )
 {
     PLINT       cx, cy, k, penup, style;
     signed char *vxygrid = 0;

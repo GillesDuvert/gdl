@@ -693,7 +693,7 @@ plrestore_locale( char * save_lc_numeric_locale );
 
 // Writes the Hershey symbol "ch" centred at the physical coordinate (x,y).
 void
-plhrsh_remove( PLINT ch, PLINT x, PLINT y );
+plhrsh( PLINT ch, PLINT x, PLINT y );
 
 // where should structure definitions that must be seen by drivers and core source files, be?
 

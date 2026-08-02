@@ -748,7 +748,7 @@ enum _plm_status read_escape( PDFstrm *plm, PLmDev *dev, PLStream *pls )
         else
         {
             rc = read_entry( plm, PDF_USHORT, PLP_PLINT, &text.symbol );
-            plhrsh_remove( text.symbol, text.x, text.y );
+            plhrsh( text.symbol, text.x, text.y );
         }
     }
         rc = PLM_SUCCESS;

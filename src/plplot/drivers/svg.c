@@ -547,8 +547,6 @@ void proc_str( PLStream *pls, EscText *args )
     }
   // 3D convert on normalized values
   SelfTransform3D(&(args->x), &(args->y));
-  //rotate if 3D
-  Project3DToPlplotFormMatrix( args->xform);    
     // get plplot escape character and the current font
     plgesc( &plplot_esc );
     plgfci( &fci );
@@ -636,7 +634,9 @@ void proc_str( PLStream *pls, EscText *args )
 
     // Calculate the tranformation matrix for SVG based on the
     // transformation matrix provided by PLplot.
-    plRotationShear( args->xform, &rotation, &shear, &stride );
+	//rotate if 3D
+	Project3DToPlplotFormMatrix(args->xform);
+	    plRotationShear( args->xform, &rotation, &shear, &stride );
     // N.B. Experimentally, I (AWI) have found the svg rotation angle is
     // the negative of the libcairo rotation angle, and the svg shear angle
     // is pi minus the libcairo shear angle.
