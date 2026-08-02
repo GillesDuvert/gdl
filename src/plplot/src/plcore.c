@@ -1791,9 +1791,6 @@ c_plinit( void )
     pllsty( 1 );
     plpsty( 0 );
 
-    // Set up default arrow style;
-    plsvect( NULL, NULL, 6, 0 );
-
 // Set clip limits.
 
     plP_sclp( plsc->phyxmi, plsc->phyxma, plsc->phyymi, plsc->phyyma );
@@ -1897,11 +1894,6 @@ c_plend1( void )
         free_mem( plsc->plserver );
     if ( plsc->auto_path )
         free_mem( plsc->auto_path );
-
-    if ( plsc->arrow_x )
-        free_mem( plsc->arrow_x );
-    if ( plsc->arrow_y )
-        free_mem( plsc->arrow_y );
 
     if ( plsc->timefmt )
         free_mem( plsc->timefmt );
@@ -3318,109 +3310,6 @@ PLINT plP_checkdriverinit( char *names )
     return ( ret );
 }
 
-
-//--------------------------------------------------------------------------
-// plP_image
-//
-// Author: Alessandro Mirone, Nov 2001
-//
-// Updated by Hezekiah Carty, Mar 2008.
-//   - Added support for pltr callback
-//   - Commented out the "dev_fastimg" rendering path
-//
-//--------------------------------------------------------------------------
-
-void
-plP_image( PLFLT *z, PLINT nx, PLINT ny, PLFLT xmin, PLFLT ymin, PLFLT dx, PLFLT dy,
-           void ( *pltr )( PLFLT, PLFLT, PLFLT *, PLFLT *, PLPointer ), PLPointer pltr_data )
-{
-    plsc->page_status = DRAWING;
-
-    plimageslow( z, nx, ny, xmin, ymin, dx, dy, pltr, pltr_data );
-
-    //
-    // COMMENTED OUT by Hezekiah Carty, March 2008
-    // The current dev_fastimg rendering method does not work as-is with
-    // the plimagefr coordinate transform support.
-    // This is hopefully temporary, until the dev_fastimg rendering
-    // path can be updated to work with the new plimage internals.
-    // Until then, all plimage* rendering is done by the plimageslow
-    // rendering path.
-    //
-#if 0   // BEGIN dev_fastimg COMMENT
-    PLINT i, npts;
-    short *xscl, *yscl;
-    int   plbuf_write;
-
-    plsc->page_status = DRAWING;
-
-    if ( plsc->dev_fastimg == 0 )
-    {
-        plimageslow( x, y, z, nx - 1, ny - 1,
-            xmin, ymin, dx, dy, zmin, zmax );
-        return;
-    }
-
-    if ( plsc->plbuf_write )
-    {
-        IMG_DT img_dt;
-
-        img_dt.xmin = xmin;
-        img_dt.ymin = ymin;
-        img_dt.dx   = dx;
-        img_dt.dy   = dy;
-
-        plsc->dev_ix    = x;
-        plsc->dev_iy    = y;
-        plsc->dev_z     = z;
-        plsc->dev_nptsX = nx;
-        plsc->dev_nptsY = ny;
-        plsc->dev_zmin  = zmin;
-        plsc->dev_zmax  = zmax;
-
-        plbuf_esc( plsc, PLESC_IMAGE, &img_dt );
-    }
-
-    // avoid re-saving plot buffer while in plP_esc()
-    plbuf_write       = plsc->plbuf_write;
-    plsc->plbuf_write = 0;
-
-    npts = nx * ny;
-    if ( plsc->difilt ) // isn't this odd? when replaying the plot buffer, e.g., when resizing the window, difilt() is caled again! the plot buffer should already contain the transformed data--it would save a lot of time! (and allow for differently oriented plots when in multiplot mode)
-    {
-        PLINT clpxmi, clpxma, clpymi, clpyma;
-
-        if ( ( ( xscl = (short *) malloc( nx * ny * sizeof ( short ) ) ) == NULL ) ||
-             ( ( yscl = (short *) malloc( nx * ny * sizeof ( short ) ) ) == NULL ) )
-        {
-            plexit( "plP_image: Insufficient memory" );
-        }
-
-        for ( i = 0; i < npts; i++ )
-        {
-            xscl[i] = x[i];
-            yscl[i] = y[i];
-        }
-        sdifilt( xscl, yscl, npts, &clpxmi, &clpxma, &clpymi, &clpyma );
-        plsc->imclxmin = clpxmi;
-        plsc->imclymin = clpymi;
-        plsc->imclxmax = clpxma;
-        plsc->imclymax = clpyma;
-        grimage( xscl, yscl, z, nx, ny );
-        free( xscl );
-        free( yscl );
-    }
-    else
-    {
-        plsc->imclxmin = plsc->phyxmi;
-        plsc->imclymin = plsc->phyymi;
-        plsc->imclxmax = plsc->phyxma;
-        plsc->imclymax = plsc->phyyma;
-        grimage( x, y, z, nx, ny );
-    }
-    plsc->plbuf_write = plbuf_write;
-#endif  // END dev_fastimg COMMENT
-}
 
 //--------------------------------------------------------------------------
 // plstransform

@@ -742,8 +742,6 @@ typedef struct
 #define    plgyax                   c_plgyax
 #define    plgzax                   c_plgzax
 #define    plhlsrgb                 c_plhlsrgb
-#define    plimage                  c_plimage
-#define    plimagefr                c_plimagefr
 #define    plinit                   c_plinit
 #define    pljoin                   c_pljoin
 #define    pllab                    c_pllab
@@ -837,7 +835,6 @@ typedef struct
 #define    plstyl                   c_plstyl
 #define    plsurf3d                 c_plsurf3d
 #define    plsurf3dl                c_plsurf3dl
-#define    plsvect                  c_plsvect
 #define    plsvpa                   c_plsvpa
 #define    plsxax                   c_plsxax
 #define    plsyax                   c_plsyax
@@ -845,7 +842,6 @@ typedef struct
 #define    pltext                   c_pltext
 #define    pltimefmt                c_pltimefmt
 #define    plvasp                   c_plvasp
-#define    plvect                   c_plvect
 #define    plvpas                   c_plvpas
 #define    plvpor                   c_plvpor
 #define    plvsta                   c_plvsta

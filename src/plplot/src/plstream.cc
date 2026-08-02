@@ -369,23 +369,6 @@ plstream::adv( PLINT page )
     pladv( page );
 }
 
-void
-plstream::vect( const PLFLT * const *u, const PLFLT * const *v, PLINT nx, PLINT ny, PLFLT scale,
-                PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plvect( u, v, nx, ny, scale, pltr, pltr_data );
-}
-
-void
-plstream::svect( const PLFLT *arrow_x, const PLFLT *arrow_y, PLINT npts, bool fill )
-{
-    set_stream();
-
-    plsvect( arrow_x, arrow_y, npts, (PLBOOL) fill );
-}
-
 // This functions similarly to plbox() except that the origin of the axes is
 // placed at the user-specified point (x0, y0).
 
@@ -1940,32 +1923,32 @@ void plstream::stripd( PLINT id )
     plstripd( id );
 }
 
-// plots a 2d image (or a matrix too large for plshade() )  - colors
-// automatically scaled
-
-void plstream::image( const PLFLT * const *data, PLINT nx, PLINT ny,
-                      PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-                      PLFLT zmin, PLFLT zmax,
-                      PLFLT Dxmin, PLFLT Dxmax, PLFLT Dymin, PLFLT Dymax )
-{
-    set_stream();
-
-    plimage( data, nx, ny, xmin, xmax, ymin, ymax, zmin, zmax,
-        Dxmin, Dxmax, Dymin, Dymax );
-}
-
-// plots a 2d image (or a matrix too large for plshade() )
-
-void plstream::imagefr( const PLFLT * const *data, PLINT nx, PLINT ny, PLFLT xmin, PLFLT xmax,
-                        PLFLT ymin, PLFLT ymax, PLFLT zmin, PLFLT zmax,
-                        PLFLT valuemin, PLFLT valuemax,
-                        PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plimagefr( data, nx, ny, xmin, xmax, ymin, ymax, zmin, zmax,
-        valuemin, valuemax, pltr, pltr_data );
-}
+//// plots a 2d image (or a matrix too large for plshade() )  - colors
+//// automatically scaled
+//
+//void plstream::image( const PLFLT * const *data, PLINT nx, PLINT ny,
+//                      PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
+//                      PLFLT zmin, PLFLT zmax,
+//                      PLFLT Dxmin, PLFLT Dxmax, PLFLT Dymin, PLFLT Dymax )
+//{
+//    set_stream();
+//
+//    plimage( data, nx, ny, xmin, xmax, ymin, ymax, zmin, zmax,
+//        Dxmin, Dxmax, Dymin, Dymax );
+//}
+//
+//// plots a 2d image (or a matrix too large for plshade() )
+//
+//void plstream::imagefr( const PLFLT * const *data, PLINT nx, PLINT ny, PLFLT xmin, PLFLT xmax,
+//                        PLFLT ymin, PLFLT ymax, PLFLT zmin, PLFLT zmax,
+//                        PLFLT valuemin, PLFLT valuemax,
+//                        PLTRANSFORM_callback pltr, PLPointer pltr_data )
+//{
+//    set_stream();
+//
+//    plimagefr( data, nx, ny, xmin, xmax, ymin, ymax, zmin, zmax,
+//        valuemin, valuemax, pltr, pltr_data );
+//}
 
 // Set up a new line style
 

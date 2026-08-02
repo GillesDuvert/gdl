@@ -543,11 +543,7 @@ typedef struct
     PLFLT width;
     PLINT widthset, widthlock;
 
-// Variables governing arrow
-    PLFLT *arrow_x;
-    PLFLT *arrow_y;
-    PLINT arrow_npts;
-    PLINT arrow_fill;
+    PLINT makeHidden; //converted ex-arrow to make window hidden in a X11 special case 
 
 // Driver dispatch table, obsoletes "device" member below.
 

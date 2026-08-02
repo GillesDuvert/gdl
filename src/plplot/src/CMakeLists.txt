@@ -29,7 +29,6 @@ set(plplot_LIB_SRCS
   pldtik.c
   plf2ops.c
   plfill.c
-  plimage.c
   plline.c
   plmetafile.c
   plot3d.c
@@ -43,7 +42,6 @@ set(plplot_LIB_SRCS
   plvpor.c
   plwind.c
   plbuf.c
-  plvect.c
 # added
   plstream.cc
   )
