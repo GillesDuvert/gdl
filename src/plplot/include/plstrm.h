@@ -755,7 +755,6 @@ typedef struct
     void *psdoc;
 
     // Gradient section.
-    PLINT       dev_gradient;
     PLINT       ngradient;
     PLINT       *xgradient, *ygradient;
     // The next three variables define the polygon boundary used

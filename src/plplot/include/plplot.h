@@ -302,7 +302,6 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_START_RASTERIZE           32 // start rasterized rendering
 #define PLESC_END_RASTERIZE             33 // end rasterized rendering
 #define PLESC_ARC                       34 // render an arc
-#define PLESC_GRADIENT                  35 // render a gradient
 #define PLESC_MODESET                   36 // set drawing mode
 #define PLESC_MODEGET                   37 // get drawing mode
 #define PLESC_FIXASPECT                 38 // set or unset fixing the aspect ratio of the plot
@@ -691,9 +690,7 @@ typedef struct
 #define    pl_setcontlabelformat    c_pl_setcontlabelformat
 #define    pl_setcontlabelparam     c_pl_setcontlabelparam
 #define    pladv                    c_pladv
-#define    plarc                    c_plarc
 #define    plaxes                   c_plaxes
-#define    plbin                    c_plbin
 #define    plbop                    c_plbop
 #define    plbox                    c_plbox
 #define    plbox3                   c_plbox3
@@ -702,11 +699,9 @@ typedef struct
 #define    plclear                  c_plclear
 #define    plcol0                   c_plcol0
 #define    plcol1                   c_plcol1
-#define    plcolorbar               c_plcolorbar
 #define    plconfigtime             c_plconfigtime
 #define    plcont                   c_plcont
 #define    plcpstrm                 c_plcpstrm
-//#define    plctime                  c_plctime
 #define    plend                    c_plend
 #define    plend1                   c_plend1
 #define    plenv                    c_plenv
@@ -738,7 +733,6 @@ typedef struct
 #define    plglevel                 c_plglevel
 #define    plgpage                  c_plgpage
 #define    plgra                    c_plgra
-#define    plgradient               c_plgradient
 #define    plgriddata               c_plgriddata
 #define    plgspa                   c_plgspa
 #define    plgstrm                  c_plgstrm
@@ -748,14 +742,12 @@ typedef struct
 #define    plgxax                   c_plgxax
 #define    plgyax                   c_plgyax
 #define    plgzax                   c_plgzax
-#define    plhist                   c_plhist
 #define    plhlsrgb                 c_plhlsrgb
 #define    plimage                  c_plimage
 #define    plimagefr                c_plimagefr
 #define    plinit                   c_plinit
 #define    pljoin                   c_pljoin
 #define    pllab                    c_pllab
-#define    pllegend                 c_pllegend
 #define    pllightsource            c_pllightsource
 #define    plline                   c_plline
 #define    plpath                   c_plpath
@@ -850,7 +842,6 @@ typedef struct
 #define    plsvpa                   c_plsvpa
 #define    plsxax                   c_plsxax
 #define    plsyax                   c_plsyax
-#define    plsym_remove                    c_plsym_remove
 #define    plszax                   c_plszax
 #define    pltext                   c_pltext
 #define    pltimefmt                c_pltimefmt
@@ -1172,10 +1163,6 @@ c_plgpage( PLFLT_NC_SCALAR p_xp, PLFLT_NC_SCALAR p_yp,
 PLDLLIMPEXP void
 c_plgra( void );
 
-// Draw gradient in polygon.
-
-PLDLLIMPEXP void
-c_plgradient( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT angle );
 
 // grid irregularly sampled data
 
@@ -1272,83 +1259,11 @@ c_pljoin( PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 );
 PLDLLIMPEXP void
 c_pllab( PLCHAR_VECTOR xlabel, PLCHAR_VECTOR ylabel, PLCHAR_VECTOR tlabel );
 
-//flags used for position argument of both pllegend and plcolorbar
-#define PL_POSITION_NULL             0x0
-#define PL_POSITION_LEFT             0x1
-#define PL_POSITION_RIGHT            0x2
-#define PL_POSITION_TOP              0x4
-#define PL_POSITION_BOTTOM           0x8
-#define PL_POSITION_INSIDE           0x10
-#define PL_POSITION_OUTSIDE          0x20
-#define PL_POSITION_VIEWPORT         0x40
-#define PL_POSITION_SUBPAGE          0x80
-
-// Flags for pllegend.
-#define PL_LEGEND_NULL               0x0
-#define PL_LEGEND_NONE               0x1
-#define PL_LEGEND_COLOR_BOX          0x2
-#define PL_LEGEND_LINE               0x4
-#define PL_LEGEND_SYMBOL             0x8
-#define PL_LEGEND_TEXT_LEFT          0x10
-#define PL_LEGEND_BACKGROUND         0x20
-#define PL_LEGEND_BOUNDING_BOX       0x40
-#define PL_LEGEND_ROW_MAJOR          0x80
-
-// Flags for plcolorbar
-#define PL_COLORBAR_NULL             0x0
-#define PL_COLORBAR_LABEL_LEFT       0x1
-#define PL_COLORBAR_LABEL_RIGHT      0x2
-#define PL_COLORBAR_LABEL_TOP        0x4
-#define PL_COLORBAR_LABEL_BOTTOM     0x8
-#define PL_COLORBAR_IMAGE            0x10
-#define PL_COLORBAR_SHADE            0x20
-#define PL_COLORBAR_GRADIENT         0x40
-#define PL_COLORBAR_CAP_NONE         0x80
-#define PL_COLORBAR_CAP_LOW          0x100
-#define PL_COLORBAR_CAP_HIGH         0x200
-#define PL_COLORBAR_SHADE_LABEL      0x400
-#define PL_COLORBAR_ORIENT_RIGHT     0x800
-#define PL_COLORBAR_ORIENT_TOP       0x1000
-#define PL_COLORBAR_ORIENT_LEFT      0x2000
-#define PL_COLORBAR_ORIENT_BOTTOM    0x4000
-#define PL_COLORBAR_BACKGROUND       0x8000
-#define PL_COLORBAR_BOUNDING_BOX     0x10000
-
 // Flags for drawing mode
 #define PL_DRAWMODE_UNKNOWN          0x0
 #define PL_DRAWMODE_DEFAULT          0x1
 #define PL_DRAWMODE_REPLACE          0x2
 #define PL_DRAWMODE_XOR              0x4
-
-// Routine for drawing discrete line, symbol, or cmap0 legends
-PLDLLIMPEXP void
-c_pllegend( PLFLT_NC_SCALAR p_legend_width, PLFLT_NC_SCALAR p_legend_height,
-            PLINT opt, PLINT position, PLFLT x, PLFLT y, PLFLT plot_width,
-            PLINT bg_color, PLINT bb_color, PLINT bb_style,
-            PLINT nrow, PLINT ncolumn,
-            PLINT nlegend, PLINT_VECTOR opt_array,
-            PLFLT text_offset, PLFLT text_scale, PLFLT text_spacing,
-            PLFLT text_justification,
-            PLINT_VECTOR text_colors, PLCHAR_MATRIX text,
-            PLINT_VECTOR box_colors, PLINT_VECTOR box_patterns,
-            PLFLT_VECTOR box_scales, PLFLT_VECTOR box_line_widths,
-            PLINT_VECTOR line_colors, PLINT_VECTOR line_styles,
-            PLFLT_VECTOR line_widths,
-            PLINT_VECTOR symbol_colors, PLFLT_VECTOR symbol_scales,
-            PLINT_VECTOR symbol_numbers, PLCHAR_MATRIX symbols );
-
-// Routine for drawing continuous colour legends
-PLDLLIMPEXP void
-c_plcolorbar( PLFLT_NC_SCALAR p_colorbar_width, PLFLT_NC_SCALAR p_colorbar_height,
-              PLINT opt, PLINT position, PLFLT x, PLFLT y,
-              PLFLT x_length, PLFLT y_length,
-              PLINT bg_color, PLINT bb_color, PLINT bb_style,
-              PLFLT low_cap_color, PLFLT high_cap_color,
-              PLINT cont_color, PLFLT cont_width,
-              PLINT n_labels, PLINT_VECTOR label_opts, PLCHAR_MATRIX labels,
-              PLINT n_axes, PLCHAR_MATRIX axis_opts,
-              PLFLT_VECTOR ticks, PLINT_VECTOR sub_ticks,
-              PLINT_VECTOR n_values, PLFLT_MATRIX values );
 
 // Sets position of the light source
 PLDLLIMPEXP void

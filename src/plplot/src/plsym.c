@@ -128,39 +128,6 @@ c_plstring( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLCHAR_VECTOR string )
     }
 }
 
-//--------------------------------------------------------------------------
-//! Plot a glyph at the specified points.  (This function is largely
-//! superseded by plstring which gives access to many[!] more glyphs.)
-//! @param n Number of points in x and y arrays.
-//! @param x Pointer to an array with X coordinates of points.
-//! @param y Pointer to an array with Y coordinates of points.
-//! @param code Hershey symbol code corresponding to a glyph to be
-//! plotted at each of the n points.
-//--------------------------------------------------------------------------
-
-void
-c_plsym_remove( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code )
-{
-    PLINT i;
-    PLFLT xt, yt;
-
-    if ( plsc->level < 3 )
-    {
-        plabort( "plsym: Please set up window first" );
-        return;
-    }
-    if ( code < 0 )
-    {
-        plabort( "plsym: Invalid code" );
-        return;
-    }
-
-    for ( i = 0; i < n; i++ )
-    {
-        TRANSFORM( x[i], y[i], &xt, &yt );
-        plhrsh_remove( code, plP_wcpcx( xt ), plP_wcpcy( yt ) );
-    }
-}
 
 //--------------------------------------------------------------------------
 //! Plot a glyph at the specified points.  (This function is largely

@@ -20,7 +20,6 @@ set(plplot_LIB_SRCS
   pdfutils.c
   plmem.c
   plaffine.c
-  plarc.c
   plargs.c
   plbox.c
   plcont.c
@@ -30,8 +29,6 @@ set(plplot_LIB_SRCS
   pldtik.c
   plf2ops.c
   plfill.c
-  plgradient.c
-  plhist.c
   plimage.c
   plline.c
   plmetafile.c
@@ -48,9 +45,6 @@ set(plplot_LIB_SRCS
   plbuf.c
   plgridd.c
   plvect.c
-#  mt19937ar.c
-#  pltime.c
-  pllegend.c
 # added
   plstream.cc
   )

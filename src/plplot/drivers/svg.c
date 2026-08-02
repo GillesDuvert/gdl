@@ -68,7 +68,6 @@ typedef struct
     PLFLT scale;
     int   svgIndent;
     FILE  *svgFile;
-    int   gradient_index;
     //  char curColor[7];
 } SVG;
 
@@ -99,7 +98,6 @@ static int svg_family_check( PLStream * );
 // General
 
 static void poly_line( PLStream *, short *, short *, PLINT, short );
-static void gradient( PLStream *, short *, short *, PLINT );
 static void write_hex( FILE *, unsigned char );
 static void write_unicode( FILE *, PLUNICODE );
 static void specify_font( FILE *, PLUNICODE );
@@ -170,7 +168,6 @@ void plD_init_svg( PLStream *pls )
     pls->page         = 0;
     pls->dev_fill0    = 1;      // driver generates solid fills
     pls->dev_fill1    = 0;      // Use PLplot core fallback for pattern fills
-    pls->dev_gradient = 1;      // driver renders gradient
 
     pls->graphx = GRAPHICS_MODE;
 
@@ -228,7 +225,6 @@ void plD_init_svg( PLStream *pls )
     aStream->textClipping = (short) text_clipping;
 
     aStream->svgIndent      = 0;
-    aStream->gradient_index = 0;
     svg_general( aStream, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" );
     svg_general( aStream, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n" );
     svg_general( aStream, "        \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n" );
@@ -417,21 +413,6 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
         }
         poly_line( pls, pls->dev_x, pls->dev_y, pls->dev_npts, 1 );
         break;
-    case PLESC_GRADIENT:      // render gradient inside polygon
-        if (Status3D == 1) { //enable use everywhere.
-          //perform conversion on the fly
-          for (PLINT i = 0; i < pls->dev_npts; ++i) {
-            int x = pls->dev_x[i];
-            int y = pls->dev_y[i];
-            // 3D convert, must take into account that y is inverted.
-            SelfTransform3D(&x, &y);
-
-            pls->dev_x[i] = x;
-            pls->dev_y[i] = y;
-          }
-        }
-       gradient( pls, pls->dev_x, pls->dev_y, pls->dev_npts );
-        break;
     case PLESC_HAS_TEXT:  // render text
         proc_str( pls, (EscText *) ptr );
         break;
@@ -506,72 +487,6 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
     }
     fprintf( aStream->svgFile, "\"/>\n" );
     aStream->svgIndent -= 2;
-}
-
-//--------------------------------------------------------------------------
-// gradient()
-//
-// Draws gradient
-//--------------------------------------------------------------------------
-
-void gradient( PLStream *pls, short *xa, short *ya, PLINT npts )
-{
-    int  i;
-    // 27 should be the maximum needed below, but be generous.
-    char buffer[50];
-    SVG  *aStream;
-
-    aStream = pls->dev;
-
-    svg_open( aStream, "g>" );
-    svg_open( aStream, "defs>" );
-    svg_open( aStream, "linearGradient" );
-    // Allows ~2^31 unique gradient id's, gradient_index incremented below.
-    sprintf( buffer, "MyGradient%010d", aStream->gradient_index );
-    svg_attr_value( aStream, "id", buffer );
-    svg_attr_value( aStream, "gradientUnits", "userSpaceOnUse" );
-    sprintf( buffer, "%.2f", pls->xgradient[0] / aStream->scale );
-    svg_attr_value( aStream, "x1", buffer );
-    sprintf( buffer, "%.2f", pls->ygradient[0] / aStream->scale );
-    svg_attr_value( aStream, "y1", buffer );
-    sprintf( buffer, "%.2f", pls->xgradient[1] / aStream->scale );
-    svg_attr_value( aStream, "x2", buffer );
-    sprintf( buffer, "%.2f", pls->ygradient[1] / aStream->scale );
-    svg_attr_value( aStream, "y2", buffer );
-    svg_general( aStream, ">\n" );
-
-    for ( i = 0; i < pls->ncol1; i++ )
-    {
-        svg_indent( aStream );
-        fprintf( aStream->svgFile, "<stop offset=\"%.3f\" ",
-            (double) i / (double) ( pls->ncol1 - 1 ) );
-        fprintf( aStream->svgFile, "stop-color=\"#" );
-        write_hex( aStream->svgFile, pls->cmap1[i].r );
-        write_hex( aStream->svgFile, pls->cmap1[i].g );
-        write_hex( aStream->svgFile, pls->cmap1[i].b );
-        fprintf( aStream->svgFile, "\" " );
-        fprintf( aStream->svgFile, "stop-opacity=\"%.3f\"/>\n", pls->cmap1[i].a );
-    }
-
-    svg_close( aStream, "linearGradient" );
-    svg_close( aStream, "defs" );
-    svg_open( aStream, "polyline" );
-    sprintf( buffer, "url(#MyGradient%010d)", aStream->gradient_index++ );
-    svg_attr_value( aStream, "fill", buffer );
-    svg_indent( aStream );
-    fprintf( aStream->svgFile, "points=\"" );
-    for ( i = 0; i < npts; i++ )
-    {
-        fprintf( aStream->svgFile, "%.2f,%.2f ", (double) xa[i] / aStream->scale, (double) ya[i] / aStream->scale );
-        if ( ( ( i + 1 ) % 10 ) == 0 )
-        {
-            fprintf( aStream->svgFile, "\n" );
-            svg_indent( aStream );
-        }
-    }
-    fprintf( aStream->svgFile, "\"/>\n" );
-    aStream->svgIndent -= 2;
-    svg_close( aStream, "g" );
 }
 
 //--------------------------------------------------------------------------

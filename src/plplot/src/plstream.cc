@@ -370,15 +370,6 @@ plstream::adv( PLINT page )
 }
 
 void
-plstream::arc( PLFLT x, PLFLT y, PLFLT a, PLFLT b, PLFLT angle1, PLFLT angle2,
-               PLFLT rotate, PLBOOL fill )
-{
-    set_stream();
-
-    plarc( x, y, a, b, angle1, angle2, rotate, fill );
-}
-
-void
 plstream::vect( const PLFLT * const *u, const PLFLT * const *v, PLINT nx, PLINT ny, PLFLT scale,
                 PLTRANSFORM_callback pltr, PLPointer pltr_data )
 {
@@ -405,15 +396,6 @@ plstream::axes( PLFLT x0, PLFLT y0, const char *xopt, PLFLT xtick, PLINT nxsub,
     set_stream();
 
     plaxes( x0, y0, xopt, xtick, nxsub, yopt, ytick, nysub );
-}
-
-// Plot a histogram using x to store data values and y to store frequencies.
-
-void plstream::bin( PLINT nbin, const PLFLT *x, const PLFLT *y, PLINT center )
-{
-    set_stream();
-
-    plbin( nbin, x, y, center );
 }
 
 // Start new page.  Should only be used with pleop().
@@ -844,15 +826,6 @@ void plstream::gra()
 }
 
 
-// Draw gradient in polygon.
-
-void plstream::gradient( PLINT n, const PLFLT *x, const PLFLT *y, PLFLT angle )
-{
-    set_stream();
-
-    plgradient( n, x, y, angle );
-}
-
 // grid irregularly sampled data
 void plstream::griddata( const PLFLT *x, const PLFLT *y, const PLFLT *z, PLINT npts,
                          const PLFLT *xg, PLINT nptsx, const PLFLT *yg, PLINT nptsy,
@@ -937,16 +910,6 @@ void plstream::gzax( PLINT & digmax, PLINT & digits )
     plgzax( &digmax, &digits );
 }
 
-// Draws a histogram of n values of a variable in array data[0..n-1]
-
-void plstream::hist( PLINT n, const PLFLT *data, PLFLT datmin, PLFLT datmax,
-                     PLINT nbin, PLINT oldwin )
-{
-    set_stream();
-
-    plhist( n, data, datmin, datmax, nbin, oldwin );
-}
-
 // Set current color (map 0) by hue, lightness, and saturation.
 
 // Initializes PLplot, using preset or default options
@@ -980,53 +943,6 @@ void plstream::lab( const char *xlabel, const char *ylabel,
     set_stream();
 
     pllab( xlabel, ylabel, tlabel );
-}
-
-// Routine for drawing line, symbol, or cmap0 legends
-
-void plstream::legend( PLFLT *p_legend_width, PLFLT *p_legend_height,
-                       PLINT opt, PLINT position, PLFLT x, PLFLT y, PLFLT plot_width,
-                       PLINT bg_color, PLINT bb_color, PLINT bb_style,
-                       PLINT nrow, PLINT ncolumn,
-                       PLINT nlegend, const PLINT *opt_array,
-                       PLFLT text_offset, PLFLT text_scale, PLFLT text_spacing,
-                       PLFLT text_justification,
-                       const PLINT *text_colors, const char * const *text,
-                       const PLINT *box_colors, const PLINT *box_patterns,
-                       const PLFLT *box_scales, const PLFLT *box_line_widths,
-                       const PLINT *line_colors, const PLINT *line_styles,
-                       const PLFLT *line_widths,
-                       const PLINT *symbol_colors, const PLFLT *symbol_scales,
-                       const PLINT *symbol_numbers, const char * const *symbols )
-{
-    set_stream();
-
-    pllegend( p_legend_width, p_legend_height, opt, position, x, y, plot_width,
-        bg_color, bb_color, bb_style, nrow, ncolumn, nlegend, opt_array,
-        text_offset, text_scale, text_spacing, text_justification,
-        text_colors, text, box_colors, box_patterns, box_scales,
-        box_line_widths, line_colors, line_styles, line_widths,
-        symbol_colors, symbol_scales, symbol_numbers, symbols );
-}
-
-void plstream::colorbar( PLFLT *p_colorbar_width, PLFLT *p_colorbar_height,
-                         PLINT opt, PLINT position, PLFLT x, PLFLT y,
-                         PLFLT x_length, PLFLT y_length,
-                         PLINT bg_color, PLINT bb_color, PLINT bb_style,
-                         PLFLT low_cap_color, PLFLT high_cap_color,
-                         PLINT cont_color, PLFLT cont_width,
-                         PLINT n_labels, PLINT *label_opts, const char * const *label,
-                         PLINT n_axes, const char * const *axis_opts,
-                         PLFLT *ticks, PLINT *sub_ticks,
-                         PLINT *n_values, const PLFLT * const *values )
-{
-    set_stream();
-
-    plcolorbar( p_colorbar_width, p_colorbar_height, opt, position, x, y,
-        x_length, y_length, bg_color, bb_color, bb_style,
-        low_cap_color, high_cap_color, cont_color, cont_width,
-        n_labels, label_opts, label, n_axes, axis_opts,
-        ticks, sub_ticks, n_values, values );
 }
 
 
@@ -2104,15 +2020,6 @@ void plstream::syax( PLINT digmax, PLINT digits )
     set_stream();
 
     plsyax( digmax, digits );
-}
-
-// Plots array y against x for n points using Hershey symbol "code"
-
-void plstream::sym_remove( PLINT n, const PLFLT *x, const PLFLT *y, PLINT code )
-{
-    set_stream();
-
-    plsym_remove( n, x, y, code );
 }
 
 // Set z axis labeling parameters
