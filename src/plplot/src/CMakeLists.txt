@@ -43,7 +43,6 @@ set(plplot_LIB_SRCS
   plvpor.c
   plwind.c
   plbuf.c
-  plgridd.c
   plvect.c
 # added
   plstream.cc

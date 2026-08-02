@@ -733,7 +733,6 @@ typedef struct
 #define    plglevel                 c_plglevel
 #define    plgpage                  c_plgpage
 #define    plgra                    c_plgra
-#define    plgriddata               c_plgriddata
 #define    plgspa                   c_plgspa
 #define    plgstrm                  c_plgstrm
 #define    plgver                   c_plgver
@@ -1163,27 +1162,6 @@ c_plgpage( PLFLT_NC_SCALAR p_xp, PLFLT_NC_SCALAR p_yp,
 PLDLLIMPEXP void
 c_plgra( void );
 
-
-// grid irregularly sampled data
-
-PLDLLIMPEXP void
-c_plgriddata( PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT npts,
-              PLFLT_VECTOR xg, PLINT nptsx, PLFLT_VECTOR yg, PLINT nptsy,
-              PLFLT_NC_MATRIX zg, PLINT type, PLFLT data );
-
-PLDLLIMPEXP void
-plfgriddata( PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT npts,
-             PLFLT_VECTOR xg, PLINT nptsx, PLFLT_VECTOR yg, PLINT nptsy,
-             PLF2OPS zops, PLPointer zgp, PLINT type, PLFLT data );
-
-// type of gridding algorithm for plgriddata()
-
-#define GRID_CSA       1 // Bivariate Cubic Spline approximation
-#define GRID_DTLI      2 // Delaunay Triangulation Linear Interpolation
-#define GRID_NNI       3 // Natural Neighbors Interpolation
-#define GRID_NNIDW     4 // Nearest Neighbors Inverse Distance Weighted
-#define GRID_NNLI      5 // Nearest Neighbors Linear Interpolation
-#define GRID_NNAIDW    6 // Nearest Neighbors Around Inverse Distance Weighted
 
 // Get subpage boundaries in absolute coordinates
 

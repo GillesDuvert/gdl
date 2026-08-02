@@ -826,16 +826,6 @@ void plstream::gra()
 }
 
 
-// grid irregularly sampled data
-void plstream::griddata( const PLFLT *x, const PLFLT *y, const PLFLT *z, PLINT npts,
-                         const PLFLT *xg, PLINT nptsx, const PLFLT *yg, PLINT nptsy,
-                         PLFLT **zg, PLINT type, PLFLT data )
-{
-    set_stream();
-
-    plgriddata( x, y, z, npts, xg, nptsx, yg, nptsy, zg, type, data );
-}
-
 // Get subpage boundaries in absolute coordinates.
 
 void plstream::gspa( PLFLT & xmin, PLFLT & xmax, PLFLT & ymin, PLFLT & ymax )
