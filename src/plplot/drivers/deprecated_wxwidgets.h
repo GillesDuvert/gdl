@@ -152,7 +152,7 @@ public: // variables
     bool             underlined;
     double           fontSize;
     double           fontScale;
-    wxCoord          textWidth, textHeight, textDescent, textLeading;
+    wxCoord          textWidth, textHeight;
     PLUNICODE        fci;
     //the distance between the superscript top and subscript base from the baseline
     wxCoord          superscriptHeight, subscriptDepth;

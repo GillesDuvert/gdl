@@ -318,16 +318,9 @@ void wxPLDevGC::SetExternalBuffer( void* dc )
     ready     = true;
 //    ownGUI    = false;
 }
-
-
 void wxPLDevGC::PSDrawTextToDC(unsigned char* utf8_string, bool drawText )
-{
-    // Log_Verbose( "%s", __FUNCTION__ );
-
-    wxDouble w, h, d, l;
-
-        wxString str( utf8_string , wxConvUTF8 );
-
+{    wxDouble w, h, d, l;
+     wxString str( utf8_string , wxConvUTF8 );
     w = 0;
     m_context->GetTextExtent( str, &w, &h, &d, &l );
 
@@ -338,54 +331,74 @@ void wxPLDevGC::PSDrawTextToDC(unsigned char* utf8_string, bool drawText )
     }
 
     textWidth += static_cast<int>( w );
-
-    //keep track of the height of superscript text, the depth of subscript
-    //text and the height of regular text
-    if ( yOffset > 0.0001 )
-    {
-        //determine the height the text would have if it were full size
-        double currentOffset = yOffset;
-        double currentHeight = h;
-        while ( currentOffset > 0.0001 )
-        {
-            currentOffset -= scaley * fontSize * fontScale / 2.;
-            currentHeight *= 1.25;
-        }
-        textHeight = textHeight > ( currentHeight )
-                     ? textHeight
-                     : static_cast<int>( ( currentHeight ) );
-        //work out the height including superscript
-        superscriptHeight = superscriptHeight > ( currentHeight + yOffset / scaley )
-                            ? superscriptHeight
-                            : static_cast<int>( ( currentHeight + yOffset / scaley ) );
-    }
-    else if ( yOffset < -0.0001 )
-    {
-        //determine the height the text would have if it were full size
-        double currentOffset = yOffset;
-        double currentHeight = h;
-        double currentDepth  = d;
-        while ( currentOffset < -0.0001 )
-        {
-            currentOffset += scaley * fontSize * fontScale * 1.25 / 2.;
-            currentHeight *= 1.25;
-            currentDepth  *= 1.25;
-        }
-        textHeight = textHeight > currentHeight ? textHeight : static_cast<int>( ( currentHeight ) );
-        //work out the additional depth for subscript note an assumption has been made
-        //that the font size of (non-superscript and non-subscript) text is the same
-        //along a line. Currently there is no escape to change font size mid string
-        //so this should be fine
-        subscriptDepth = subscriptDepth > ( ( -yOffset / scaley + h + d ) - ( currentDepth + textHeight ) )
-                         ? subscriptDepth
-                         : static_cast<int>( ( -yOffset / scaley + h + d ) - ( currentDepth + textHeight ) );
-        subscriptDepth = subscriptDepth > 0 ? subscriptDepth : 0;
-    }
-    else
-        textHeight = textHeight > h ? textHeight : static_cast<int>( h );
-
 }
 
+//void wxPLDevGC::PSDrawTextToDC2(unsigned char* utf8_string, bool drawText )
+//{
+//    // Log_Verbose( "%s", __FUNCTION__ );
+//
+//    wxDouble w, h, d, l;
+//
+//    wxString str( utf8_string , wxConvUTF8 );
+//
+//    w = 0;
+//    m_context->GetTextExtent( str, &w, &h, &d, &l );
+//
+//    if ( drawText )
+//    {
+//        m_context->DrawText( str, 0, -yOffset / scaley );
+//        m_context->Translate( w, 0 );
+//    }
+//
+//    textWidth += static_cast<int>( w );
+//
+//    //keep track of the height of superscript text, the depth of subscript
+//    //text and the height of regular text
+//    if ( yOffset > 0.0001 )
+//    {
+//        //determine the height the text would have if it were full size
+//        double currentOffset = yOffset;
+//        double currentHeight = h;
+//        while ( currentOffset > 0.0001 )
+//        {
+//            currentOffset -= scaley * fontSize * fontScale / 2.;
+//            currentHeight *= 1.25;
+//        }
+//        textHeight = textHeight > ( currentHeight )
+//                     ? textHeight
+//                     : static_cast<int>( ( currentHeight ) );
+//        //work out the height including superscript
+//        superscriptHeight = superscriptHeight > ( currentHeight + yOffset / scaley )
+//                            ? superscriptHeight
+//                            : static_cast<int>( ( currentHeight + yOffset / scaley ) );
+//    }
+//    else if ( yOffset < -0.0001 )
+//    {
+//        //determine the height the text would have if it were full size
+//        double currentOffset = yOffset;
+//        double currentHeight = h;
+//        double currentDepth  = d;
+//        while ( currentOffset < -0.0001 )
+//        {
+//            currentOffset += scaley * fontSize * fontScale * 1.25 / 2.;
+//            currentHeight *= 1.25;
+//            currentDepth  *= 1.25;
+//        }
+//        textHeight = textHeight > currentHeight ? textHeight : static_cast<int>( ( currentHeight ) );
+//        //work out the additional depth for subscript note an assumption has been made
+//        //that the font size of (non-superscript and non-subscript) text is the same
+//        //along a line. Currently there is no escape to change font size mid string
+//        //so this should be fine
+//        subscriptDepth = subscriptDepth > ( ( -yOffset / scaley + h + d ) - ( currentDepth + textHeight ) )
+//                         ? subscriptDepth
+//                         : static_cast<int>( ( -yOffset / scaley + h + d ) - ( currentDepth + textHeight ) );
+//        subscriptDepth = subscriptDepth > 0 ? subscriptDepth : 0;
+//    }
+//    else
+//        textHeight = textHeight > h ? textHeight : static_cast<int>( h );
+//
+//}
+//
 
 void wxPLDevGC::PSSetFont( PLUNICODE fci , PLFLT scale)
 {
@@ -545,6 +558,7 @@ void wxPLDevGC::ProcessString( PLStream* pls, EscText* args )
         fci       = startingFci;
         PSSetFont( fci, fontScale);
         m_context->PushState();                                              //save current position
+        std::cerr<<"("<<args->refx<<","<<args->refy<<"), "<<height<<" - "<<args->y<<"/"<<scaley<<std::endl;
         m_context->Translate( args->x / scalex, height - args->y / scaley ); //move to text starting position
         wxGraphicsMatrix matrix = m_context->CreateMatrix(
             cos_rot * stride, -sin_rot * stride,

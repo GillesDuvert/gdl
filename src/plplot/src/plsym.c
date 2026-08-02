@@ -92,7 +92,7 @@ int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 static void
 pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode);
 static void
-plchar( short *xygrid, int len, PLFLT *xform, PLINT base, 
+plchar( short *xygrid, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width );
 static PLINT
@@ -893,7 +893,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 					yorg = yline - linespacing / 2;
 					yref = yorg;
 					ilev = 0,
-							scale = dscale;
+					scale = dscale;
 					write = 1;
 					break;
 				case C: // !C shift back to the starting position and down one line
@@ -977,8 +977,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 						} else {
 							if (write) {
 								write = 0;
-								args.refx = xorg;
-								args.refy = yref;
+								args.y = refy+yorg;
 								plP_esc(PLESC_HAS_TEXT, &args);
 								args.unicode_array_len = 0;
 							}
@@ -999,7 +998,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 							break; // do not draw anything
 						}
 						charPoints = &(hersheyFontVectors[ifont][offset]);
-						plchar(charPoints, nvecs, xform, base, refx, refy, scale,
+						plchar(charPoints, nvecs, xform, refx, refy, scale,
 								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
 					}
 					if (revert) {
@@ -1025,13 +1024,13 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 // Plots out a given stroke font character.
 //--------------------------------------------------------------------------
 static void
-plchar( short *vects, int len, PLFLT *xform, PLINT base, 
+plchar( short *vects, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
 	if (vects[0] == -1) return;
 	
-	PLINT xbase, ybase, ydisp, lx, ly;
+	PLINT lx, ly;
     PLINT penup;
     PLFLT x, y;
     short cx, cy;
@@ -1040,8 +1039,6 @@ plchar( short *vects, int len, PLFLT *xform, PLINT base,
 	PLINT l = 0;
 
 
-	xbase = 0;
-	ybase = 0;
     penup = 1;
 	
     for ( int i=0; i< len; ++i )
@@ -1051,8 +1048,8 @@ plchar( short *vects, int len, PLFLT *xform, PLINT base,
         if (cx & 64) cx-=128;
         if (cy & 64) cy-=128;
         penup = ((vects[i] & 16384) != 0);
-		x = *p_xorg + (cx - xbase) * scale;
-		y = *p_yorg + (cy - ybase) * scale;
+		x = *p_xorg + cx * scale;
+		y = *p_yorg + cy * scale;
 		lx = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
 		ly = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
         if ( penup  == 1)
