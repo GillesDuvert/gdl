@@ -450,7 +450,7 @@ void plD_init_wxwidgets( PLStream* pls )
     wxPLDevBase* dev;
     dev = common_init( pls );
 
-    pls->plbuf_write = 0;             // use the plot buffer!
+    pls->plbuf_write = 1;             // use the plot buffer!
     pls->termin      = 1;             // interactive device
     pls->graphx      = GRAPHICS_MODE; //  No text mode for this driver (at least for now, might add a console window if I ever figure it out and have the inclination)
 
@@ -459,60 +459,6 @@ void plD_init_wxwidgets( PLStream* pls )
 }
 
 #endif  // PLD_wxwidgets
-
-
-#ifdef PLD_wxpng
-
-//--------------------------------------------------------------------------
-//  void plD_dispatch_init_wxpng( PLDispatchTable *pdt )
-//
-//  Make wxpng driver functions known to plplot.
-//--------------------------------------------------------------------------
-void plD_dispatch_init_wxpng( PLDispatchTable *pdt )
-{
-    pdt->pl_MenuStr = "wxWidgets PNG driver";
-    pdt->pl_DevName = "wxpng";
-    pdt->pl_type     = plDevType_FileOriented;
-    pdt->pl_seq      = 52;
-    pdt->pl_init     = (plD_init_fp) plD_init_wxpng;
-    pdt->pl_line     = (plD_line_fp) plD_line_wxwidgets;
-    pdt->pl_polyline = (plD_polyline_fp) plD_polyline_wxwidgets;
-    pdt->pl_eop      = (plD_eop_fp) plD_eop_wxwidgets;
-    pdt->pl_bop      = (plD_bop_fp) plD_bop_wxwidgets;
-    pdt->pl_tidy     = (plD_tidy_fp) plD_tidy_wxwidgets;
-    pdt->pl_state    = (plD_state_fp) plD_state_wxwidgets;
-    pdt->pl_esc      = (plD_esc_fp) plD_esc_wxwidgets;
-}
-
-//--------------------------------------------------------------------------
-//  void plD_init_wxpng( PLStream *pls )
-//
-//  Initialize wxpng device.
-//--------------------------------------------------------------------------
-void plD_init_wxpng( PLStream *pls )
-{
-    // Log_Verbose( "plD_init_wxwidgets()" );
-
-    wxPLDevBase* dev;
-    dev = common_init( pls );
-
-    // Initialize family file info
-    plFamInit( pls );
-
-    // Prompt for a file name if not already set.
-    plOpenFile( pls );
-
-    pls->plbuf_write = 1;             // use the plot buffer!
-    pls->dev_flush   = 0;             // No need for flushes
-    pls->termin      = 0;             // file oriented device
-    pls->graphx      = GRAPHICS_MODE; //  No text mode for this driver (at least for now, might add a console window if I ever figure it out and have the inclination)
-    pls->page        = 0;
-
-    dev->showGUI    = false;
-    dev->bitmapType = wxBITMAP_TYPE_PNG;
-}
-
-#endif  // PLD_wxpng
 
 
 //--------------------------------------------------------------------------
