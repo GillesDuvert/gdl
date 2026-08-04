@@ -307,8 +307,11 @@ wxPLDevBase* common_init( PLStream *pls) {
   plParseDrvOpts(wx_options);
 
   // allocate memory for the device storage
-
+#if wxUSE_GRAPHICS_CONTEXT
   dev = new wxPLDevGC;
+#else
+  dev = new wxPLDevDC; printf("!!!!!!!!!!!!!! USING Device Context!\n");
+#endif
   // by default the own text routines are used for wxGC
   if (text == -1)
     text = 1;

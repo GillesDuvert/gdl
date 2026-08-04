@@ -78,6 +78,7 @@
 #define LOCATE_INVOKED_VIA_DRIVER    2
 
 // Available backends: we use GC only
+#define wxBACKEND_DC	0
 #define wxBACKEND_GC                 2 // relic of plplot library that switched between various backends (something we cannot support)
 
 class wxPLplotFrame;
@@ -163,6 +164,34 @@ public: // variables
     PLFLT            shear, cos_shear, sin_shear;
     PLFLT            stride;
 };
+
+
+class wxPLDevDC : public wxPLDevBase
+{
+public: // methods
+    wxPLDevDC( void );
+    ~wxPLDevDC( void );
+
+    void DrawLine( short x1a, short y1a, short x2a, short y2a );
+    void DrawPolyline( short *xa, short *ya, PLINT npts );
+    void ClearBackground( PLINT bgr, PLINT bgg, PLINT bgb, PLINT x1 = -1, PLINT y1 = -1, PLINT x2 = -1, PLINT y2 = -1 );
+    void FillPolygon( PLStream *pls );
+    void BlitRectangle( wxDC* dc, int vX, int vY, int vW, int vH );
+    void CreateCanvas();
+    void SetWidth( PLStream *pls );
+    void SetColor0( PLStream *pls );
+    void SetColor1( PLStream *pls );
+    void SetExternalBuffer( void* buffer );
+    void ProcessString( PLStream* pls, EscText* args );
+    void PSDrawTextToDC(unsigned char* utf8_string, bool drawText );
+    void PSSetFont( PLUNICODE fci , PLFLT scale=1);
+
+private: // variables
+    wxBitmap* m_bitmap;
+    wxDC    * m_dc;
+	wxFont  * m_font;
+};
+
 
 #include <wx/graphics.h>
 

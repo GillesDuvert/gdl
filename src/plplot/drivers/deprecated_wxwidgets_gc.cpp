@@ -25,6 +25,9 @@
 
 // wxwidgets headers
 #include <wx/wx.h>
+#include <wx/cmndata.h>
+#include <wx/dcps.h>
+#include <wx/dcsvg.h>
 
 #include "plDevs.h"
 
@@ -42,37 +45,23 @@
 
 wxPLDevGC::wxPLDevGC( void ) : wxPLDevBase( wxBACKEND_GC )
 {
-    // Log_Verbose( "%s", __FUNCTION__ );
-
     m_dc       = NULL;
     m_bitmap   = NULL;
     m_context  = NULL;
     underlined = false;
+
 }
 
 
 wxPLDevGC::~wxPLDevGC()
 {
-    // Log_Verbose( "%s", __FUNCTION__ );
 
-//    if ( ownGUI )
-//    {
-//        if ( m_dc )
-//        {
-//            ( (wxMemoryDC *) m_dc )->SelectObject( wxNullBitmap );
-//            delete m_dc;
-//        }
-//        if ( m_bitmap )
-//            delete m_bitmap;
-//    }
     delete m_context;
 }
 
 
 void wxPLDevGC::DrawLine( short x1a, short y1a, short x2a, short y2a )
 {
-    // Log_Verbose( "%s", __FUNCTION__ );
-
     wxDouble       x1 = x1a / scalex;
     wxDouble       y1 = height - y1a / scaley;
     wxDouble       x2 = x2a / scalex;
@@ -87,9 +76,13 @@ void wxPLDevGC::DrawLine( short x1a, short y1a, short x2a, short y2a )
 }
 
 
+//--------------------------------------------------------------------------
+//  void wxPLDevGC::DrawPolyline( short *xa, short *ya, PLINT npts )
+//
+//  Draw a poly line - coordinates are in the xa and ya arrays.
+//--------------------------------------------------------------------------
 void wxPLDevGC::DrawPolyline( short *xa, short *ya, PLINT npts )
 {
-    // Log_Verbose( "%s", __FUNCTION__ );
 
     wxGraphicsPath path = m_context->CreatePath();
     path.MoveToPoint( xa[0] / scalex, height - ya[0] / scaley );
@@ -231,18 +224,6 @@ void wxPLDevGC::CreateCanvas()
 {
     // Log_Verbose( "%s", __FUNCTION__ );
 
-//    if ( ownGUI )
-//    {
-//        if ( !m_dc )
-//            m_dc = new wxMemoryDC();
-//
-//        ( (wxMemoryDC *) m_dc )->SelectObject( wxNullBitmap ); // deselect bitmap
-//        if ( m_bitmap )
-//            delete m_bitmap;
-//        m_bitmap = new wxBitmap( bm_width, bm_height, 32 );
-//        ( (wxMemoryDC *) m_dc )->SelectObject( *m_bitmap ); // select new bitmap
-//    }
-
     if ( m_dc )
     {
         delete m_context;
@@ -312,6 +293,12 @@ void wxPLDevGC::SetExternalBuffer( void* dc )
 
     m_dc      = (wxDC *) dc; // Add the dc to the device
     m_context = wxGraphicsContext::Create( *( (wxMemoryDC *) m_dc ) );
+  
+// something possible with wxWidgets 3.3.3: write a SVG   
+//  wxSVGFileDC* svg=new wxSVGFileDC("output.svg", 1024, 680, 72);
+//  m_dc=(wxDC*) svg; // new  	wxSVGFileDC ("output.svg", 1024, 680, 72);
+//  m_context = svg->GetGraphicsContext 	( 		) 	;
+ // 
     char* do_antialias = getenv("GDL_DO_ANTIALIASING");
     if (do_antialias == NULL) m_context->SetAntialiasMode(wxANTIALIAS_NONE); //GD May 2022 force no antialias as antialiasing prevents erasing lines by redrawing them ontop by a color 0.
 	//NOTE: antialiasing and no double buffer makes plots very slow.
