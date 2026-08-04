@@ -116,6 +116,11 @@ void AtExit()
   PurgeContainer(libProList);
 }
 
+void CloseCorrectlyGraphicFiles()
+{
+  //this default Atexit() function insures eventual PS or SVG outputs are correctly closed by calling the destroyer.
+  GraphicsDevice::PurgeDeviceList();
+}
 #ifndef _WIN32
 void GDLSetLimits()
 {
@@ -484,7 +489,8 @@ int main(int argc, char *argv[])
     cerr << argv[0] << ": " << "-e option cannot be specified with batch files" << endl;
     return 0;
   }
-
+  // register an atexit function to properly close PS files (at the moment only that?)
+  atexit(CloseCorrectlyGraphicFiles);
   //depending on master or not, attach to respective message boxes
   if (!iAmMaster) gdl_ipc_ClientGetsMailboxAddress(myMessageBoxName);	
   
