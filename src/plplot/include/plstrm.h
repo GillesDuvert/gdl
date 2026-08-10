@@ -187,7 +187,6 @@ typedef struct
 // linepos	PLINT	Line count for output stream
 // pdfs		PDFstrm* PDF stream pointer
 // dev_mem_alpha     PLINT  The user supplied memory buffer supports alpha values
-// has_string_length PLINT  The driver can calculate the lengths of strings
 // string_length     PLFLT  Set to the length of the current string (in mm) by the driver
 // get_string_length PLINT  Tells the driver to calculate the length of the string
 //                             but not to render it.
@@ -762,7 +761,6 @@ typedef struct
     PLBOOL      stream_closed;
     PLINT       line_style;
     PLINT       dev_mem_alpha;
-    PLINT       has_string_length;
     PLFLT       string_length;
     PLINT       get_string_length;
     PLINT       dev_eofill;

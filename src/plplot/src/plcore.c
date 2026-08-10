@@ -574,70 +574,7 @@ plP_text( PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y,
     if ( string == NULL )
         return;
 
-/*
-    if ( plsc->dev_text ) // Does the device render it's own text ?
-    {
-        EscText args;
-
-        args.text_type = PL_STRING_TEXT;
-        args.base      = base;
-        args.just      = just;
-        args.xform     = xform;
-        args.x         = x;
-        args.y         = y;
-        args.refx      = refx;
-        args.refy      = refy;
-
-        // Always store the string passed by the caller, even for unicode
-        // enabled drivers.  The plmeta driver will use this field to store
-        // the string data in the metafile.
-        args.string = string;
-
-        // Does the device also understand unicode?
-        if ( plsc->dev_unicode )
-        {
-            if ( plsc->alt_unicode )
-            {
-                // We are using the alternate unicode processing
-                alternate_unicode_processing( string, &args );
-
-                // All text processing is done, so we can exit
-                return;
-            }
-            else
-            {
-                // Setup storage for the unicode array and
-                // process the string to generate the unicode
-                // representation of it.
-                args.unicode_array = unicode_buffer_static;
-                encode_unicode( string, &args );
-
-                len = (size_t) args.unicode_array_len;
-            }
-        }
-        else
-        {
-            //  We are using the char array, NULL out the unicode part
-            args.unicode_array     = NULL;
-            args.unicode_array_len = 0;
-
-            len = strlen( string );
-        }
-
-        // If the string is not empty, ask the driver to display it
-        if ( len > 0 )
-            plP_esc( PLESC_HAS_TEXT, &args );
-
-#ifndef DEBUG_TEXT
-    }
-    else
-    {
-#endif
-*/
-        plstr(string ,0, base, just, xform, x, y, refx, refy);
-/*
-    }
-*/
+    plstr(string ,0, base, just, xform, x, y, refx, refy);
 }
 
 // convert utf8 string to ucs4 unichar
@@ -2964,14 +2901,6 @@ c_plsfam( PLINT fam, PLINT num, PLINT bmax )
         plsc->member = num;
     if ( bmax >= 0 )
         plsc->bytemax = bmax;
-}
-
-// Advance to the next family file on the next new page
-
-void
-c_plfamadv( void )
-{
-    plsc->famadv = 1;
 }
 
 //--------------------------------------------------------------------------

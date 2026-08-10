@@ -63,7 +63,8 @@ GDLWXStream::GDLWXStream( int width, int height )
   
   
   plstream::cmd(PLESC_DEVINIT, (void*)streamDC );
-    
+  // AFTER initialization, force a default font
+    PLUNICODE code=0; plP_esc(PLESC_LOAD_FONT, &code); 
    // no pause on win destruction
     plstream::spause( false);
 

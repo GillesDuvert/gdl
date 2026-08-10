@@ -36,7 +36,13 @@ typedef struct {
 } GDL_3DTRANSFORMDEVICE;
 
 static GDL_3DTRANSFORMDEVICE Data3d;
-      
+
+
+//dummy functions to keep compiler happy if the code does not know about LINE2D and POLYLINE2D
+//Just set #define LINE2D dummy_line and idem for POLYLINE2D see deprecated_wxwidgets_gc.cpp
+static void dummy_line( PLStream *pls, short x1a, short y1a, short x2a, short y2a ){};
+static void dummy_polyline( PLStream *pls, short *xa, short *ya,  PLINT npts ){};
+
 static void SelfTransform3D(int *xs, int *ys) {
   if (Status3D == 1) { //enable use everywhere.
     PLFLT x = *xs, y = *ys, z=Data3d.zValue;

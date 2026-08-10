@@ -522,8 +522,8 @@ void proc_str( PLStream *pls, EscText *args )
 {
     char         plplot_esc;
     short        i;
-    short        totalTags = 1;
-    short        ucs4Len   = (short) args->unicode_array_len;
+    const PLUNICODE    *ucs4 = args->unicode_array;
+    const short        ucs4Len   = (short) args->unicode_array_len;
     double       ftHt, scaled_offset, scaled_ftHt;
     PLUNICODE    fci;
     PLINT        rcx[4], rcy[4];
@@ -531,9 +531,6 @@ void proc_str( PLStream *pls, EscText *args )
     PLFLT        rotation, shear, stride, cos_rot, sin_rot, sin_shear, cos_shear;
     PLFLT        t[4];
     int          glyph_size, sum_glyph_size;
-    short        if_write;
-    //   PLFLT *t = args->xform;
-    PLUNICODE    *ucs4 = args->unicode_array;
     SVG          *aStream;
     PLFLT        old_sscale, sscale, old_soffset, soffset, old_dup, ddup;
     PLINT        level;
@@ -545,8 +542,7 @@ void proc_str( PLStream *pls, EscText *args )
         printf( "Non unicode string passed to SVG driver, ignoring\n" );
         return;
     }
-  // 3D convert on normalized values
-  SelfTransform3D(&(args->x), &(args->y));
+
     // get plplot escape character and the current font
     plgesc( &plplot_esc );
     plgfci( &fci );
@@ -632,11 +628,17 @@ void proc_str( PLStream *pls, EscText *args )
     // svg_open_end(aStream);
     //
 
-    // Calculate the tranformation matrix for SVG based on the
+    // Calculate the transformation matrix for SVG based on the
     // transformation matrix provided by PLplot.
 	//rotate if 3D
-	Project3DToPlplotFormMatrix(args->xform);
+
+/*
 	    plRotationShear( args->xform, &rotation, &shear, &stride );
+		printf("before: rotation=%f, shear=%f, stride=%f\n", rotation*180/PI, shear, stride);
+*/
+		Project3DToPlplotFormMatrix(args->xform);
+	    plRotationShear( args->xform, &rotation, &shear, &stride );
+		printf("after: rotation=%f, shear=%f, stride=%f\n", rotation*180/PI, shear, stride);
     // N.B. Experimentally, I (AWI) have found the svg rotation angle is
     // the negative of the libcairo rotation angle, and the svg shear angle
     // is pi minus the libcairo shear angle.
@@ -669,6 +671,10 @@ void proc_str( PLStream *pls, EscText *args )
 
     // Apply coordinate transform for text display.
     // The transformation also defines the location of the text in x and y.
+
+	// 3D convert on normalized values
+    SelfTransform3D(&(args->x), &(args->y));
+
     svg_attr_values( aStream, "transform", "matrix(%f %f %f %f %f %f)",
         t[0], t[1], t[2], t[3],
         (double) ( args->x / aStream->scale ),
@@ -688,11 +694,13 @@ void proc_str( PLStream *pls, EscText *args )
 
     glyph_size     = (int) ftHt;
     sum_glyph_size = 0;
+/*
     if_write       = 0;
     while ( if_write < 2 )
     {
         if ( if_write == 1 )
         {
+*/
             //printf("number of characters = %f\n", sum_glyph_size/ftHt);
             // The above coordinate transform defines the _raw_ x position of the
             // text without justification so this attribute value depends on
@@ -729,129 +737,26 @@ void proc_str( PLStream *pls, EscText *args )
 
             // specify the initial font
             specify_font( aStream->svgFile, fci );
-        }
+
         i           = 0;
-        scaled_ftHt = ftHt;
-        level       = 0;
-        ddup        = 0.;
-        while ( i < ucs4Len )
+		while ( i < ucs4Len )
         {
-            if ( ucs4[i] < PL_FCI_MARK )                 // not a font change
+            if ( ucs4[i] < PRIVATE_UNICODE_PLANE )                 // not a font change
             {
-                if ( ucs4[i] != (PLUNICODE) plplot_esc ) // a character to display
-                {
-                    if ( if_write )
-                    {
-                        write_unicode( aStream->svgFile, ucs4[i] );
-                    }
-                    else
-                    {
-                        sum_glyph_size += glyph_size;
-                    }
-                    i++;
-                    continue;
-                }
+					write_unicode( aStream->svgFile, ucs4[i] );
                 i++;
-                if ( ucs4[i] == (PLUNICODE) plplot_esc ) // a escape character to display
-                {
-                    if ( if_write )
-                    {
-                        write_unicode( aStream->svgFile, ucs4[i] );
-                    }
-                    else
-                    {
-                        sum_glyph_size += glyph_size;
-                    }
-                    i++;
-                    continue;
-                }
-                else
-                {
-                    // super/subscript logic follows that in plstr routine (plsym.c)
-                    // for Hershey fonts. Factor of FONT_SHIFT_RATIO*0.80 is empirical
-                    // adjustment.
-                    if ( ucs4[i] == (PLUNICODE) 'u' ) // Superscript
-                    {
-                        plP_script_scale( TRUE, &level,
-                            &old_sscale, &sscale, &old_soffset, &soffset );
-                        // The correction for the difference in magnitude
-                        // between the baseline and middle coordinate systems
-                        // for superscripts should be
-                        // 0.5*(base font size - superscript/subscript font size).
-                        old_dup = ddup;
-                        ddup    = 0.5 * ( 1.0 - sscale );
-                        if ( level <= 0 )
-                        {
-                            scaled_offset = FONT_SHIFT_RATIO * ftHt * ( 0.80 * ( soffset - old_soffset ) - ( ddup - old_dup ) );
-                        }
-                        else
-                        {
-                            scaled_offset = -FONT_SHIFT_RATIO * ftHt * ( 0.80 * ( soffset - old_soffset ) + ( ddup - old_dup ) );
-                        }
-                        scaled_ftHt = sscale * ftHt;
-                        if ( if_write )
-                        {
-                            totalTags++;
-                            fprintf( aStream->svgFile, "<tspan dy=\"%f\" font-size=\"%d\">", scaled_offset, (int) scaled_ftHt );
-                        }
-                        else
-                        {
-                            glyph_size = (int) scaled_ftHt;
-                        }
-                    }
-                    if ( ucs4[i] == (PLUNICODE) 'd' ) // Subscript
-                    {
-                        plP_script_scale( FALSE, &level,
-                            &old_sscale, &sscale, &old_soffset, &soffset );
-                        // The correction for the difference in magnitude
-                        // between the baseline and middle coordinate systems
-                        // for superscripts should be
-                        // 0.5*(base font size - superscript/subscript font size).
-                        old_dup = ddup;
-                        ddup    = 0.5 * ( 1.0 - sscale );
-                        if ( level < 0 )
-                        {
-                            scaled_offset = FONT_SHIFT_RATIO * ftHt * ( 0.80 * ( soffset - old_soffset ) - ( ddup - old_dup ) );
-                        }
-                        else
-                        {
-                            scaled_offset = -FONT_SHIFT_RATIO * ftHt * ( 0.80 * ( soffset - old_soffset ) + ( ddup - old_dup ) );
-                        }
-                        scaled_ftHt = sscale * ftHt;
-                        if ( if_write )
-                        {
-                            totalTags++;
-                            fprintf( aStream->svgFile, "<tspan dy=\"%f\" font-size=\"%d\">", scaled_offset, (int) scaled_ftHt );
-                        }
-                        else
-                        {
-                            glyph_size = (int) scaled_ftHt;
-                        }
-                    }
-                    i++;
-                }
             }
             else // a font change
             {
-                if ( if_write )
-                {
-                    specify_font( aStream->svgFile, ucs4[i] );
-                    totalTags++;
-                }
+				fci = ucs4[i]-PRIVATE_UNICODE_PLANE;
+                    fprintf( aStream->svgFile, "</tspan>" );
+					specify_font( aStream->svgFile, fci );
                 i++;
             }
         }
-        if_write++;
-    }
 
-    //----------------------------------------------
-    // close out all the tspan tags and the text tag
-    // ----------------------------------------------
-
-    for ( i = 0; i < totalTags; i++ )
-    {
         fprintf( aStream->svgFile, "</tspan>" );
-    }
+
     // The following commented out (by AWI) because it is a bad idea to
     // put line ends in the middle of a text tag.  This was the key to
     // all the text rendering issues we had.

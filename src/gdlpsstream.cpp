@@ -100,14 +100,10 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
     firstTime=false;
     this->vpor(0, 1, 0, 1); //ALL PAGE
     this->wind(0, 1, 0, 1); //ALL PAGE
-    PLFLT x=0;
-    PLFLT y=0;
-    this->poin(1,&x,&y,-1); //put a point at 0,0 wherever it is on the plot
+    this->ptex(0,0,0,0,0," "); //put a blank at 0,0 wherever it is on the plot
     this->Flush();
     pls->bytecnt += fprintf(pls->OutFile, "\ncurrentpoint /YMIN exch def /XMIN exch def\n");
-    x=1;
-    y=1;
-    this->poin(1,&x,&y,-1); //put a point at 0,0 wherever it is on the plot
+    this->ptex(1,1,0,0,0," "); //put a blank at 1,1 wherever it is on the plot
     this->Flush();
 //autotest whether PS was rotated + define good sizes.
     pls->bytecnt += fprintf(pls->OutFile, "\ncurrentpoint /YMAX exch def /XMAX exch def\n");

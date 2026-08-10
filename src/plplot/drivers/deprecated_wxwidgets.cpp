@@ -54,7 +54,7 @@ static void init_freetype_lv2( PLStream *pls );
 #endif
 
 // private functions needed by the wxwidgets Driver
-static void install_buffer( PLStream *pls );
+//static void install_buffer( PLStream *pls );
 //static void wxRunApp( PLStream *pls, bool runonce = false );
 //static void GetCursorCmd( PLStream *pls, PLGraphicsIn *ptr );
 static void fill_polygon( PLStream *pls );
@@ -266,6 +266,7 @@ void wxPLDevBase::PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText )
     }
 
     PSDrawTextToDC( utf8_string, drawText );pos=0;
+    plsc->string_length=textWidth; textWidth=0;
 }
 
 
@@ -400,7 +401,7 @@ wxPLDevBase* common_init( PLStream *pls) {
   // setting scale factors
   dev->scalex = (PLFLT) (dev->xmax - dev->xmin) / (dev->width);
   dev->scaley = (PLFLT) (dev->ymax - dev->ymin) / (dev->height);
-
+   
   // set dpi
   plspage(VIRTUAL_PIXELS_PER_IN / dev->scalex, VIRTUAL_PIXELS_PER_IN / dev->scaley, 0, 0, 0, 0);
 
@@ -476,8 +477,7 @@ void plD_line_wxwidgets( PLStream *pls, short x1a, short y1a, short x2a, short y
 
     wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
 
-    if ( !( dev->ready ) )
-        install_buffer( pls );
+//    if ( !( dev->ready ) )        install_buffer( pls );
 
     dev->DrawLine( x1a, y1a, x2a, y2a );
 
@@ -506,8 +506,7 @@ void plD_polyline_wxwidgets( PLStream *pls, short *xa, short *ya, PLINT npts )
     // should be changed to use the wxDC::DrawLines function?
     wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
 
-    if ( !( dev->ready ) )
-        install_buffer( pls );
+//    if ( !( dev->ready ) )        install_buffer( pls );
 
     dev->DrawPolyline( xa, ya, npts );
 
@@ -697,9 +696,8 @@ void plD_state_wxwidgets( PLStream *pls, PLINT op )
     case PLSTATE_SYM:
         break;
 
-    default:
-        if ( !( dev->ready ) )
-            install_buffer( pls );
+//    default:
+//        if ( !( dev->ready ) )            install_buffer( pls );
     }
 }
 
@@ -740,10 +738,11 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
         // replay begin of page call and state settings
         plD_bop_wxwidgets( pls );
         break;
-
+      case PLESC_LOAD_FONT:
+        dev->PSSetFont(* (PLUNICODE*) ptr);
+        break;
     case PLESC_HAS_TEXT:
-        if ( !( dev->ready ) )
-            install_buffer( pls );
+//        if ( !( dev->ready ) )            install_buffer( pls );
 
         if ( dev->freetype )
         {
@@ -763,8 +762,7 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
     break;
 
     case PLESC_CLEAR:
-        if ( !( dev->ready ) )
-            install_buffer( pls );
+//        if ( !( dev->ready ) )            install_buffer( pls );
 //        // Since the plot is updated only every MAX_COMCOUNT commands (usually 5000)
 //        //       before we clear the screen we need to show the plot at least once :)
 //        if ( !( dev->resizing ) && dev->ownGUI )
@@ -819,8 +817,7 @@ static void fill_polygon( PLStream *pls )
 
     wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
 
-    if ( !( dev->ready ) )
-        install_buffer( pls );
+//    if ( !( dev->ready ) )        install_buffer( pls );
 
     if (Status3D == 1) { //enable use everywhere.
       //perform conversion on the fly
@@ -1174,8 +1171,8 @@ static void init_freetype_lv2( PLStream *pls )
 //  from within a wxWidgets program), this function prepares a DC and a
 //  bitmap to plot into.
 //--------------------------------------------------------------------------
-static void install_buffer( PLStream *pls )
-{
+//static void install_buffer( PLStream *pls )
+//{
 //    // Log_Verbose( "install_buffer" );
 //
 //    wxPLDevBase * dev   = (wxPLDevBase *) pls->dev;
@@ -1250,7 +1247,7 @@ static void install_buffer( PLStream *pls )
 //
 //    // replay command we may have missed
 //    plD_bop_wxwidgets( pls );
-}
+//}
 
 
 //--------------------------------------------------------------------------

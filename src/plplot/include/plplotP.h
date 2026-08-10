@@ -386,66 +386,12 @@ enum { AT_BOP, DRAWING, AT_EOP };
 #define PL_FILESIZE_KB    1000
 #endif
 
-// Font file names.
-
-#define PLPLOT5_FONTS
-
-#ifdef PLPLOT5_FONTS
-#define PL_XFONT    "plxtnd5.fnt"
-#define PL_SFONT    "hersh1.chr"
-#else
-#define PL_XFONT    "plxtnd4.fnt"
-#define PL_SFONT    "plstnd4.fnt"
-#endif
-
 //to suffer from GDL drastic unicode support
 enum positionCode {PRIVATE_UNICODE_PLANE=1048576, //start of UNICODE <Plane 16 Private Use> 
 F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13,F14,F15,F16,F17,F18,F19,F20,//leave space for font number (see pldeco)
 A, 
 B, C, D,E,I,L,M,N,R,S,U,V,SP};
-//--------------------------------------------------------------------------
-// The following environment variables are defined:
-//
-//	PLPLOT_BIN      # where to find executables
-//	PLPLOT_LIB      # where to find library files (fonts, maps, etc)
-//	PLPLOT_TCL      # where to find tcl scripts
-//
-//	PLPLOT_HOME     # basename of plplot hierarchy
-//
-// search order:
-//	1)	the most specific possible locators, one of
-//			$(PLPLOT_BIN)
-//			$(PLPLOT_LIB)
-//			$(PLPLOT_TCL)
-//		as appropriate
-//
-//	2)	the current directory
-//
-//	3)	one of  $(PLPLOT_HOME)/bin
-//			$(PLPLOT_HOME)/lib
-//			$(PLPLOT_HOME)/tcl
-//		as appropriate
-//
-//	4)	as appropriate, the compile-time (Makefile)
-//		BIN_DIR, LIB_DIR, TCL_DIR
-//
-//  8 Jun 1994  mj olesen (olesen@weber.me.queensu.ca)
-//
-// Other notes:
-//
-// In addition to the directories above, the following are also used:
-//
-// Lib file search path: PLLIBDEV (see plctrl.c).  This is checked last,
-// and is a system-dependent hardwired location.
-//
-// Tcl search path: $HOME/tcl is searched before the install location,
-// TCL_DIR.
-//--------------------------------------------------------------------------
 
-#define PLPLOT_BIN_ENV     "PLPLOT_BIN"
-#define PLPLOT_LIB_ENV     "PLPLOT_LIB"
-#define PLPLOT_TCL_ENV     "PLPLOT_TCL"
-#define PLPLOT_HOME_ENV    "PLPLOT_HOME"
 
 // Maximum size for path strings in the plplot code
 #define PLPLOT_MAX_PATH    1024
@@ -471,8 +417,6 @@ extern Hershey_to_Unicode_table hershey_to_unicode_lookup_table[];
 
 #endif
 
-// Greek character translation array (defined in plcore.c)
-extern const char plP_greek_mnemonic[];
 
 //--------------------------------------------------------------------------
 //		Function Prototypes
@@ -708,7 +652,8 @@ typedef struct
 
     // Positioning settings
     PLINT base;                    // ref point at base(1) or center(0) of text. Currently plplot only use 0
-    PLFLT just;                    // continuos justification, 0 left, 0.5 center, 1 right
+    PLFLT just;                    // continuous justification, 0 left, 0.5 center, 1 right
+	PLFLT scale;
     PLFLT *xform;                  // transformation (rotation) matrix
 
     // raw reference point--after any transformation

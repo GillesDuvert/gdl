@@ -91,7 +91,7 @@ plunicode2type1( const PLUNICODE index,
                  const int number_of_entries );
 
 static const char *
-get_font( PSDev* dev, PLUNICODE fci );
+get_font(  PLUNICODE fci );
 
 // text > 0 uses some postscript tricks, namely a transformation matrix
 // that scales, rotates (with slanting) and offsets text strings.
@@ -206,7 +206,7 @@ ps_init( PLStream *pls )
     if ( text )
     {
         pls->dev_text    = 1;                // want to draw text
-        pls->dev_unicode = 0;                // does not want unicode
+        pls->dev_unicode = 1;                // want unicode
         if ( hrshsym )
             pls->dev_hrshsym = 1;            // want Hershey symbols
     }
@@ -790,7 +790,7 @@ plD_esc_ps(PLStream *pls, PLINT op, void *ptr)
 {
     switch ( op )
     {
-      case PLESC_FILL:
+	case PLESC_FILL:
         fill_polygon(pls);
         break;
       case PLESC_HAS_TEXT:
@@ -914,184 +914,104 @@ ps_getdate( void )
 //--------------------------------------------------------------------------
 
 void
-proc_str( PLStream *pls, EscText *args )
-{
+proc_str( PLStream *pls, EscText *args ) {
+	const PLUNICODE *ucs4 = args->unicode_array;
+	const short ucs4Len = (short) args->unicode_array_len;
     PLFLT      *t = args->xform, tt[4];           // Transform matrices
-    PLFLT      theta, shear, stride;              // Rotation angle and shear from the matrix
+    PLFLT      rotation, shear, stride;              // Rotation angle and shear from the matrix
     PLFLT      ft_ht, offset;                     // Font height and offset
-    PLFLT      cs, sn, l1, l2;
+    PLFLT      cs, sn;
     PSDev      *dev = (PSDev *) pls->dev;
     const char *font;
     char       esc;
-    // Be generous.  Used to store lots of font changes which take
-    // 3 characters per change.
+    // Be generous.  Used to store lots of font changes
   #define PROC_STR_STRING_LENGTH    1000
-    unsigned char *strp, str[PROC_STR_STRING_LENGTH], *cur_strp,
-                   cur_str[PROC_STR_STRING_LENGTH];
+    static unsigned char string_to_print[PROC_STR_STRING_LENGTH];
     float         font_factor = 1.4f;
-    PLINT         clxmin, clxmax, clymin, clymax; // Clip limits
-    PLINT         clipx[4], clipy[4];             // Current clip limits
 
-    PLFLT         scale = 1., up = 0.;            // Font scaling and shifting parameters
+    PLFLT         scale = 1.;            // Font scaling and shifting parameters
 
     int           i = 0;                          // String index
 
-    // unicode only! so test for it.
-    if ( args->unicode_array_len > 0 )
+    // check that we got unicode
+    if ( ucs4Len == 0 )
     {
-        int        j, s, f;
-        const char *fonts[PROC_STR_STRING_LENGTH];
-        const PLUNICODE              *cur_text;
-        PLUNICODE  fci, fci_save;
-        PLFLT      old_sscale, sscale, old_soffset, soffset, ddup;
-        PLINT      level = 0;
-        // translate from unicode into type 1 font index.
-        //
-        // Choose the font family, style, variant, and weight using
-        // the FCI (font characterization integer).
-        //
+        printf( "Non unicode string passed to PS driver, ignoring\n" );
+        return;
+    }
 
-        plgesc( &esc );
-        plgfci( &fci );
-        fci_save = fci;
-        font     = get_font( dev, fci );
-        cur_text = args->unicode_array;
-        for ( f = s = j = 0; j < args->unicode_array_len; j++ )
-        {
-            if ( cur_text[j] & PL_FCI_MARK )
-            {
-                // process an FCI by saving it and escaping cur_str
-                // with an escff to make it a 2-character escape
-                // that is not used in legacy Hershey code
-                //
-                if ( ( f < PROC_STR_STRING_LENGTH ) && ( s + 3 < PROC_STR_STRING_LENGTH ) )
-                {
-                    fci_save     = cur_text[j];
-                    fonts[f++]   = get_font( dev, fci_save );
-                    cur_str[s++] = (unsigned char) esc;
-                    cur_str[s++] = 'f';
-                    cur_str[s++] = 'f';
-                }
-            }
-            else if ( s + 4 < PROC_STR_STRING_LENGTH )
-            {
-#undef PL_TEST_TYPE1
-#ifdef PL_TEST_TYPE1
-                // Use this test case only to conveniently view Type1 font
-                // possibilities (as in test_type1.py example).
-                // This functionality is useless other than for this test case.
-                PLINT ifamily, istyle, iweight;
-                plgfont( &ifamily, &istyle, &iweight );
-                if ( 0 <= cur_text[j] && cur_text[j] < 256 )
-                    cur_str[s++] = cur_text[j];
-                else
-                    cur_str[s++] = 32;
-                // Overwrite font just for this special case.
-                if ( ifamily == PL_FCI_SYMBOL )
-                    font = get_font( dev, 0 );
-                else
-                    font = get_font( dev, fci );
-#else
-                cur_str[s] = plunicode2type1( cur_text[j], dev->lookup, dev->nlookup );
-                if ( cur_text[j] != ' ' && cur_str[s] == ' ' )
-                {
-                    // failed lookup.
-                    if ( !dev->if_symbol_font )
-                    {
-                        // failed standard font lookup.  Use symbol
-                        // font instead which will return a blank if
-                        // that fails as well.
-                        fonts[f++]   = get_font( dev, 0 );
-                        cur_str[s++] = (unsigned char) esc;
-                        cur_str[s++] = 'f';
-                        cur_str[s++] = 'f';
-                        cur_str[s++] = plunicode2type1( cur_text[j], dev->lookup, dev->nlookup );
-                    }
-                    else
-                    {
-                        // failed symbol font lookup.  Use last standard
-                        // font instead which will return a blank if
-                        // that fails as well.
-                        fonts[f++]   = get_font( dev, fci_save );
-                        cur_str[s++] = (unsigned char) esc;
-                        cur_str[s++] = 'f';
-                        cur_str[s++] = 'f';
-                        cur_str[s++] = plunicode2type1( cur_text[j], dev->lookup, dev->nlookup );
-                    }
-                }
-                else
-                {
-                    // lookup succeeded.
-                    s++;
-                }
-#endif
-                pldebug( "proc_str", "unicode = 0x%x, type 1 code = %d\n",
-                    cur_text[j], cur_str[s - 1] );
-            }
-        }
-        cur_str[s] = '\0';
+	int        j, s, f;
+	PLUNICODE  fci, fci_save;
 
-        // finish previous polyline
+	plgesc( &esc );
+	plgfci( &fci );
+	fci_save = fci;
+	font     = get_font(-1);
+	ucs4 = args->unicode_array;
 
-        dev->xold = PL_UNDEFINED;
-        dev->yold = PL_UNDEFINED;
+	// finish previous polyline
 
-        // Determine the font height
-        ft_ht = pls->chrht * 72.0 / 25.4; // ft_ht in points, ht is in mm
+	dev->xold = PL_UNDEFINED;
+	dev->yold = PL_UNDEFINED;
 
-        Project3DToPlplotFormMatrix(t);
-        // The transform matrix has only rotations and shears; extract them
-        plRotationShear( t, &theta, &shear, &stride );
-        cs    = cos( theta );
-        sn    = sin( theta );
-        tt[0] = t[0] * cs + t[2] * sn;
-        tt[1] = t[1] * cs + t[3] * sn;
-        tt[2] = -t[0] * sn + t[2] * cs;
-        tt[3] = -t[1] * sn + t[3] * cs;
+	// Determine the font height
+	ft_ht = pls->chrht * 72.0 / 25.4; // ft_ht in points, ht is in mm
 
-        //
-        // Reference point conventions:
-        //   If base = 0, it is aligned with the center of the text box
-        //   If base = 1, it is aligned with the baseline of the text box
-        //   If base = 2, it is aligned with the top of the text box
-        //
-        // Currently plplot only uses base=0
-        // Postscript uses base=1
-        //
-        // We must calculate the difference between the two and apply the offset.
-        //
+//	Project3DToPlplotFormMatrix(t);
+	// The transform matrix has only rotations and shears; extract them
+	plRotationShear( t, &rotation, &shear, &stride );
+	printf("rotation=%f, shear=%f, stride=%f ft=%f offset(scale)=%f\n", rotation, shear, stride, ft_ht, offset);
+	cs    = cos( -rotation );
+	sn    = sin( -rotation );
+	tt[0] = t[0] * cs + t[2] * sn;
+	tt[1] = t[1] * cs + t[3] * sn;
+	tt[2] = -t[0] * sn + t[2] * cs;
+	tt[3] = -t[1] * sn + t[3] * cs;
 
-        if ( args->base == 2 )             // not supported by plplot
-            offset = ENLARGE * ft_ht / 2.; // half font height
-        else if ( args->base == 1 )
-            offset = 0.;
-        else
-            offset = -ENLARGE * ft_ht / 2.;
+//
+	// Reference point conventions:
+	//   If base = 0, it is aligned with the center of the text box
+	//   If base = 1, it is aligned with the baseline of the text box
+	//   If base = 2, it is aligned with the top of the text box
+	//
+	// Currently plplot only uses base=0
+	// Postscript uses base=1
+	//
+	// We must calculate the difference between the two and apply the offset.
+	//
 
-        // Determine the adjustment for page orientation
-        theta   -= PI / 2. * pls->diorot;
-        args->y += (PLINT) ( offset * cos( theta ) );
-        args->x -= (PLINT) ( offset * sin( theta ) );
+	if ( args->base == 2 )             // not supported by plplot
+		offset = ENLARGE * ft_ht / 2.; // half font height
+	else if ( args->base == 1 )
+		offset = 0.;
+	else
+		offset = -ENLARGE * ft_ht / 2.;
+
+	// Determine the adjustment for page orientation
+        rotation   -= PI / 2. * pls->diorot;
+        args->y += (PLINT) ( offset * cos( rotation ) );
+        args->x -= (PLINT) ( offset * sin( rotation ) );
 
 if ( ! pls->portrait )
 {
-  // 3D convert on normalized values
-  SelfTransform3DPSL(&(args->x), &(args->y));
+// 3D convert on normalized values
+SelfTransform3DPSL(&(args->x), &(args->y));
 }
-        // ps driver is rotated by default
-        plRotPhy( ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax,
-            &( args->x ), &( args->y ) );
+	// ps driver is rotated by default
+plRotPhy( ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax,
+		&( args->x ), &( args->y ) );
 if ( pls->portrait )
 {
-  // 3D convert on normalized values
-  SelfTransform3DPSP(&(args->x), &(args->y));
+// 3D convert on normalized values
+SelfTransform3DPSP(&(args->x), &(args->y));
 }
 
-        // Correct for the fact ps driver uses landscape by default
-        theta += PI / 2.;
+	// Correct for the fact ps driver uses landscape by default
+       rotation += PI / 2.;
 
         // Output
         // Set clipping
+/*
         clipx[0] = pls->clpxmi;
         clipx[2] = pls->clpxma;
         clipy[0] = pls->clpymi;
@@ -1110,169 +1030,148 @@ if ( pls->portrait )
         plRotPhy( ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax,
             &clipx[3], &clipy[3] );
         fprintf( OF, " gsave %d %d %d %d %d %d %d %d CL\n", clipx[0], clipy[0], clipx[1], clipy[1], clipx[2], clipy[2], clipx[3], clipy[3] );
+*/
 
-        // move to string reference point
-        fprintf( OF, " %d %d M\n", args->x, args->y );
+	// move to string reference point
+	fprintf( OF, " %d %d M\n", args->x, args->y );
 
-        // Save the current position and set the string rotation
-        fprintf( OF, "gsave %.3f R\n", TRMFLT( theta * 180. / PI ) );
+	// Save the current position and set the string rotation
+	fprintf( OF, "gsave %.3f R\n", TRMFLT( rotation * 180. / PI ) );
 
-        // Purge escape sequences from string, so that postscript can find it's
-        // length.  The string length is computed with the current font, and can
-        // thus be wrong if there are font change escape sequences in the string
-        //
+	int ucs4Pos = 0;
+	int stringLen=0;
+	fprintf( OF, "/%s %.3f SF\n", font , TRMFLT( font_factor * ENLARGE * ft_ht ) );
+	while (ucs4Pos < ucs4Len) {
+		if (ucs4[ucs4Pos] < PRIVATE_UNICODE_PLANE) // not a font change
+		{
+			if ((ucs4[ucs4Pos] & 0xffff80) == 0) string_to_print[stringLen] = (unsigned char) ucs4[ucs4Pos]; else string_to_print[stringLen] = 32; // single byte
+				if (string_to_print[stringLen] == '(' || string_to_print[stringLen] == ')' || string_to_print[stringLen] == '\\') {
+				unsigned char tmp = string_to_print[stringLen];
+				string_to_print[stringLen++] = '\\';
+				string_to_print[stringLen] = tmp;
+			}
+			stringLen++;ucs4Pos++;
+		} else // a font change
+		{
+			fci = ucs4[ucs4Pos] - PRIVATE_UNICODE_PLANE;
+			//write so far
+			if (stringLen > 0) {
+				string_to_print[stringLen] = '\0';
+				// Apply the scaling and the shear
+				fprintf(OF, "/%s [%.3f %.3f %.3f %.3f 0 0] SF\n",
+						font,
+						TRMFLT(tt[0] * font_factor * ENLARGE * ft_ht * scale),
+						TRMFLT(tt[2] * font_factor * ENLARGE * ft_ht * scale),
+						TRMFLT(tt[1] * font_factor * ENLARGE * ft_ht * scale),
+						TRMFLT(tt[3] * font_factor * ENLARGE * ft_ht * scale));
 
-        esc_purge( str, cur_str );
+				// print the string
+				fprintf(OF, "(%s) show\n", string_to_print);
+				printf("(%s) show\n", string_to_print);
 
-        fprintf( OF, "/%s %.3f SF\n", font, TRMFLT( font_factor * ENLARGE * ft_ht ) );
+				//????					fprintf( OF, "%.3f (", TRMFLT( -args->just ) );
+			}
+			font = get_font(fci);
+			fprintf(OF, "/%s %.3f SF\n", font, TRMFLT(font_factor * ENLARGE * ft_ht));
+			ucs4Pos++;
+			stringLen = 0;
+			string_to_print[stringLen] = '\0';
+		}
+	}
+	if (stringLen > 0) {
+		string_to_print[stringLen]='\0';
+		// Apply the scaling and the shear
+		fprintf( OF, "/%s [%.3f %.3f %.3f %.3f 0 0] SF\n",
+		font,
+		TRMFLT( tt[0] * font_factor * ENLARGE * ft_ht * scale ),
+		TRMFLT( tt[2] * font_factor * ENLARGE * ft_ht * scale ),
+		TRMFLT( tt[1] * font_factor * ENLARGE * ft_ht * scale ),
+		TRMFLT( tt[3] * font_factor * ENLARGE * ft_ht * scale ) );
 
-        // Output string, while escaping the '(', ')' and '\' characters.
-        // this string is output for measurement purposes only.
-        //
-        fprintf( OF, "%.3f (", TRMFLT( -args->just ) );
-        while ( str[i] != '\0' )
-        {
-            if ( str[i] == '(' || str[i] == ')' || str[i] == '\\' )
-                fprintf( OF, "\\%c", str[i] );
-            else
-                fprintf( OF, "%c", str[i] );
-            i++;
-        }
-        fprintf( OF, ") SW\n" );
+		// print the string
+		fprintf( OF, "(%s) show\n", string_to_print );
+	}
+/*
+	// Output string, while escaping the '(', ')' and '\' characters.
+	// this string is output for measurement purposes only.
+	//
+	fprintf( OF, "%.3f (", TRMFLT( -args->just ) );
+	while ( string_to_print[i] != '\0' )
+	{
+		if ( string_to_print[i] == '(' || string_to_print[i] == ')' || string_to_print[i] == '\\' )
+			fprintf( OF, "\\%c", string_to_print[i] );
+		else
+			fprintf( OF, "%c", string_to_print[i] );
+		i++;
+	}
+	fprintf( OF, ") SW\n" );
 
 
-        // Parse string for PLplot escape sequences and print everything out
+	// Parse string for PLplot escape sequences and print everything out
 
-        cur_strp = cur_str;
-        f        = 0;
-        do
-        {
-            strp = str;
+	cur_strp = cur_str;
+	f        = 0;
+	do
+	{
+		strp = string_to_print;
 
-            if ( *cur_strp == esc )
-            {
-                cur_strp++;
+        if( *cur_strp > PRIVATE_UNICODE_PLANE ) {
+			   // get new font
+            fci = *cur_strp-PRIVATE_UNICODE_PLANE;
+            PSSetFont( fci );
 
-                if ( *cur_strp == esc ) // <esc><esc>
-                {
-                    *strp++ = *cur_strp++;
-                }
-                else if ( *cur_strp == 'f' )
-                {
-                    cur_strp++;
-                    if ( *cur_strp++ != 'f' )
-                    {
-                        // escff occurs because of logic above. But any suffix
-                        // other than "f" should never happen.
-                        plabort( "proc_str, internal PLplot logic error;"
-                            "wrong escf escape sequence" );
-                        return;
-                    }
-                    font = fonts[f++];
-                    pldebug( "proc_str", "string-specified fci = 0x%x, font name = %s\n", fci, font );
-                    continue;
-                }
-                else
-                    switch ( *cur_strp++ )
-                    {
-                    case 'd':  //subscript
-                    case 'D':
-                        plP_script_scale( FALSE, &level,
-                            &old_sscale, &sscale, &old_soffset, &soffset );
-                        scale = sscale;
-                        // The correction for the difference in magnitude
-                        // between the baseline and middle coordinate systems
-                        // for subscripts should be
-                        // -0.5*(base font size - superscript/subscript font size).
-                        ddup = -0.5 * ( 1.0 - sscale );
-                        up   = -font_factor * ENLARGE * ft_ht * ( RISE_FACTOR * soffset + ddup );
-                        break;
+		// copy from current to next token, adding a postscript escape
+		// char '\' if necessary
+		//
+		while ( *cur_strp && *cur_strp != esc )
+		{
+			if ( *cur_strp == '(' || *cur_strp == ')' || *cur_strp == '\\' )
+				*strp++ = '\\';
+			*strp++ = *cur_strp++;
+		}
+		*strp = '\0';
 
-                    case 'u':  //superscript
-                    case 'U':
-                        plP_script_scale( TRUE, &level,
-                            &old_sscale, &sscale, &old_soffset, &soffset );
-                        scale = sscale;
-                        // The correction for the difference in magnitude
-                        // between the baseline and middle coordinate systems
-                        // for superscripts should be
-                        // 0.5*(base font size - superscript/subscript font size).
-                        ddup = 0.5 * ( 1.0 - sscale );
-                        up   = font_factor * ENLARGE * ft_ht * ( RISE_FACTOR * soffset + ddup );
-                        break;
+		// Apply the scaling and the shear
+		fprintf( OF, "/%s [%.3f %.3f %.3f %.3f 0 0] SF\n",
+			font,
+			TRMFLT( tt[0] * font_factor * ENLARGE * ft_ht * scale ),
+			TRMFLT( tt[2] * font_factor * ENLARGE * ft_ht * scale ),
+			TRMFLT( tt[1] * font_factor * ENLARGE * ft_ht * scale ),
+			TRMFLT( tt[3] * font_factor * ENLARGE * ft_ht * scale ) );
 
-                    // ignore the next sequences
+		// print the string
+		fprintf( OF, "(%s) show\n", string_to_print );
 
-                    case '+':
-                    case '-':
-                    case 'b':
-                    case 'B':
-                        plwarn( "'+', '-', and 'b/B' text escape sequences not processed." );
-                        break;
-                    }
-            }
+	} while ( *cur_strp );
+*/
 
-            // copy from current to next token, adding a postscript escape
-            // char '\' if necessary
-            //
-            while ( *cur_strp && *cur_strp != esc )
-            {
-                if ( *cur_strp == '(' || *cur_strp == ')' || *cur_strp == '\\' )
-                    *strp++ = '\\';
-                *strp++ = *cur_strp++;
-            }
-            *strp = '\0';
+	fprintf( OF, "grestore\n" );
+	fprintf( OF, "grestore\n" );
 
-            if ( fabs( up ) < 0.001 )
-                up = 0.;                       // Watch out for small differences
+/*
+	//
+	// keep driver happy -- needed for background and orientation.
+	// arghhh! can't calculate it, as I only have the string reference
+	// point, not its extent!
+	// Still a hack - but at least it takes into account the string
+	// length and justification. Character width is assumed to be
+	// 0.6 * character height. Add on an extra 1.5 * character height
+	// for safety.
+	//
+	cs = cos( rotation );
+	sn = sin( rotation );
+	l1 = -i * args->just;
+	l2 = i * ( 1. - args->just );
+	// Factor of 0.6 is an empirical fudge to convert character
+	// height to average character width
+	l1 *= 0.6;
+	l2 *= 0.6;
 
-            // Apply the scaling and the shear
-            fprintf( OF, "/%s [%.3f %.3f %.3f %.3f 0 0] SF\n",
-                font,
-                TRMFLT( tt[0] * font_factor * ENLARGE * ft_ht * scale ),
-                TRMFLT( tt[2] * font_factor * ENLARGE * ft_ht * scale ),
-                TRMFLT( tt[1] * font_factor * ENLARGE * ft_ht * scale ),
-                TRMFLT( tt[3] * font_factor * ENLARGE * ft_ht * scale ) );
-
-            // if up/down escape sequences, save current point and adjust baseline;
-            // take the shear into account
-            if ( up != 0. )
-                fprintf( OF, "gsave %.3f %.3f rmoveto\n", TRMFLT( up * tt[1] ), TRMFLT( up * tt[3] ) );
-
-            // print the string
-            fprintf( OF, "(%s) show\n", str );
-
-            // back to baseline
-            if ( up != 0. )
-                fprintf( OF, "grestore (%s) stringwidth rmoveto\n", str );
-        } while ( *cur_strp );
-
-        fprintf( OF, "grestore\n" );
-        fprintf( OF, "grestore\n" );
-
-        //
-        // keep driver happy -- needed for background and orientation.
-        // arghhh! can't calculate it, as I only have the string reference
-        // point, not its extent!
-        // Still a hack - but at least it takes into account the string
-        // length and justification. Character width is assumed to be
-        // 0.6 * character height. Add on an extra 1.5 * character height
-        // for safety.
-        //
-        cs = cos( theta );
-        sn = sin( theta );
-        l1 = -i * args->just;
-        l2 = i * ( 1. - args->just );
-        // Factor of 0.6 is an empirical fudge to convert character
-        // height to average character width
-        l1 *= 0.6;
-        l2 *= 0.6;
-
-        dev->llx = (int) ( MIN( dev->llx, args->x + ( MIN( l1 * cs, l2 * cs ) - 1.5 ) * font_factor * ft_ht * ENLARGE ) );
-        dev->lly = (int) ( MIN( dev->lly, args->y + ( MIN( l1 * sn, l2 * sn ) - 1.5 ) * font_factor * ft_ht * ENLARGE ) );
-        dev->urx = (int) ( MAX( dev->urx, args->x + ( MAX( l1 * cs, l2 * cs ) + 1.5 ) * font_factor * ft_ht * ENLARGE ) );
-        dev->ury = (int) ( MAX( dev->ury, args->y + ( MAX( l1 * sn, l2 * sn ) + 1.5 ) * font_factor * ft_ht * ENLARGE ) );
-    }
+	dev->llx = (int) ( MIN( dev->llx, args->x + ( MIN( l1 * cs, l2 * cs ) - 1.5 ) * font_factor * ft_ht * ENLARGE ) );
+	dev->lly = (int) ( MIN( dev->lly, args->y + ( MIN( l1 * sn, l2 * sn ) - 1.5 ) * font_factor * ft_ht * ENLARGE ) );
+	dev->urx = (int) ( MAX( dev->urx, args->x + ( MAX( l1 * cs, l2 * cs ) + 1.5 ) * font_factor * ft_ht * ENLARGE ) );
+	dev->ury = (int) ( MAX( dev->ury, args->y + ( MAX( l1 * sn, l2 * sn ) + 1.5 ) * font_factor * ft_ht * ENLARGE ) );
+*/
 }
 
 static void
@@ -1360,28 +1259,36 @@ plunicode2type1( const PLUNICODE index,
 //
 // Sets the Type1 font.
 //--------------------------------------------------------------------------
+
+#define CHANGE_ME "Helvetica"
 static const char *
-get_font( PSDev* dev, PLUNICODE fci )
-{
-    const char *font;
-    // fci = 0 is a special value indicating the Type 1 Symbol font
-    // is desired.  This value cannot be confused with a normal FCI value
-    // because it doesn't have the PL_FCI_MARK.
-    if ( fci == 0 )
-    {
-        font                = "Symbol";
-        dev->nlookup        = number_of_entries_in_unicode_to_symbol_table;
-        dev->lookup         = unicode_to_symbol_lookup_table;
-        dev->if_symbol_font = 1;
-    }
-    else
-    {
-        // convert the fci to Base14/Type1 font information
-        font                = plP_FCI2FontName( fci, Type1Lookup, N_Type1Lookup );
-        dev->nlookup        = number_of_entries_in_unicode_to_standard_table;
-        dev->lookup         = unicode_to_standard_lookup_table;
-        dev->if_symbol_font = 0;
-    }
-    pldebug( "set_font", "fci = 0x%x, font name = %s\n", fci, font );
+get_font( PLUNICODE fci )
+{ 
+  const char *font;
+  switch(fci){
+    case 1:
+    case 2:
+    case 3:font = "Helvetica"; break;
+    case 4:font = "Helvetica-Bold"; break;
+    case 5:font = "Helvetica-Narrow"; break;
+    case 6:font = "Helvetica-Narrow-BoldOblique"; break;
+    case 7:font = "Times-Roman"; break;
+    case 8:font = "Times-BoldItalic"; break;
+    case 9:font = "Symbol";  break;
+    case 10:font = "ZapfDingbats"; break;
+    case 11:font = "Courier"; break;
+    case 12:font = "Courier-Oblique"; break;
+    case 13:font = "Palatino"; break;
+    case 14:font = "Palatino-Italic"; break;
+    case 15:font = "Palatino-Bold"; break;
+    case 16:font = "Palatino-BoldItalic"; break;
+    case 17:font = "AvantGarde-Book"; break;
+    case 18:font = "NewCenturySchlbk"; break;
+    case 19:font = "NewCenturySchlbk-Bold"; break;
+    case 20:font = CHANGE_ME ; break;
+    default:font = "Helvetica";
+      break;
+  }
+    fprintf(stderr, "set_font, fci = 0x%x, font name = %s\n", fci, font );
     return ( font );
 }

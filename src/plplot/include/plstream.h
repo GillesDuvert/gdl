@@ -585,14 +585,6 @@ public:
 
     void path( PLINT n, PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 );
 
-// Plots array y against x for n points using ASCII code "code".
-
-    void poin( PLINT n, const PLFLT *x, const PLFLT *y, PLINT code );
-
-// Draws a series of points in 3 space.
-
-    void poin3( PLINT n, const PLFLT *x, const PLFLT *y, const PLFLT *z, PLINT code );
-
 // Draws a polygon in 3 space.
 
     void poly3( PLINT n, const PLFLT *x, const PLFLT *y, const PLFLT *z, const bool *draw, bool ifcc );
@@ -609,11 +601,6 @@ public:
 
     void ptex( PLFLT x, PLFLT y, PLFLT dx, PLFLT dy, PLFLT just,
                const char *text );
-
-// Prints out "text" at world cooordinate (x,y,z).
-
-    void ptex3( PLFLT wx, PLFLT wy, PLFLT wz, PLFLT dx, PLFLT dy, PLFLT dz,
-                PLFLT sx, PLFLT sy, PLFLT sz, PLFLT just, const char *text );
 
 // Get the world coordinates associated with device coordinates
 

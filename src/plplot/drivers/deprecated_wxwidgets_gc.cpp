@@ -36,6 +36,10 @@
 
 // std and driver headers
 #include "deprecated_wxwidgets.h"
+//define LINE2D, POLYLINE2D
+#define LINE2D dummy_line
+#define POLYLINE2D dummy_polyline
+#include "plplot3d.h"
 
 #include <wx/string.h>
 #include <string>
@@ -49,7 +53,6 @@ wxPLDevGC::wxPLDevGC( void ) : wxPLDevBase( wxBACKEND_GC )
     m_bitmap   = NULL;
     m_context  = NULL;
     underlined = false;
-
 }
 
 
@@ -317,7 +320,7 @@ void wxPLDevGC::PSDrawTextToDC(unsigned char* utf8_string, bool drawText )
         m_context->Translate( w, 0 );
     }
 
-    textWidth += static_cast<int>( w );
+    textWidth += w ;
 }
 
 //void wxPLDevGC::PSDrawTextToDC2(unsigned char* utf8_string, bool drawText )
@@ -389,6 +392,8 @@ void wxPLDevGC::PSDrawTextToDC(unsigned char* utf8_string, bool drawText )
 
 void wxPLDevGC::PSSetFont( PLUNICODE fci , PLFLT scale)
 {
+  assert (m_dc != NULL);
+//  printf("Using fci=%d, scale=%f\n",fci,scale);
   bool useName=true;
   wxFont currentFont=m_dc->GetFont();
   wxString faceName=currentFont.GetFaceName();
@@ -439,11 +444,14 @@ void wxPLDevGC::PSSetFont( PLUNICODE fci , PLFLT scale)
       break;
   }
     if (useName) {
-      m_context->SetFont(m_context->CreateFont(fontSize * fontScale,faceName,flags , wxColour( textRed, textGreen, textBlue )));
+      wxFont f(wxFontInfo(fontSize * fontScale).FaceName(faceName));
+      m_dc->SetFont(f);
+      m_context->SetFont(f, wxColour( textRed, textGreen, textBlue ));
+//      m_context->SetFont(m_context->CreateFont(fontSize * fontScale,faceName,flags , wxColour( textRed, textGreen, textBlue )));
       return;
     } else {
-      wxFont f(1, family, style, weight);
-      f.Scale(fontSize * fontScale);
+      wxFont f(fontSize * fontScale, family, style, weight);
+      m_dc->SetFont(f);
       m_context->SetFont(f, wxColour( textRed, textGreen, textBlue ));
     }
 }
@@ -495,8 +503,12 @@ void wxPLDevGC::ProcessString( PLStream* pls, EscText* args )
     textBlue  = pls->curcolor.b;
 
     // calculate rotation of text
+    Project3DToPlplotFormMatrix(args->xform);
     plRotationShear( args->xform, &rotation, &shear, &stride );
-    rotation -= pls->diorot * M_PI / 2.0;
+//    unsigned char s[args->unicode_array_len];
+//    int k=0; for (k; k<args->unicode_array_len; ++k) s[k]=(unsigned char)args->unicode_array[k]; s[k]=0;
+//    printf("string :\"%s\" : rotation=%f, shear=%f, stride=%f\n", s, rotation*180/PI, shear, stride);
+//    rotation -= pls->diorot * M_PI / 2.0;
     cos_rot   = cos( rotation );
     sin_rot   = sin( rotation );
     cos_shear = cos( shear );
@@ -509,7 +521,8 @@ void wxPLDevGC::ProcessString( PLStream* pls, EscText* args )
     bool      carriageReturn = false;
     wxCoord   paraHeight     = 0;
     // Get the curent font
-    fontScale = 1.0;
+    fontScale = args->scale*10;
+    PSSetFont( -1, fontScale);
     yOffset   = 0.0;
     fci = -1;
     PSSetFont( fci ); //use current font
@@ -544,18 +557,25 @@ void wxPLDevGC::ProcessString( PLStream* pls, EscText* args )
         yOffset   = startingYOffset;
         fci       = startingFci;
         PSSetFont( fci, fontScale);
-        m_context->PushState();                                              //save current position
-        std::cerr<<"("<<args->refx<<","<<args->refy<<"), "<<height<<" - "<<args->y<<"/"<<scaley<<std::endl;
-        m_context->Translate( args->x / scalex, height - args->y / scaley ); //move to text starting position
-        wxGraphicsMatrix matrix = m_context->CreateMatrix(
-            cos_rot * stride, -sin_rot * stride,
-            cos_rot * sin_shear + sin_rot * cos_shear,
-            -sin_rot * sin_shear + cos_rot * cos_shear,
-            0.0, 0.0 );                                                                                //create rotation transformation matrix
-        m_context->ConcatTransform( matrix );                                                          //rotate
-        m_context->Translate( -args->just * textWidth, -0.5 * textHeight + paraHeight * lineSpacing ); //move to set alignment
-        PSDrawText( lineStart, lineLen, true );                                                        //draw text
-        m_context->PopState();                                                                         //return to original position
+
+	// 3D convert on normalized values
+    SelfTransform3D(&(args->x), &(args->y));
+
+    m_context->PushState();                                              //save current position
+    wxDouble dx=args->x / scalex;
+    wxDouble dy= height - args->y / scaley ;
+    m_context->Translate( dx,dy ); //move to text starting position
+    wxGraphicsMatrix matrix = m_context->CreateMatrix(
+        cos_rot * stride, -sin_rot * stride,
+        cos_rot * sin_shear + sin_rot * cos_shear,
+        -sin_rot * sin_shear + cos_rot * cos_shear,
+        0.0, 0.0 );                                                                                //create rotation transformation matrix
+    m_context->ConcatTransform( matrix );                                                         //rotate
+    dx=-args->just * textWidth;
+    dy= -0.5 * textHeight + paraHeight * lineSpacing ;
+    m_context->Translate( dx,dy ); //move to set alignment
+    PSDrawText( lineStart, lineLen, true );                                                        //draw text
+    m_context->PopState();                                                                         //return to original position
 
         lineStart += lineLen;
         if ( carriageReturn )

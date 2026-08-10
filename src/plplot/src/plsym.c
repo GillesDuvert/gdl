@@ -98,427 +98,6 @@ plchar( short *xygrid, int len, PLFLT *xform,
 static PLINT
 plcvec( PLINT ch, signed char **xygr );
 
-static void
-plhrsh2( PLINT ch, PLINT x, PLINT y );
-
-//--------------------------------------------------------------------------
-//! Plot a glyph at the specified points.  (This function largely
-//! supersedes plpoin and plsym because many[!] more glyphs are
-//! accessible with plstring.)  The glyph is specified with a PLplot
-//! user string.  Note that the user string is not actually limited to
-//! one glyph so it is possible (but not normally useful) to plot more
-//! than one glyph at the specified points with this function.  As
-//! with plmtex and plptex, the user string can contain FCI escapes to
-//! determine the font, UTF-8 code to determine the glyph or else
-//! PLplot escapes for Hershey or unicode text to determine the glyph.
-//! @param n Number of points in x and y arrays.
-//! @param x Array of X coordinates of points.
-//! @param y Array of Y coordinates of points.
-//! @param string PLplot user string corresponding to the glyph to
-//! be plotted at each of the n points.
-//--------------------------------------------------------------------------
-
-void
-c_plstring( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLCHAR_VECTOR string )
-{
-    PLINT i;
-    for ( i = 0; i < n; i++ )
-    {
-        c_plptex( x[i], y[i], 1., 0., 0.5, string );
-    }
-}
-
-
-//--------------------------------------------------------------------------
-//! Plot a glyph at the specified points.  (This function is largely
-//! superseded by plstring which gives access to many[!] more glyphs.)
-//! code=-1 means try to just draw a point.  Right now it's just a
-//! move and a draw at the same place.  Not ideal, since a
-//! sufficiently intelligent output device may optimize it away, or
-//! there may be faster ways of doing it.  This is OK for now, though,
-//! and offers a 4X speedup over drawing a Hershey font "point" (which
-//! is actually diamond shaped and and therefore takes 4 strokes to
-//! draw).  If 0 < code < 32, then a useful (but small subset) of
-//! Hershey symbols is plotted.  If 32 <= code <= 127 the
-//! corresponding printable ASCII character is plotted.
-//! @param n Number of points in x and y arrays.
-//! @param x Pointer to an array with X coordinates of points.
-//! @param y Pointer to an array with Y coordinates of points.
-//! @param code Hershey symbol code (in "ascii-indexed" form with
-//! -1 <= code <= 127) corresponding to a glyph to be plotted at each
-//! of the n points.
-//--------------------------------------------------------------------------
-
-void
-c_plpoin( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code )
-{
-    PLINT i, sym, ifont = plsc->cfont;
-    PLFLT xt, yt;
-
-    if ( plsc->level < 3 )
-    {
-        plabort( "plpoin: Please set up window first" );
-        return;
-    }
-    if ( code < -1 || code > 127 )
-    {
-        plabort( "plpoin: Invalid code" );
-        return;
-    }
-
-    if ( code == -1 )
-    {
-        for ( i = 0; i < n; i++ )
-        {
-            TRANSFORM( x[i], y[i], &xt, &yt );
-            pljoin( xt, yt, xt, yt );
-        }
-    }
-    else
-    {
-        if ( ifont > numberfonts )
-            ifont = 1;
-        sym = *( fntlkup + ( ifont - 1 ) * numberchars + code );
-        // One-time diagnostic output.
-        // fprintf(stdout, "plploin code, sym = %d, %d\n", code, sym);
-
-        for ( i = 0; i < n; i++ )
-        {
-            TRANSFORM( x[i], y[i], &xt, &yt );
-            plhrsh( sym, plP_wcpcx( xt ), plP_wcpcy( yt ) );
-        }
-    }
-}
-
-//--------------------------------------------------------------------------
-//! Plot a glyph at the specified 3D points.  (This function is
-//! largely superseded by plstring3 which gives access to many[!] more
-//! glyphs.)  Set up the call to this function similar to what is done
-//! for plline3.  code=-1 means try to just draw a point.  Right now
-//! it's just a move and a draw at the same place.  Not ideal, since a
-//! sufficiently intelligent output device may optimize it away, or
-//! there may be faster ways of doing it.  This is OK for now, though,
-//! and offers a 4X speedup over drawing a Hershey font "point" (which
-//! is actually diamond shaped and therefore takes 4 strokes to draw).
-//! If 0 < code < 32, then a useful (but small subset) of Hershey
-//! symbols is plotted.  If 32 <= code <= 127 the corresponding
-//! printable ASCII character is plotted.
-//! @param n Number of points in x, y, and z arrays.
-//! @param x Pointer to an array with X coordinates of points.
-//! @param y Pointer to an array with Y coordinates of points.
-//! @param z Pointer to an array with Z coordinates of points.
-//! @param code Hershey symbol code (in "ascii-indexed" form with
-//! -1 <= code <= 127) corresponding to a glyph to be plotted at each
-//! of the n points.
-//--------------------------------------------------------------------------
-
-void
-c_plpoin3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT code )
-{
-    PLINT i, sym, ifont = plsc->cfont;
-    PLFLT u, v;
-    PLFLT xmin, xmax, ymin, ymax, zmin, zmax, zscale;
-
-    if ( plsc->level < 3 )
-    {
-        plabort( "plpoin3: Please set up window first" );
-        return;
-    }
-    if ( code < -1 || code > 127 )
-    {
-        plabort( "plpoin3: Invalid code" );
-        return;
-    }
-
-    plP_gdom( &xmin, &xmax, &ymin, &ymax );
-    plP_grange( &zscale, &zmin, &zmax );
-
-    if ( code == -1 )
-    {
-        for ( i = 0; i < n; i++ )
-        {
-            if ( x[i] >= xmin && x[i] <= xmax &&
-                 y[i] >= ymin && y[i] <= ymax &&
-                 z[i] >= zmin && z[i] <= zmax )
-            {
-                u = plP_wcpcx( plP_w3wcx( x[i], y[i], z[i] ) );
-                v = plP_wcpcy( plP_w3wcy( x[i], y[i], z[i] ) );
-                plP_movphy( (PLINT) u, (PLINT) v );
-                plP_draphy( (PLINT) u, (PLINT) v );
-            }
-        }
-    }
-    else
-    {
-        if ( ifont > numberfonts )
-            ifont = 1;
-        sym = *( fntlkup + ( ifont - 1 ) * numberchars + code );
-
-        for ( i = 0; i < n; i++ )
-        {
-            if ( x[i] >= xmin && x[i] <= xmax &&
-                 y[i] >= ymin && y[i] <= ymax &&
-                 z[i] >= zmin && z[i] <= zmax )
-            {
-                u = plP_wcpcx( plP_w3wcx( x[i], y[i], z[i] ) );
-                v = plP_wcpcy( plP_w3wcy( x[i], y[i], z[i] ) );
-                plhrsh( sym, (PLINT) u, (PLINT) v );
-            }
-        }
-    }
-}
-
-//--------------------------------------------------------------------------
-//! Plot a glyph at the specified 3D points.  (This function
-//! largely supersedes plpoin3 because many[!] more glyphs are
-//! accessible with plstring3).  Set up the call to this function
-//! similar to what is done for plline3.  The glyph is specified with
-//! a PLplot user string.  Note that the user string is not actually
-//! limited to one glyph so it is possible (but not normally useful)
-//! to plot more than one glyph at the specified points with this
-//! function.  As with plmtex and plptex, the user string can contain
-//! FCI escapes to determine the font, UTF-8 code to determine the
-//! glyph or else PLplot escapes for Hershey or unicode text to
-//! determine the glyph.
-//! @param n Number of points in x, y, and z arrays.
-//! @param x Array of X coordinates of points.
-//! @param y Array of Y coordinates of points.
-//! @param z Array of Z coordinates of points.
-//! @param string PLplot user string corresponding to the glyph to
-//! be plotted at each of the n points.
-//--------------------------------------------------------------------------
-
-void
-c_plstring3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLCHAR_VECTOR string )
-{
-    PLINT i;
-    PLFLT u, v;
-    PLFLT xmin, xmax, ymin, ymax, zmin, zmax, zscale;
-
-    if ( plsc->level < 3 )
-    {
-        plabort( "plstring3: Please set up window first" );
-        return;
-    }
-
-    plP_gdom( &xmin, &xmax, &ymin, &ymax );
-    plP_grange( &zscale, &zmin, &zmax );
-
-    for ( i = 0; i < n; i++ )
-    {
-        if ( x[i] >= xmin && x[i] <= xmax &&
-             y[i] >= ymin && y[i] <= ymax &&
-             z[i] >= zmin && z[i] <= zmax )
-        {
-            u = plP_w3wcx( x[i], y[i], z[i] );
-            v = plP_w3wcy( x[i], y[i], z[i] );
-            c_plptex( u, v, 1., 0., 0.5, string );
-        }
-    }
-}
-
-//--------------------------------------------------------------------------
-// void plhrsh(PLINT ch, PLINT x, PLINT y)
-//    PLINT ch - hershey code to plot
-//    PLINT x - device-world x coordinate of hershey character
-//    PLINT y - device-world y coordinate of hershey character
-//
-//  Writes the Hershey symbol "ch" centred at the physical coordinate (x,y).
-//  This function is now just a "spoof" front end to the old plhersh,
-//  which has now been renamed to plhrsh2(). All this function does is
-//  decide whether or not we should render natively as unicode, and then
-//  convert between hershey and unicode.
-//
-//  If the function KNOWS there isn't a unicode equivalent, then it will
-//  try to render it as a hershey font. Understandably, this might make
-//  testing out the unicode functions a little tricky, so if you want
-//  to disable this behaviour, recompile with PL_TEST_FOR_MISSING_GLYPHS
-//  defined.
-//--------------------------------------------------------------------------
-
-void
-plhrsh( PLINT ch, PLINT x, PLINT y )
-{
-    EscText   args;
-    int       idx;
-    PLUNICODE unicode_char;
-
-    // Check to see if the device understands unicode and wants to draw
-    // symbols.
-    //
-    if ( ( plsc->dev_text ) && ( plsc->dev_unicode ) && ( !plsc->dev_hrshsym ) )
-    {
-        // Get the index in the lookup table and the unicode character
-        idx = plhershey2unicode( ch );
-        if ( 0 <= idx && idx <= number_of_entries_in_hershey_to_unicode_table )
-            unicode_char = hershey_to_unicode_lookup_table[idx].Unicode;
-        else
-            unicode_char = (PLUNICODE) 0x00;
-
-        pldebug( "plhrsh", "ch, idx, unicode_char = %d, %d, %#x\n", ch, idx, unicode_char );
-        //
-        //  Test to see if there is a defined unicode glyph for this hershey
-        //  code; if there isn't, then we pass the glyph to plhersh, and have
-        //  it rendered the old fashioned way.
-        //  Otherwise, we let the driver render it as unicode
-        //
-
-        if ( ( unicode_char == 0 ) || ( idx == -1 ) )
-        {
-#ifndef PL_TEST_FOR_MISSING_GLYPHS
-            plhrsh2( ch, x, y );
-#endif
-        }
-        else
-        {
-            PLUNICODE plhrsh_unicode_buffer[3], fci;
-            PLFLT     xform[] = { 1.0, 0.0, 0.0, 1.0 };
-            char      esc;
-
-            // Get the current escape character
-            plgesc( &esc );
-
-            // Setup to render a unicode character
-            args.text_type    = PL_STRING_SYMBOL;
-            args.unicode_char = unicode_char;
-            if ( 0 <= idx && idx <= number_of_entries_in_hershey_to_unicode_table )
-                args.font_face = hershey_to_unicode_lookup_table[idx].Font;
-            else
-                // Unknown font face indicated by 0 value.
-                args.font_face = 0;
-            // Comment out to fix problem with ps, psttf drivers
-            //args.base = 1;
-            args.base   = 0;
-            args.just   = 0.5;
-            args.xform  = xform;
-            args.x      = x;
-            args.y      = y;
-            args.string = NULL;
-            args.symbol = ch;
-
-            // Get address of the unicode buffer (even though it is
-            // currently static)
-            args.unicode_array       = &plhrsh_unicode_buffer[0];
-            args.unicode_array_len   = 1;
-            plhrsh_unicode_buffer[0] = unicode_char;
-            // watch out for escape character and unescape it by appending
-            // one extra.
-            if ( unicode_char == (PLUNICODE) esc )
-            {
-                args.unicode_array_len   = 2;
-                plhrsh_unicode_buffer[1] = unicode_char;
-            }
-
-            // No need to change font back since only one character.
-
-            // Swap the sym and chr information so that the text
-            // rendering (which uses chrht and chrdef) will
-            // render the symbol correctly
-            plsc->original_chrht  = plsc->chrht;
-            plsc->original_chrdef = plsc->chrdef;
-            plsc->chrht           = plsc->symht;
-            plsc->chrdef          = plsc->symdef;
-
-            if ( plsc->alt_unicode )
-            {
-                // Character at a time method
-                plgfci( &fci );
-                args.n_fci  = fci;
-                args.n_char = unicode_char;
-
-                plP_esc( PLESC_BEGIN_TEXT, &args );
-                plP_esc( PLESC_TEXT_CHAR, &args );
-                plP_esc( PLESC_END_TEXT, &args );
-            }
-            else
-            {
-                // "array method"
-                plP_esc( PLESC_HAS_TEXT, &args );
-            }
-
-            plsc->chrht  = plsc->original_chrht;
-            plsc->chrdef = plsc->original_chrdef;
-        }
-    }
-    else
-    {
-        plhrsh2( ch, x, y );
-    }
-}
-
-//--------------------------------------------------------------------------
-// void plhrsh2()
-//
-// Writes the Hershey symbol "ch" centred at the physical coordinate (x,y).
-//--------------------------------------------------------------------------
-
-static void
-plhrsh2( PLINT ch, PLINT x, PLINT y )
-{
-    PLINT       cx, cy, k, penup, style;
-    signed char *vxygrid = 0;
-    PLFLT       scale, xscale, yscale;
-    PLINT       llx[STLEN], lly[STLEN], l = 0;
-
-    penup = 1;
-    scale = 0.05 * plsc->symht;
-
-    if ( !plcvec( ch, &vxygrid ) )
-    {
-        plP_movphy( x, y );
-        return;
-    }
-
-// Line style must be continuous
-
-    style     = plsc->nms;
-    plsc->nms = 0;
-
-// Compute how many physical pixels correspond to a character pixel
-
-    xscale = scale * plsc->xpmm;
-    yscale = scale * plsc->ypmm;
-
-    k = 4;
-    for (;; )
-    {
-        cx = vxygrid[k++];
-        cy = vxygrid[k++];
-        if ( cx == 64 && cy == 64 )
-        {
-            if ( l )
-            {
-                plP_draphy_poly( llx, lly, l );
-                l = 0;
-            }
-            plP_movphy( x, y );
-            plsc->nms = style;
-            return;
-        }
-        else if ( cx == 64 && cy == 0 )
-            penup = 1;
-        else
-        {
-            if ( penup == 1 )
-            {
-                if ( l )
-                {
-                    plP_draphy_poly( llx, lly, l );
-                    l = 0;
-                }
-                llx[l]   = ROUND( x + xscale * cx );
-                lly[l++] = ROUND( y + yscale * cy );
-                plP_movphy( llx[l - 1], lly[l - 1] );
-                penup = 0;
-            }
-            else
-            {
-                llx[l]   = ROUND( x + xscale * cx );
-                lly[l++] = ROUND( y + yscale * cy );
-            }
-        }
-    }
-}
 
 //--------------------------------------------------------------------------
 // void pllab()
@@ -791,8 +370,8 @@ PLFLT
 plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y, PLINT refx, PLINT refy) {
 	static PLFLT saverestore[1000] = {};
 	int counter = -1;
-	signed char *vxygrid = 0;
 	short *charPoints = 0;
+	PLFLT save_form[4]={1,0,0,1};
 #define HEIGHTRATIO 1.6
 	PLINT ch, i, length, style, oline = 0;
 	PLFLT width = 0., xorg = 0., yorg = 0., yline = 0., yref = 0., def, ht, dscale, scale;
@@ -812,97 +391,192 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	style = plsc->nms;
 	plsc->nms = 0;
 
-	if (plsc->has_string_length) {
-		PLINT plbuf_write = plsc->plbuf_write;
-		plsc->plbuf_write = FALSE;
-		plsc->get_string_length = 1;
-		c_plmtex("t", 0.0, 0.0, 0.0, string);
-		plsc->get_string_length = 0;
-		plsc->plbuf_write = plbuf_write;
-		return (PLFLT) plsc->string_length;
-	} else {
+	EscText args = {};
+	args.text_type = PL_STRING_TEXT;
+	args.base = base;
+	args.just = just;
+	args.scale= dscale;
+	//must make a copy of xform because 'args.xform' is modified afterwards and must be resetted each
+	// time the string position is called
+	args.xform = save_form;
+	if (xform) for (int i=0; i< 4; ++i) save_form[i]=xform[i]; //xform may be NULL!
+	args.x = x;
+	args.y = y;
+	args.refx = refx;
+	args.refy = refy;
+printf("%d,%f\n",x,xorg);
+	// Always store the string passed by the caller, even for unicode
+	// enabled drivers.  The plmeta driver will use this field to store
+	// the string data in the metafile.
+	args.string = string;
+	args.unicode_array = (PLUNICODE*) calloc(strlen(string), sizeof (PLUNICODE));
+	args.unicode_array_len = 0;
+	PLUNICODE *symbol = args.unicode_array;
 
-		EscText args = {};
-		args.text_type = PL_STRING_TEXT;
-		args.base = base;
-		args.just = just;
-		args.xform = xform;
-		args.x = x;
-		args.y = y;
-		args.refx = refx;
-		args.refy = refy;
+	pldeco(symbol, &length, string, plsc->dev_text); // decode embedded commands, encode to unicode or hershey, depending.
 
-		// Always store the string passed by the caller, even for unicode
-		// enabled drivers.  The plmeta driver will use this field to store
-		// the string data in the metafile.
-		args.string = string;
-		args.unicode_array = (PLUNICODE*) calloc(strlen(string), sizeof (PLUNICODE));
-		args.unicode_array_len = 0;
-		PLUNICODE *symbol = args.unicode_array;
+	PLUNICODE ifont = plsc->cfont;
+	PLUNICODE oldifont = ifont;
+	int revert = 0;
 
-		pldeco(symbol, &length, string, plsc->dev_text); // Does the device render it's own text ?
-
-		int ifont = plsc->cfont;
-		int oldifont = ifont;
-		int revert = 0;
-
+	if (plsc->dev_text) // Does the device render it's own text ?
+	{
 		for (i = 0; i < length; i++) {
 			ch = symbol[i];
 			switch (ch) {
-				case A: // !A Shift above the division line. 
-					yorg = yline + linespacing / 2;
-					yref = yorg;
+				case A: // !A Shift above the division line.
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args); args.unicode_array_len=0;
+					yorg = yref = yline + linespacing / 2;
 					ilev = 0;
 					scale = dscale;
-					write = 1;
 					break;
-				case B: // !B Shift below the division line. 
-					yorg = yline - linespacing / 2;
-					yref = yorg;
-					ilev = 0,
+				case B: // !B Shift below the division line.
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+					yorg = yref = yline - linespacing / 2;
+					ilev = 0;
 					scale = dscale;
-					write = 1;
 					break;
 				case C: // !C shift back to the starting position and down one line
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
 					xorg = 0;
 					yline -= linespacing;
-					yref = yline;
+					yorg = yref = yline;
 					scale = dscale;
 					ilev = 0;
-					yorg = yline;
-					write = 1;
 					break;
 				case D: // !D Shift down to the first level subscript, shrink the character size by 38%.
-					yorg = yline + firstlevsubs;
-					yref = yorg;
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+					yorg = yref = yline + firstlevsubs;
 					ilev = 1;
 					scale = dscale38;
-					write = 1;
 					break;
 				case U:// !U Shift to first and unique upper subscript level, shrink the character size by 38%.
-					yorg = yline + levsuper;
-					yref = yorg;
-					ilev = 1;
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+					yorg = yref = yline + levsuper;
 					scale = dscale38;
 					write = 1;
 					break;
 				case L: // !L Shift down to the second level subscript, shrink the character size by 38%.
-					yorg = yline + secondlevsubs;
-					yref = yorg;
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+					yorg = yref = yline + secondlevsubs;
 					ilev = 1;
 					scale = dscale38;
 					write = 1;
 					break;
 					// 2 variable sizes
 				case E: // !E Shift up to the exponent level, shrink the character size by 56%.
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
 					yorg = yref + (HEIGHTRATIO * ht) * scales[ilev]; //not exactly same as IDL
 					scale = dscale * scales[ilev];
 					write = 1;
 					break;
 				case I: // !I Shift down to the index level, shrink the character size by 56%.
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
 					yorg = yref - (HEIGHTRATIO * ht) * scales[ilev]; //idem
 					scale = dscale * scales[ilev];
 					write = 1;
+					break;
+				case M: // !M Switch to the !9 symbol font for one character, then switch back.
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+					oldifont = ifont;
+					ifont = 9;
+					revert = 1;
+					plP_esc(PLESC_LOAD_FONT, &ifont);
+				case N: // !N Shift back to the normal level and original character size.
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+					scale = dscale;
+					yorg = yref = yline;
+					ilev = 0;
+					write = 1;
+					break;
+				case R: // !R Restore position from the top of the saved positions stack.
+					if (counter >= 0) {
+					    if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+						xorg = saverestore[counter--];
+					} else {
+						fprintf(stderr, "Error using Hershey characters: Restore without save.\n");
+						return xorg;
+					}
+					break;
+				case S:// !S Save position to the top of the saved positions stack.
+					saverestore[++counter] = xorg;
+					break;
+				case V: // !V Switch to the !20 symbol font for one character, then switch back.
+					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
+					oldifont = ifont;
+					ifont = 20;
+					revert = 1;
+					plP_esc(PLESC_LOAD_FONT, &ifont);
+/*
+				case SP:// SPACE : Just add space size
+					xorg += ht * args.scale * plsc->xpmm * 10;
+					break;
+*/
+				default:
+				{
+					args.unicode_array[args.unicode_array_len++] = ch; //if (ch < PRIVATE_UNICODE_PLANE) xorg+=ht*scale;
+					if (length_only) {
+						if (ch < PRIVATE_UNICODE_PLANE) xorg += ht * scale;
+						break;
+					}
+					xorg += ht * args.scale * plsc->xpmm; //plsc->string_length; printf("%f,%f\n",x,xorg);
+					args.x = x + xorg;
+					printf("x=%d\n", args.x);
+					args.y = y + yorg * plsc->ypmm;
+					args.scale = scale;
+					if (xform) for (int i = 0; i < 4; ++i) save_form[i] = xform[i]; //restore original xform
+				}
+			}
+			if (revert) {
+				revert = 0;
+				ifont = oldifont;
+				plP_esc(PLESC_LOAD_FONT, &ifont);
+			}
+		}
+	} else {
+		for (i = 0; i < length; i++) {
+			ch = symbol[i];
+			switch (ch) {
+				case A: // !A Shift above the division line.
+					yorg = yref = yline + linespacing / 2;
+					ilev = 0;
+					scale = dscale;
+					break;
+				case B: // !B Shift below the division line.
+					yorg = yref = yline - linespacing / 2;
+					ilev = 0,
+							scale = dscale;
+					break;
+				case C: // !C shift back to the starting position and down one line
+					xorg = 0;
+					yline -= linespacing;
+					yorg = yref = yline;
+					scale = dscale;
+					ilev = 0;
+					break;
+				case D: // !D Shift down to the first level subscript, shrink the character size by 38%.
+					yorg = yref = yline + firstlevsubs;
+					ilev = 1;
+					scale = dscale38;
+					break;
+				case U:// !U Shift to first and unique upper subscript level, shrink the character size by 38%.
+					yorg = yref = yline + levsuper;
+					ilev = 1;
+					scale = dscale38;
+					break;
+				case L: // !L Shift down to the second level subscript, shrink the character size by 38%.
+					yorg = yref = yline + secondlevsubs;
+					ilev = 1;
+					scale = dscale38;
+					break;
+					// 2 variable sizes
+				case E: // !E Shift up to the exponent level, shrink the character size by 56%.
+					yorg = yref + (HEIGHTRATIO * ht) * scales[ilev]; //not exactly same as IDL
+					scale = dscale * scales[ilev];
+					break;
+				case I: // !I Shift down to the index level, shrink the character size by 56%.
+					yorg = yref - (HEIGHTRATIO * ht) * scales[ilev]; //idem
+					scale = dscale * scales[ilev];
 					break;
 				case M: // !M Switch to the !9 symbol font for one character, then switch back.
 					oldifont = ifont;
@@ -910,15 +584,12 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 					revert = 1;
 				case N: // !N Shift back to the normal level and original character size.
 					scale = dscale;
-					yorg = yline;
-					yref = yorg;
+					yorg = yref = yline;
 					ilev = 0;
-					write = 1;
 					break;
 				case R: // !R Restore position from the top of the saved positions stack.
 					if (counter >= 0) {
 						xorg = saverestore[counter--];
-						write = 1;
 					} else {
 						fprintf(stderr, "Error using Hershey characters: Restore without save.\n");
 						return xorg;
@@ -932,56 +603,42 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 					ifont = 20;
 					revert = 1;
 				case SP:// SPACE : Just add space size
-					xorg += ht;
+					xorg += ht * args.scale * plsc->xpmm * 10;
 					break;
 				default:
-				{
-					if (plsc->dev_text) // Does the device render it's own text ?
-					{
-						if (length_only) {
-							xorg += ht;
-							break;
-						} else {
-							if (write) {
-								write = 0;
-								args.y = refy+yorg;
-								plP_esc(PLESC_HAS_TEXT, &args);
-								args.unicode_array_len = 0;
-							}
-							args.unicode_array[args.unicode_array_len++] = ch;
-						}
-					} else {
-						if (ch >= PRIVATE_UNICODE_PLANE) {
-							ifont = ch - PRIVATE_UNICODE_PLANE;
-							break;
-						}
-						if (hersheyNumberChars[ifont] == 0) break;
-						if ((ch-32) > hersheyNumberChars[ifont]) break;
-						int offset = hersheyFontLookupStruct[ifont][ch - 32].offset;
-						int nvecs = hersheyFontLookupStruct[ifont][ch - 32].nvecs;
-						width = hersheyFontLookupStruct[ifont][ch - 32].width;
-						if (length_only) {
-							xorg += width * scale;
-							break; // do not draw anything
-						}
-						charPoints = &(hersheyFontVectors[ifont][offset]);
-						plchar(charPoints, nvecs, xform, refx, refy, scale,
-								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+					if (ch >= PRIVATE_UNICODE_PLANE) {
+						ifont = ch - PRIVATE_UNICODE_PLANE;
+						break;
 					}
-					if (revert) {
-						revert = 0;
-						ifont = oldifont;
+					if (hersheyNumberChars[ifont] == 0) break;
+					if ((ch - 32) > hersheyNumberChars[ifont]) break;
+					int offset = hersheyFontLookupStruct[ifont][ch - 32].offset;
+					int nvecs = hersheyFontLookupStruct[ifont][ch - 32].nvecs;
+					width = hersheyFontLookupStruct[ifont][ch - 32].width;
+					if (length_only) {
+						xorg += width * scale;
+						break; // do not draw anything
 					}
-				}
+					charPoints = &(hersheyFontVectors[ifont][offset]);
+					plchar(charPoints, nvecs, xform, refx, refy, scale,
+							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+
+			}
+			if (revert) {
+				revert = 0;
+				ifont = oldifont;
 			}
 		}
-		if (plsc->dev_text) // Does the device render it's own text ?
-		{
-			if (args.unicode_array_len) plP_esc(PLESC_HAS_TEXT, &args);
-		}
-		free(args.unicode_array);
-		plsc->nms = style;
 	}
+	if (length_only) return xorg; //avoid problems with null-valued xform
+	
+	if (plsc->dev_text) // Does the device render it's own text ?
+	{
+		if (args.unicode_array_len) plP_esc(PLESC_HAS_TEXT, &args);
+	}
+	free(args.unicode_array);
+	plsc->nms = style;
+
 	return xorg; //length
 }
 
@@ -1054,153 +711,6 @@ PLFLT
 plstrl( PLCHAR_VECTOR string) {
 	return plstr(string, 1, 0,0, NULL,0,0,0,0);
 }
-/*
-
-PLFLT
-plstrl( PLCHAR_VECTOR string) {
-	static PLFLT saverestore[1000] = {};
-	int counter = -1;
-	signed char *vxygrid = 0;
-#define HEIGHTRATIO 1.6
-	PLUNICODE ch;
-	PLINT i, length, style, oline = 0;
-	PLFLT width = 0., xorg = 0., yorg = 0., yline = 0., yref = 0., def, ht, dscale, scale;
-
-	plgchr(&def, &ht);
-	dscale = 0.05 * ht;
-	scale = dscale;
-	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
-	const PLFLT dscale38 = dscale * (1 - 0.38);
-	const PLFLT linespacing = HEIGHTRATIO * ht;
-	const PLFLT levsuper = HEIGHTRATIO * ht * 0.5 - 0.5 * ht * dscale38;
-	const PLFLT firstlevsubs = -HEIGHTRATIO * ht * 0.5 + 0.5 * ht * dscale38;
-	const PLFLT secondlevsubs = -HEIGHTRATIO * ht * 0.75 + 0.5 * ht * dscale38;
-	int ilev = 0;
-
-	// If the driver will compute string lengths for us then we ask
-	// it do so by setting get_string_length flag. When this is set
-	// the driver will set the string_length variable instead of
-	// actually rendering the string.
-	// Note we must make sure that this text command does not end up
-	// in the buffer.
-	//
-	// TODO:
-	//   Is plmtex the best string diplay routine to use?
-	//   Will this work for buffered plots?
-
-	if (plsc->has_string_length) {
-		PLINT plbuf_write = plsc->plbuf_write;
-		plsc->plbuf_write = FALSE;
-		plsc->get_string_length = 1;
-		c_plmtex("t", 0.0, 0.0, 0.0, string);
-		plsc->get_string_length = 0;
-		plsc->plbuf_write = plbuf_write;
-		return (PLFLT) plsc->string_length;
-	}
-
-	PLUNICODE *symbol=(PLUNICODE*)calloc(strlen(string),sizeof(PLUNICODE));
-
-	plgchr(&def, &ht);
-	dscale = 0.05 * ht;
-	scale = dscale;
-	pldeco(symbol, &length, string, plsc->dev_text);
-
-	for (i = 0; i < length; i++) {
-		ch = symbol[i];
-		switch (ch) {
-			case A: // !A Shift above the division line. 
-				yorg = yline + linespacing / 2;
-				yref = yorg;
-				ilev = 0;
-				scale = dscale;
-				break;
-			case B: // !B Shift below the division line. 
-				yorg = yline - linespacing / 2;
-				yref = yorg;
-				ilev = 0,
-						scale = dscale;
-				break;
-			case C: // !C shift back to the starting position and down one line
-				xorg = 0;
-				yline -= linespacing;
-				yref = yline;
-				scale = dscale;
-				ilev = 0;
-				yorg = yline;
-				break;
-			case D: // !D Shift down to the first level subscript, shrink the character size by 38%.
-				yorg = yline + firstlevsubs;
-				yref = yorg;
-				ilev = 1;
-				scale = dscale38;
-				break;
-			case U:// !U Shift to first and unique upper subscript level, shrink the character size by 38%.
-				yorg = yline + levsuper;
-				yref = yorg;
-				ilev = 1;
-				scale = dscale38;
-				break;
-			case L: // !L Shift down to the second level subscript, shrink the character size by 38%.
-				yorg = yline + secondlevsubs;
-				yref = yorg;
-				ilev = 1;
-				scale = dscale38;
-				break;
-				// 2 variable sizes
-			case E: // !E Shift up to the exponent level, shrink the character size by 56%.
-				yorg = yref + (HEIGHTRATIO * ht) * scales[ilev]; //not exactly same as IDL
-				scale = dscale * scales[ilev];
-				break;
-			case I: // !I Shift down to the index level, shrink the character size by 56%.
-				yorg = yref - (HEIGHTRATIO * ht) * scales[ilev]; //idem
-				scale = dscale * scales[ilev];
-				break;
-			case N: // !N Shift back to the normal level and original character size.
-				scale = dscale;
-				yorg = yline;
-				yref = yorg;
-				ilev = 0;
-				break;
-			case R: // !R Restore position from the top of the saved positions stack.
-				if (counter >= 0) {
-					xorg = saverestore[counter--];
-				} else {
-					fprintf(stderr, "Error using Hershey characters: Restore without save.\n");
-					return 0;
-				}
-				break;
-			case S:// !S Save position to the top of the saved positions stack.
-				saverestore[++counter] = xorg;
-				break;
-			case SP:// SPACE : Just add space size
-				xorg += ht;
-				break;
-			default:
-			{
-				if (plsc->dev_text) // Does the device render it's own text ?
-				{
-					if ( ch >= PRIVATE_UNICODE_PLANE ) break; //remove unicode-encoded font changes that have no meaning for this case
-					xorg += ht; // do something 
-				} else {
-					if (plcvec(ch, &vxygrid)) {
-						width = vxygrid[3] - vxygrid[2];
-						xorg += width * scale;
-					}
-				}
-			}
-		}
-	}
-	free(symbol);
-	return (PLFLT) xorg;
-}
-*/
-
-//--------------------------------------------------------------------------
-// PLINT plcvec()
-//
-// Gets the character digitisation of Hershey table entry "char".
-// Returns 1 if there is a valid entry.
-//--------------------------------------------------------------------------
 
 static PLINT
 plcvec( PLINT ch, signed char **xygr )
@@ -1707,515 +1217,6 @@ plP_FCI2FontName( PLUNICODE fci,
     // Mark lookup failure with NULL pointer.
     //
     return ( NULL );
-}
-
-//--------------------------------------------------------------------------
-// void plmtex3()
-//
-// This is the 3d equivalent of plmtex(). It prints out "text" at specified
-// position relative to viewport (may be inside or outside)
-//
-// side	String contains one or more of the following characters
-//  x,y,z : Specify which axis is to be labeled
-//  p,s   : Label the "primary" or the "secondary" axis. The "primary" axis
-//            being somewhat arbitrary, but basically it is the one that you'd
-//            expect to labeled in a 3d graph of standard orientation. Example:
-//            for z this would be the left hand axis.
-//  v     : draw the text perpendicular to the axis.
-//
-// disp Displacement from specified edge of axis, measured outwards from
-//	the axis in units of the current character height. The
-//	centerlines of the characters are aligned with the specified
-//	position.
-//
-// pos	Position of the reference point of the string relative to the
-//	axis ends, ranging from 0.0 (left-hand end) to 1.0 (right-hand
-//	end)
-//
-// just	Justification of string relative to reference point
-//	just = 0.0 => left hand edge of string is at reference
-//	just = 1.0 => right hand edge of string is at reference
-//	just = 0.5 => center of string is at reference
-//
-// All calculations are done in physical coordinates.
-//
-//--------------------------------------------------------------------------
-
-void
-c_plmtex3( PLCHAR_VECTOR side, PLFLT disp, PLFLT pos, PLFLT just, PLCHAR_VECTOR text )
-{
-    // local storage
-    PLFLT xmin, xmax, ymin, ymax, zmin, zmax, zscale;
-    PLFLT chrdef, chrht;
-
-    // calculated
-    PLFLT xpc, ypc, xrefpc, yrefpc;
-    PLFLT epx1 = 0.0, epy1 = 0.0, epx2 = 0.0, epy2 = 0.0, epx3 = 0.0, epy3 = 0.0;
-    PLFLT dispx, dispy, xform[4];
-    PLFLT shift, theta, temp;
-
-    // check that the plotting environment is set up
-    if ( plsc->level < 3 )
-    {
-        plabort( "plmtex3: Please set up window first" );
-        return;
-    }
-
-    // get plotting environment information
-    plP_gdom( &xmin, &xmax, &ymin, &ymax );
-    plP_grange( &zscale, &zmin, &zmax );
-    plgchr( &chrdef, &chrht );
-
-    // handle x/y axises
-    if ( ( plP_stindex( side, "x" ) != -1 ) || ( plP_stindex( side, "y" ) != -1 ) )
-    {
-        // get the locations of the end points of the relevant axis
-
-        // x axis label
-        if ( plP_stindex( side, "x" ) != -1 )
-        {
-            // primary
-            if ( plP_stindex( side, "p" ) != -1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmin, ymin, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmin ) );
-                epx2 = plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmin ) );
-            }
-            else
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmin ) );
-                epx2 = plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmin ) );
-            }
-        }
-        else
-        {
-            if ( plP_stindex( side, "p" ) != -1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmin, ymin, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmin ) );
-                epx2 = plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmin ) );
-            }
-            else
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmin ) );
-                epx2 = plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmin ) );
-            }
-        }
-
-        // text always goes from left to right
-        if ( epx1 > epx2 )
-        {
-            temp = epx1;
-            epx1 = epx2;
-            epx2 = temp;
-            temp = epy1;
-            epy1 = epy2;
-            epy2 = temp;
-            // recalculate position assuming the user specified
-            // it in the min -> max direction of the axis.
-            pos = 1.0 - pos;
-        }
-
-        // calculate location of text center point
-
-        // 1. calculate the angle of the axis we are to
-        // draw the text on relative to the horizontal
-
-        if ( ( epx2 - epx1 ) != 0.0 )
-        {
-            theta = atan( ( epy2 - epy1 ) / ( epx2 - epx1 ) );
-        }
-        else
-        {
-            if ( epy2 > epy1 )
-            {
-                theta = 0.5 * PI;
-            }
-            else
-            {
-                theta = -0.5 * PI;
-            }
-        }
-
-        // 2. calculate the perpendicular vector
-
-        dispy = disp * chrht;
-
-        // 3. calculate x & y center points
-
-        xpc = pos * ( epx2 - epx1 ) + epx1;
-        ypc = pos * ( epy2 - epy1 ) + epy1;
-
-        // 4. compute reference point
-        //  It appears that drivers that cannot handle text justification
-        //   use this as the starting point of the string.
-        //  Calculations must be done in millimeters for this part
-        //   so we convert to mm, do the calculation and convert back.
-        //  The calculation is also dependent of the orientation
-        //   (perpendicular or parallel) of the text.
-
-        xpc = plP_dcmmx( plP_pcdcx( (PLINT) xpc ) );
-        ypc = plP_dcmmy( plP_pcdcy( (PLINT) ypc ) ) - dispy;
-
-        shift = plstrl( text ) * just;
-
-        if ( plP_stindex( side, "v" ) != -1 )
-        {
-            xrefpc = xpc;
-            yrefpc = ypc - shift;
-        }
-        else
-        {
-            xrefpc = xpc - cos( theta ) * shift;
-            yrefpc = ypc - sin( theta ) * shift;
-        }
-
-        xpc    = plP_mmpcx( xpc );
-        ypc    = plP_mmpcy( ypc );
-        xrefpc = plP_mmpcx( xrefpc );
-        yrefpc = plP_mmpcy( yrefpc );
-
-        // 5. compute transform matrix & draw text
-
-        // perpendicular, rotate 90 degrees & shear
-
-        if ( plP_stindex( side, "v" ) != -1 )
-        {
-            xform[0] = 0.0;
-            xform[1] = -cos( theta );
-            xform[2] = 1.0;
-            xform[3] = -sin( theta );
-            plP_text( 0, just, xform, (PLINT) xpc, (PLINT) ypc, (PLINT) xrefpc, (PLINT) yrefpc, text );
-        }
-
-        // parallel, rotate & shear by angle
-        else
-        {
-            xform[0] = cos( theta );
-            xform[1] = 0.0;
-            xform[2] = sin( theta );
-            xform[3] = 1.0;
-
-            plP_text( 0, just, xform, (PLINT) xpc, (PLINT) ypc, (PLINT) xrefpc, (PLINT) yrefpc, text );
-        }
-    }
-
-    // handle z axises
-    if ( plP_stindex( side, "z" ) != -1 )
-    {
-        // Find the left most of the 4 z axis options for "primary"
-        // Also find the location of frontmost point in the graph,
-        //  which will be needed to calculate at what angle to shear
-        //  the text.
-
-        if ( plP_stindex( side, "p" ) != -1 )
-        {
-            epx1 = plP_wcpcx( plP_w3wcx( xmin, ymin, zmin ) );
-            epy1 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmin ) );
-            epy2 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmax ) );
-            epx3 = plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) );
-            epy3 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmin ) );
-
-            if ( plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) ) < epx1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmax ) );
-                epx3 = plP_wcpcx( plP_w3wcx( xmin, ymin, zmin ) );
-                epy3 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmin ) );
-            }
-
-            if ( plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) ) < epx1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmax ) );
-                epx3 = plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) );
-                epy3 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmin ) );
-            }
-
-            if ( plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) ) < epx1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmax ) );
-                epx3 = plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) );
-                epy3 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmin ) );
-            }
-        }
-
-        // find the right most of the 4 z axis options for "primary"
-        if ( plP_stindex( side, "s" ) != -1 )
-        {
-            epx1 = plP_wcpcx( plP_w3wcx( xmin, ymin, zmin ) );
-            epy1 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmin ) );
-            epy2 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmax ) );
-            epx3 = plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) );
-            epy3 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmin ) );
-
-            if ( plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) ) > epx1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmin, ymax, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmin, ymax, zmax ) );
-                epx3 = plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) );
-                epy3 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmin ) );
-            }
-
-            if ( plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) ) > epx1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmax ) );
-                epx3 = plP_wcpcx( plP_w3wcx( xmin, ymin, zmin ) );
-                epy3 = plP_wcpcy( plP_w3wcy( xmin, ymin, zmin ) );
-            }
-
-            if ( plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) ) > epx1 )
-            {
-                epx1 = plP_wcpcx( plP_w3wcx( xmax, ymax, zmin ) );
-                epy1 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmin ) );
-                epy2 = plP_wcpcy( plP_w3wcy( xmax, ymax, zmax ) );
-                epx3 = plP_wcpcx( plP_w3wcx( xmax, ymin, zmin ) );
-                epy3 = plP_wcpcy( plP_w3wcy( xmax, ymin, zmin ) );
-            }
-        }
-
-        // Calculate location of text center point.
-        // This is very similiar for the z axis.
-
-        // primary and secondary have to be handled separately here
-
-        if ( plP_stindex( side, "p" ) != -1 )
-        {
-            // 1. Calculate the angle of the axis we are to
-            // draw the text on relative to the horizontal.
-
-            if ( ( epx3 - epx1 ) != 0.0 )
-            {
-                theta = atan( ( epy3 - epy1 ) / ( epx3 - epx1 ) );
-            }
-            else
-            {
-                if ( epy3 > epy1 )
-                {
-                    theta = 0.5 * PI;
-                }
-                else
-                {
-                    theta = -0.5 * PI;
-                }
-            }
-
-            // 2. Calculate the perpendicular vector.
-
-            dispx = -cos( theta ) * disp * chrht;
-            dispy = -sin( theta ) * disp * chrht;
-        }
-        else
-        {
-            if ( ( epx1 - epx3 ) != 0.0 )
-            {
-                theta = -atan( ( epy3 - epy1 ) / ( epx1 - epx3 ) );
-            }
-            else
-            {
-                if ( epy3 > epy1 )
-                {
-                    theta = -0.5 * PI;
-                }
-                else
-                {
-                    theta = 0.5 * PI;
-                }
-            }
-
-            dispx = cos( theta ) * disp * chrht;
-            dispy = sin( theta ) * disp * chrht;
-        }
-
-        // 3. Calculate x & y center points.
-
-        xpc = epx1;
-        ypc = pos * ( epy2 - epy1 ) + epy1;
-
-        // 4. Compute the reference point.
-
-        xpc = plP_dcmmx( plP_pcdcx( (PLINT) xpc ) ) + dispx;
-        ypc = plP_dcmmy( plP_pcdcy( (PLINT) ypc ) ) + dispy;
-
-        shift = plstrl( text ) * just;
-
-        if ( plP_stindex( side, "v" ) != -1 )
-        {
-            xrefpc = xpc - cos( theta ) * shift;
-            yrefpc = ypc - sin( theta ) * shift;
-        }
-        else
-        {
-            xrefpc = xpc;
-            yrefpc = ypc - shift;
-        }
-
-        xpc    = plP_mmpcx( xpc );
-        ypc    = plP_mmpcy( ypc );
-        xrefpc = plP_mmpcx( xrefpc );
-        yrefpc = plP_mmpcy( yrefpc );
-
-        // 5. Compute transform matrix & draw text.
-
-        if ( plP_stindex( side, "v" ) != -1 )
-        {
-            xform[0] = cos( theta );
-            xform[1] = 0.0;
-            xform[2] = sin( theta );
-            xform[3] = 1.0;
-
-            plP_text( 0, just, xform, (PLINT) xpc, (PLINT) ypc, (PLINT) xrefpc, (PLINT) yrefpc, text );
-        }
-
-        else
-        {
-            xform[0] = 0.0;
-            xform[1] = -cos( theta );
-            xform[2] = 1.0;
-            xform[3] = -sin( theta );
-
-            plP_text( 0, just, xform, (PLINT) xpc, (PLINT) ypc, (PLINT) xrefpc, (PLINT) yrefpc, text );
-        }
-    }
-}
-
-//--------------------------------------------------------------------------
-// void plptex3()
-//
-// Prints out "text" at world cooordinate (wx,wy,wz).
-//
-// The text is drawn parallel to the line between (wx,wy,wz) and
-// (wx+dx,wy+dy,wz+dz).
-//
-// The text is sheared so that it is "vertically" parallel to the
-// line between (wx,wy,wz) and (wx+sx, wy+sy, wz+sz). If sx=sy=sz=0 then
-// the text is simply rotated to parallel to the baseline.
-//
-// "just" adjusts the horizontal justification of the string:
-//	just = 0.0 => left hand edge of string is at (wx,wy)
-//	just = 1.0 => right hand edge of string is at (wx,wy)
-//	just = 0.5 => center of string is at (wx,wy) etc.
-//
-// Calculations are done in physical coordinates.
-//
-//--------------------------------------------------------------------------
-
-void
-c_plptex3( PLFLT wx, PLFLT wy, PLFLT wz, PLFLT dx, PLFLT dy, PLFLT dz,
-           PLFLT sx, PLFLT sy, PLFLT sz, PLFLT just, PLCHAR_VECTOR text )
-{
-    PLFLT xpc, ypc, xrefpc, yrefpc, xdpc, ydpc, xspc, yspc, ld, ls, cp, shift;
-    PLFLT x_o, y_o, z_o, x_dx, y_dy, z_dz;
-    PLFLT theta, phi, stride, xform[6], affineL[6], cosphi;
-
-    // check that the plotting environment is set up
-    if ( plsc->level < 3 )
-    {
-        plabort( "plptex3: Please set up window first" );
-        return;
-    }
-
-    // compute text x,y location in physical coordinates
-    xpc = plP_wcpcx( plP_w3wcx( wx, wy, wz ) );
-    ypc = plP_wcpcy( plP_w3wcy( wx, wy, wz ) );
-
-    // determine angle to rotate text in the x-y plane
-    xdpc  = plP_wcpcx( plP_w3wcx( wx + dx, wy + dy, wz + dz ) );
-    ydpc  = plP_wcpcy( plP_w3wcy( wx + dx, wy + dy, wz + dz ) );
-    theta = atan2( ydpc - ypc, xdpc - xpc );
-
-    // Determine angle to shear text in the x-y plane. This is a little
-    // messy, but basically the idea is:
-    //
-    // Compute the dot product of the vector d and the vector s to
-    // determine the angle between them (acos(t) = d . s / |d| |s|).
-    // Then because acos will return a number from 0.0 to PI, i.e.
-    // only in quadrants 1 or 2, compute the cross product of the
-    // two vectors. If this is negative then the angle is adjusted
-    // 0.0 to -PI.
-
-    if ( ( sx == 0.0 ) && ( sy == 0.0 ) && ( sz == 0.0 ) )
-    {
-        phi = 0.0;
-    }
-    else
-    {
-        xspc = plP_wcpcx( plP_w3wcx( wx + sx, wy + sy, wz + sz ) );
-        yspc = plP_wcpcy( plP_w3wcy( wx + sx, wy + sy, wz + sz ) );
-        ld   = sqrt( ( xpc - xdpc ) * ( xpc - xdpc ) + ( ypc - ydpc ) * ( ypc - ydpc ) );
-        ls   = sqrt( ( xpc - xspc ) * ( xpc - xspc ) + ( ypc - yspc ) * ( ypc - yspc ) );
-        phi  = acos( ( ( xdpc - xpc ) * ( xspc - xpc ) + ( ydpc - ypc ) * ( yspc - ypc ) ) / ( ld * ls ) );
-        cp   = ( xdpc - xpc ) * ( yspc - ypc ) - ( ydpc - ypc ) * ( xspc - xpc );
-        if ( cp < 0.0 )
-        {
-            phi = -phi;
-        }
-        phi = 0.5 * PI - phi;
-    }
-
-    // Determine how to adjust the "stride" of the text to make it
-    // appear that it is going into (or out of) the page. Basically
-    // scale the x baseline of the text by the normalized length of
-    // the d vector projected into the x-y plane.
-    x_o  = plP_w3wcx( wx, wy, wz );
-    y_o  = plP_w3wcy( wx, wy, wz );
-    z_o  = plP_w3wcz( wx, wy, wz );
-    x_dx = x_o - plP_w3wcx( wx + dx, wy + dy, wz + dz );
-    y_dy = y_o - plP_w3wcy( wx + dx, wy + dy, wz + dz );
-    z_dz = z_o - plP_w3wcz( wx + dx, wy + dy, wz + dz );
-
-    stride = sqrt( x_dx * x_dx + y_dy * y_dy );
-    stride = stride / sqrt( x_dx * x_dx + y_dy * y_dy + z_dz * z_dz );
-
-    // compute the reference point
-    xpc = plP_dcmmx( plP_pcdcx( (PLINT) xpc ) );
-    ypc = plP_dcmmy( plP_pcdcy( (PLINT) ypc ) );
-
-    shift  = plstrl( text ) * just;
-    xrefpc = xpc - cos( theta ) * shift * stride;
-    yrefpc = ypc - sin( theta ) * shift * stride;
-
-    xpc    = plP_mmpcx( xpc );
-    ypc    = plP_mmpcy( ypc );
-    xrefpc = plP_mmpcx( xrefpc );
-    yrefpc = plP_mmpcy( yrefpc );
-
-    // compute the transform
-    // This affine transformation corresponds to transforming from old
-    // coordinates to new coordinates by rotating axes, y shearing
-    // or (y skewing), and scaling.
-    // Comment out the explicit xform calculations because we use
-    // the affine utilities for that calculation instead.
-    //
-    // xform[0] = cos( theta ) * stride;
-    // xform[1] = cos( theta ) * sin( phi ) - sin( theta ) * cos( phi );
-    // xform[2] = sin( theta ) * stride;
-    // xform[3] = sin( theta ) * sin( phi ) + cos( theta ) * cos( phi );
-    //
-    plP_affine_rotate( xform, 180. * theta / PI );
-    plP_affine_yskew( affineL, -180. * phi / PI );
-    plP_affine_multiply( xform, affineL, xform );
-    cosphi = cos( phi );
-    if ( fabs( cosphi ) > 1.e-300 )
-        plP_affine_scale( affineL, 1. / stride, 1. / cosphi );
-    else
-        plP_affine_scale( affineL, 1. / stride, 1.e300 );
-    plP_affine_multiply( xform, affineL, xform );
-
-    plP_text( 0, just, xform, (PLINT) xpc, (PLINT) ypc, (PLINT) xrefpc, (PLINT) yrefpc, text );
 }
 
 //--------------------------------------------------------------------------

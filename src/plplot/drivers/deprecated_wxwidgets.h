@@ -23,7 +23,8 @@
 ////with graphic_context GDL can erase drawings by writing with !P.BACKGROUND since antialiasing can be removed.
 // So we force no antialiasing (way faster plots) and thus prefer GC.
 //#undef wxUSE_GRAPHICS_CONTEXT
-//
+//to force to to compile / use DC
+//#define USE_DEVICE_CONTEXT_ALSO
 
 // some special wxWidgets headers
 #include <wx/spinctrl.h>
@@ -153,7 +154,7 @@ public: // variables
     bool             underlined;
     double           fontSize;
     double           fontScale;
-    wxCoord          textWidth, textHeight;
+    double           textWidth, textHeight;
     PLUNICODE        fci;
     //the distance between the superscript top and subscript base from the baseline
     wxCoord          superscriptHeight, subscriptDepth;
@@ -165,6 +166,7 @@ public: // variables
     PLFLT            stride;
 };
 
+#ifdef USE_DEVICE_CONTEXT_ALSO
 
 class wxPLDevDC : public wxPLDevBase
 {
@@ -192,6 +194,7 @@ private: // variables
 	wxFont  * m_font;
 };
 
+#endif 
 
 #include <wx/graphics.h>
 

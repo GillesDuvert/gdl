@@ -23,7 +23,6 @@
 // - text clipping
 // - implement AddToClipRegion for text correctly
 //
-
 // wxwidgets headers
 #include <wx/wx.h>
 #include <wx/cmndata.h>
@@ -38,6 +37,9 @@
 // std and driver headers
 #include <cmath>
 #include "deprecated_wxwidgets.h"
+
+#ifdef USE_DEVICE_CONTEXT_ALSO
+
 //define LINE2D, POLYLINE2D
 #define LINE2D plD_line_wxwidgets
 #define POLYLINE2D plD_polyline_wxwidgets
@@ -419,7 +421,7 @@ void wxPLDevDC::ProcessString( PLStream* pls, EscText* args )
     wxDCClipper clip( *m_dc, wxRegion( 4, cpoints ) );
 
     // calculate rotation of text
-    plRotationShear( args->xform, &rotation, &shear, &stride );
+        plRotationShear( args->xform, &rotation, &shear, &stride );
     rotation -= pls->diorot * M_PI / 2.0;
     cos_rot   = cos( rotation );
     sin_rot   = sin( rotation );
@@ -492,4 +494,4 @@ void wxPLDevDC::ProcessString( PLStream* pls, EscText* args )
     AddtoClipRegion( 0, 0, width, height );
 }
 
-
+#endif

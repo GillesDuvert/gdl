@@ -308,6 +308,7 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_IMPORT_BUFFER             39 // set the contents of the buffer to a specified byte string
 #define PLESC_APPEND_BUFFER             40 // append the given byte string to the buffer
 #define PLESC_FLUSH_REMAINING_BUFFER    41 // flush the remaining buffer e.g. after new data was appended
+#define PLESC_LOAD_FONT                 42 // driver loads font
 
 // Alternative unicode text handling control characters
 #define PLTEXT_FONTCHANGE               0 // font change in the text stream
@@ -693,13 +694,10 @@ typedef struct
 #define    plaxes                   c_plaxes
 #define    plbop                    c_plbop
 #define    plbox                    c_plbox
-#define    plbox3                   c_plbox3
-//#define    plbtime                  c_plbtime
 #define    plcalc_world             c_plcalc_world
 #define    plclear                  c_plclear
 #define    plcol0                   c_plcol0
 #define    plcol1                   c_plcol1
-#define    plconfigtime             c_plconfigtime
 #define    plcont                   c_plcont
 #define    plcpstrm                 c_plcpstrm
 #define    plend                    c_plend
@@ -709,11 +707,8 @@ typedef struct
 #define    pleop                    c_pleop
 #define    plerrx                   c_plerrx
 #define    plerry                   c_plerry
-#define    plfamadv                 c_plfamadv
 #define    plfill                   c_plfill
-#define    plfill3                  c_plfill3
 #define    plflush                  c_plflush
-#define    plfont                   c_plfont
 #define    plgchr                   c_plgchr
 #define    plgcmap1_range           c_plgcmap1_range
 #define    plgcol0                  c_plgcol0
@@ -760,19 +755,15 @@ typedef struct
 #define    plmeshc                  c_plmeshc
 #define    plmkstrm                 c_plmkstrm
 #define    plmtex                   c_plmtex
-#define    plmtex3                  c_plmtex3
 #define    plot3d                   c_plot3d
 #define    plot3dc                  c_plot3dc
 #define    plot3dcl                 c_plot3dcl
 #define    plparseopts              c_plparseopts
 #define    plpat                    c_plpat
-#define    plpoin                   c_plpoin
-#define    plpoin3                  c_plpoin3
 #define    plpoly3                  c_plpoly3
 #define    plprec                   c_plprec
 #define    plpsty                   c_plpsty
 #define    plptex                   c_plptex
-#define    plptex3                  c_plptex3
 #define    plrandd                  c_plrandd
 #define    plreplot                 c_plreplot
 #define    plrgbhls                 c_plrgbhls
@@ -807,9 +798,6 @@ typedef struct
 #define    plsfnam                  c_plsfnam
 #define    plsfont                  c_plsfont
 #define    plshade                  c_plshade
-#ifdef PL_DEPRECATED
-#define    plshade1                 c_plshade1
-#endif // PL_DEPRECATED
 #define    plshades                 c_plshades
 #define    plslabelfunc             c_plslabelfunc
 #define    plsmaj                   c_plsmaj
@@ -919,13 +907,6 @@ c_plbop( void );
 PLDLLIMPEXP void
 c_plbox( PLCHAR_VECTOR xopt, PLFLT xtick, PLINT nxsub,
          PLCHAR_VECTOR yopt, PLFLT ytick, PLINT nysub );
-
-// This is the 3-d analogue of plbox().
-
-PLDLLIMPEXP void
-c_plbox3( PLCHAR_VECTOR xopt, PLCHAR_VECTOR xlabel, PLFLT xtick, PLINT nxsub,
-          PLCHAR_VECTOR yopt, PLCHAR_VECTOR ylabel, PLFLT ytick, PLINT nysub,
-          PLCHAR_VECTOR zopt, PLCHAR_VECTOR zlabel, PLFLT ztick, PLINT nzsub );
 
 // Calculate world coordinates and subpage from relative device coordinates.
 
@@ -1042,20 +1023,10 @@ c_plfamadv( void );
 PLDLLIMPEXP void
 c_plfill( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y );
 
-// Pattern fills the 3d polygon bounded by the input points.
-
-PLDLLIMPEXP void
-c_plfill3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z );
-
 // Flushes the output stream.  Use sparingly, if at all.
 
 PLDLLIMPEXP void
 c_plflush( void );
-
-// Sets the global font flag to 'ifont'.
-
-PLDLLIMPEXP void
-c_plfont( PLINT ifont );
 
 // Load specified font set.
 
@@ -1421,20 +1392,6 @@ c_plpat( PLINT nlin, PLINT_VECTOR inc, PLINT_VECTOR del );
 PLDLLIMPEXP void
 c_plpath( PLINT n, PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 );
 
-// Plots array y against x for n points using ASCII code "code".
-
-PLDLLIMPEXP void
-c_plpoin( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
-
-// Draws a series of points in 3 space.
-
-PLDLLIMPEXP void
-c_plpoin3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT code );
-
-// Draws a polygon in 3 space.
-
-PLDLLIMPEXP void
-c_plpoly3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLBOOL_VECTOR draw, PLBOOL ifcc );
 
 // Set the floating point precision (in number of places) in numeric labels.
 
@@ -1450,18 +1407,6 @@ c_plpsty( PLINT patt );
 
 PLDLLIMPEXP void
 c_plptex( PLFLT x, PLFLT y, PLFLT dx, PLFLT dy, PLFLT just, PLCHAR_VECTOR text );
-
-// Prints out "text" at world cooordinate (x,y,z).
-
-PLDLLIMPEXP void
-c_plptex3( PLFLT wx, PLFLT wy, PLFLT wz, PLFLT dx, PLFLT dy, PLFLT dz,
-           PLFLT sx, PLFLT sy, PLFLT sz, PLFLT just, PLCHAR_VECTOR text );
-
-// Random number generator based on Mersenne Twister.
-// Obtain real random number in range [0,1].
-
-PLDLLIMPEXP PLFLT
-c_plrandd( void );
 
 // Replays contents of plot buffer to current device/file.
 
@@ -1775,17 +1720,6 @@ c_plstransform( PLTRANSFORM_callback coordinate_transform, PLPointer coordinate_
 // directly as UTF-8 or indirectly via the standard text escape
 // sequences allowed for PLplot input strings.
 
-PLDLLIMPEXP void
-c_plstring( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLCHAR_VECTOR string );
-
-// Prints out the same string repeatedly at the n points in world
-// coordinates given by the x, y, and z arrays.  Supersedes plpoin3
-// for the case where text refers to a unicode glyph either directly
-// as UTF-8 or indirectly via the standard text escape sequences
-// allowed for PLplot input strings.
-
-PLDLLIMPEXP void
-c_plstring3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLCHAR_VECTOR string );
 
 // Add a point to a stripchart.
 
