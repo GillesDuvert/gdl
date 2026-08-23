@@ -134,86 +134,112 @@ void wxPLDevGC::ClearBackground( PLINT bgr, PLINT bgg, PLINT bgb, PLINT x1, PLIN
     AddtoClipRegion( (int) x1a, (int) y1a, (int) x2a, (int) y2a );
 }
 
+void wxPLDevGC::FillPolygon(PLStream *pls) {
+  // Log_Verbose( "%s", __FUNCTION__ );
 
-void wxPLDevGC::FillPolygon( PLStream *pls )
-{
-    // Log_Verbose( "%s", __FUNCTION__ );
+  bool isRect = false;
+  short* x = pls->dev_x;
+  short* y = pls->dev_y;
 
-    bool isRect = false;
-    short* x    = pls->dev_x;
-    short* y    = pls->dev_y;
-
-    if ( pls->dev_npts == 4 )     // Check if it's a rectangle. If so, it can be made faster to display
-    {
-        if ( x[0] == x[1] && x[2] == x[3] && y[0] == y[3] && y[1] == y[2] )
-            isRect = true;
-        else if ( x[0] == x[3] && x[1] == x[2] && y[0] == y[1] && y[2] == y[3] )
-            isRect = true;
+  if (pls->dev_npts == 4) // Check if it's a rectangle. If so, it can be made faster to display
+  {
+    if (x[0] == x[1] && x[2] == x[3] && y[0] == y[3] && y[1] == y[2])
+      isRect = true;
+    else if (x[0] == x[3] && x[1] == x[2] && y[0] == y[1] && y[2] == y[3])
+      isRect = true;
+  }
+  if (pls->dev_npts == 5) {
+    if (x[0] == x[4] && y[0] == y[4]) {
+      if (x[0] == x[1] && x[2] == x[3] && y[0] == y[3] && y[1] == y[2])
+        isRect = true;
+      else if (x[0] == x[3] && x[1] == x[2] && y[0] == y[1] && y[2] == y[3])
+        isRect = true;
     }
-    if ( pls->dev_npts == 5 )
-    {
-        if ( x[0] == x[4] && y[0] == y[4] )
-        {
-            if ( x[0] == x[1] && x[2] == x[3] && y[0] == y[3] && y[1] == y[2] )
-                isRect = true;
-            else if ( x[0] == x[3] && x[1] == x[2] && y[0] == y[1] && y[2] == y[3] )
-                isRect = true;
-        }
+  }
+
+  if (isRect) //isRect) {
+  {
+    double x1, y1, x2, y2, x0, y0, w, h;
+
+    x1 = x[0] / scalex;
+    x2 = x[2] / scalex;
+    y1 = height - y[0] / scaley;
+    y2 = height - y[2] / scaley;
+
+    if (x1 < x2) {
+      x0 = x1;
+      w = x2 - x1;
+    } else {
+      x0 = x2;
+      w = x1 - x2;
     }
-
-    if ( isRect )    //isRect) {
-    {
-        double x1, y1, x2, y2, x0, y0, w, h;
-
-        x1 = x[0] / scalex;
-        x2 = x[2] / scalex;
-        y1 = height - y[0] / scaley;
-        y2 = height - y[2] / scaley;
-
-        if ( x1 < x2 )
-        {
-            x0 = x1;
-            w  = x2 - x1;
-        }
-        else
-        {
-            x0 = x2;
-            w  = x1 - x2;
-        }
-        if ( y1 < y2 )
-        {
-            y0 = y1;
-            h  = y2 - y1;
-        }
-        else
-        {
-            y0 = y2;
-            h  = y1 - y2;
-        }
-        m_context->DrawRectangle( x0, y0, w, h );
-        AddtoClipRegion( (int) x0, (int) y0, (int) w, (int) h );
+    if (y1 < y2) {
+      y0 = y1;
+      h = y2 - y1;
+    } else {
+      y0 = y2;
+      h = y1 - y2;
     }
+    m_context->DrawRectangle(x0, y0, w, h);
+    AddtoClipRegion((int) x0, (int) y0, (int) w, (int) h);
+  } else {
+    wxGraphicsPath path = m_context->CreatePath();
+    path.MoveToPoint(x[0] / scalex, height - y[0] / scaley);
+    for (int i = 1; i < pls->dev_npts; i++)
+      path.AddLineToPoint(x[i] / scalex, height - y[i] / scaley);
+    path.CloseSubpath();
+
+    if (pls->dev_eofill)
+      m_context->DrawPath(path, wxODDEVEN_RULE);
     else
-    {
-        wxGraphicsPath path = m_context->CreatePath();
-        path.MoveToPoint( x[0] / scalex, height - y[0] / scaley );
-        for ( int i = 1; i < pls->dev_npts; i++ )
-            path.AddLineToPoint( x[i] / scalex, height - y[i] / scaley );
-        path.CloseSubpath();
+      m_context->DrawPath(path, wxWINDING_RULE);
 
-        if ( pls->dev_eofill )
-            m_context->DrawPath( path, wxODDEVEN_RULE );
-        else
-            m_context->DrawPath( path, wxWINDING_RULE );
+    wxDouble bx, by, bw, bh;
+    path.GetBox(&bx, &by, &bw, &bh);
 
-        wxDouble x, y, w, h;
-        path.GetBox( &x, &y, &w, &h );
-
-        AddtoClipRegion( (int) x, (int) y, (int) ( x + w ), (int) ( y + h ) );
-    }
+    AddtoClipRegion((int) bx, (int) by, (int) (bx + bw), (int) (by + bh));
+  }
 }
 
+// paths need to be in ints, not shorts, as shorts may overflow in this case. 
+void wxPLDevGC::FillPolygons(PLStream *pls) {
+  // Log_Verbose( "%s", __FUNCTION__ );
 
+  wxGraphicsPath path = m_context->CreatePath();
+  for (int i = 0; i < pls->dev_npath; ++i) {
+    PLINT* x = pls->dev_pathx[i];
+    PLINT* y = pls->dev_pathy[i];
+    path.MoveToPoint(x[0] / scalex, height - y[0] / scaley);
+    for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
+      switch (x[j]) {
+        case -1: //line
+          path.AddLineToPoint(x[j+1] / scalex, height - y[j+1] / scaley);
+          j++;
+          break;
+        case -2:
+          path.AddQuadCurveToPoint(x[j+1] / scalex, height - y[j+1]/ scaley, x[j+2] / scalex, height - y[j+2] / scaley);
+          j+=2;
+          break;
+        case -3:
+          path.AddCurveToPoint(x[j+1] / scalex, height - y[j+1] / scaley, x[j+2] / scalex, height - y[j+2] / scaley, x[j+3] / scalex, height - y[j+3] / scaley);
+          j+=3;
+          break;
+          break;
+        default:
+          printf("should not happen in FillPolygons(%d), please report!\n",x[j]);
+      }
+    }
+    path.CloseSubpath();
+  }
+  if (pls->dev_eofill)
+    m_context->DrawPath(path, wxODDEVEN_RULE);
+  else
+    m_context->DrawPath(path, wxWINDING_RULE);
+
+  wxDouble bx, by, bw, bh;
+  path.GetBox(&bx, &by, &bw, &bh);
+  AddtoClipRegion((int) bx, (int) by, (int) (bx + bw), (int) (by +bh));
+}
 void wxPLDevGC::BlitRectangle( wxDC* dc, int vX, int vY, int vW, int vH )
 {
     // Log_Verbose( "%s", __FUNCTION__ );

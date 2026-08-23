@@ -867,6 +867,19 @@ void plstream::init()
     //active_streams++;
 }
 
+// load a new truetype font (will make it current)
+void plstream::loadtt(const char *name)
+{
+    set_stream();
+    ttFontLoad(name);
+}
+// set a known truetype font as current
+void plstream::settt(int n)
+{
+    set_stream();
+    ttFontSet(n);
+}
+
 // Draws a line segment from (x1, y1) to (x2, y2).
 
 void plstream::join( PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 )

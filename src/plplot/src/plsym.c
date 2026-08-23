@@ -49,6 +49,10 @@
 #include <float.h>
 #include <ctype.h>
 #include "plhershey-unicode.h"
+#define STB_TRUETYPE_IMPLEMENTATION 
+#include "stb_truetype.h"
+
+extern const char* findFontPath(const char* name);
 
 //for ntohl etc
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -59,6 +63,7 @@
 
 // Declarations
 #define NUMBERHERSHEYFONTS 40 
+#define MAXTTFONTS 100
 struct CTAB {
 	unsigned char nvecs;
 	unsigned char width;
@@ -68,7 +73,9 @@ typedef struct CTAB CTAB;
 static int32_t *HersheyFontTableDirectory=NULL;
 static unsigned char hersheyNumberChars[NUMBERHERSHEYFONTS]={}; 
 static struct CTAB *hersheyFontLookupStruct[NUMBERHERSHEYFONTS]={}; 
-static short int *hersheyFontVectors[NUMBERHERSHEYFONTS]={}; 
+static short int *hersheyFontVectors[NUMBERHERSHEYFONTS]={};
+static stbtt_fontinfo* ttfVectors[MAXTTFONTS]={0};
+static float charHeightCorr[MAXTTFONTS]={0};
 static short int   *fntlkup;
 static long   *fntindx;
 static signed char *fntbffr;
@@ -95,6 +102,10 @@ static void
 plchar( short *xygrid, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width );
+static void
+plttf( stbtt_vertex *vects, int len, PLFLT *xform, 
+        PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
+        PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width);
 static PLINT
 plcvec( PLINT ch, signed char **xygr );
 
@@ -404,7 +415,6 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	args.y = y;
 	args.refx = refx;
 	args.refy = refy;
-printf("%d,%f\n",x,xorg);
 	// Always store the string passed by the caller, even for unicode
 	// enabled drivers.  The plmeta driver will use this field to store
 	// the string data in the metafile.
@@ -413,14 +423,15 @@ printf("%d,%f\n",x,xorg);
 	args.unicode_array_len = 0;
 	PLUNICODE *symbol = args.unicode_array;
 
-	pldeco(symbol, &length, string, plsc->dev_text); // decode embedded commands, encode to unicode or hershey, depending.
+	pldeco(symbol, &length, string, plsc->dev_unicode); // decode embedded commands, encode to unicode or hershey, depending.
 
 	PLUNICODE ifont = plsc->cfont;
 	PLUNICODE oldifont = ifont;
 	int revert = 0;
-
-	if (plsc->dev_text) // Does the device render it's own text ?
+	PLINT oldglyph=-1; //for char-to-char advance
+	if (0) //plsc->dev_text) // Does the device render it's own text ?
 	{
+/*
 		for (i = 0; i < length; i++) {
 			ch = symbol[i];
 			switch (ch) {
@@ -512,6 +523,7 @@ printf("%d,%f\n",x,xorg);
 					xorg += ht * args.scale * plsc->xpmm * 10;
 					break;
 */
+/*
 				default:
 				{
 					args.unicode_array[args.unicode_array_len++] = ch; //if (ch < PRIVATE_UNICODE_PLANE) xorg+=ht*scale;
@@ -533,6 +545,7 @@ printf("%d,%f\n",x,xorg);
 				plP_esc(PLESC_LOAD_FONT, &ifont);
 			}
 		}
+*/
 	} else {
 		for (i = 0; i < length; i++) {
 			ch = symbol[i];
@@ -606,23 +619,54 @@ printf("%d,%f\n",x,xorg);
 					xorg += ht * args.scale * plsc->xpmm * 10;
 					break;
 				default:
-					if (ch >= PRIVATE_UNICODE_PLANE) {
-						ifont = ch - PRIVATE_UNICODE_PLANE;
-						break;
-					}
-					if (hersheyNumberChars[ifont] == 0) break;
-					if ((ch - 32) > hersheyNumberChars[ifont]) break;
-					int offset = hersheyFontLookupStruct[ifont][ch - 32].offset;
-					int nvecs = hersheyFontLookupStruct[ifont][ch - 32].nvecs;
-					width = hersheyFontLookupStruct[ifont][ch - 32].width;
-					if (length_only) {
-						xorg += width * scale;
-						break; // do not draw anything
-					}
-					charPoints = &(hersheyFontVectors[ifont][offset]);
-					plchar(charPoints, nvecs, xform, refx, refy, scale,
-							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+					if (plsc->dev_unicode && plsc->dev_text) {
+						if (ch >= PRIVATE_UNICODE_PLANE) {
+							ifont = ch - PRIVATE_UNICODE_PLANE;
+							c_ttFontSet(ifont);
+							break;
+						}
+						int glyph=stbtt_FindGlyphIndex(ttfVectors[plsc->fci], ch);
+						int ax;
+						int lsb;
+						stbtt_GetGlyphHMetrics(ttfVectors[plsc->fci], glyph, &ax, &lsb);
+						if (oldglyph != -1) {
+							ax+=stbtt_GetGlyphKernAdvance(ttfVectors[plsc->fci], oldglyph, glyph);
+						}
+					    oldglyph=glyph;
+						//ax is advance width, so corr*ax will be advance in pixels.
+						width = ax*plsc->charHeightCorr;
+/*
+						printf("ax=%d, corr=%f, xppm=%f, width=%f\n",ax,plsc->charHeightCorr,plsc->xpmm,width);
+*/
+						if (length_only) {
+							xorg += (width * scale);
+							break; // do not draw anything, just add to xorg
+						}
+						stbtt_vertex *vertices;
+						int nvecs=stbtt_GetGlyphShape(ttfVectors[plsc->fci], glyph, &vertices);
+					    plttf(vertices, nvecs, xform, refx, refy, scale*plsc->charHeightCorr,
+								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+   						stbtt_FreeShape(ttfVectors[plsc->fci], vertices);
+						xorg += (width * scale);
 
+					} else {
+						if (ch >= PRIVATE_UNICODE_PLANE) {
+							ifont = ch - PRIVATE_UNICODE_PLANE;
+							break;
+						}
+					    if (hersheyNumberChars[ifont] == 0) break;
+						if ((ch - 32) > hersheyNumberChars[ifont]) break;
+						int offset = hersheyFontLookupStruct[ifont][ch - 32].offset;
+						int nvecs = hersheyFontLookupStruct[ifont][ch - 32].nvecs;
+						width = hersheyFontLookupStruct[ifont][ch - 32].width;
+						if (length_only) {
+							xorg += width * scale;
+							break; // do not draw anything, just add to xorg
+						}
+						charPoints = &(hersheyFontVectors[ifont][offset]);
+						plchar(charPoints, nvecs, xform, refx, refy, scale,
+								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+					}
 			}
 			if (revert) {
 				revert = 0;
@@ -700,6 +744,133 @@ plchar( short *vects, int len, PLFLT *xform,
 	free(lly);
     *p_xorg = *p_xorg + width * scale;
 }
+//--------------------------------------------------------------------------
+// plttf()
+//
+// Fills a given TTF character using device EOFILL capabilities.
+//--------------------------------------------------------------------------
+static void
+plttf( stbtt_vertex *vects, int len, PLFLT *xform, 
+        PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
+        PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
+
+	if (len == 0) return;
+	
+	PLINT lx, ly, clx, cly, cclx, clly;
+    PLFLT x, y;
+    PLINT cx, cy;
+	PLINT l = 0;
+	PLINT nPath=0;
+    for ( int i=0; i< len; ++i )
+    {
+        switch (vects[i].type) {
+			case STBTT_vmove:
+				nPath++;
+		}
+	}
+	// compute allocation, according to type of path:
+	int npassed=0;
+    for ( int i=0; i< len; ++i )
+    {
+		switch (vects[i].type) {
+			case STBTT_vmove:
+				npassed++;
+				break;
+			case STBTT_vline:
+				npassed+=2;
+				break;
+			case STBTT_vcurve:
+				npassed+=3;
+				break;
+			case STBTT_vcubic:
+				npassed+=4;
+				break;
+		}
+	}	
+    PLINT *llx=(PLINT*)malloc(npassed*sizeof(PLINT));
+    PLINT *lly=(PLINT*)malloc(npassed*sizeof(PLINT));
+			
+	PLINT n=0;
+	PLINT ipath=0;
+	PLINT *pathnxy=(PLINT*)malloc(nPath*sizeof(PLINT));
+	PLINT **pathx=(PLINT**)malloc(nPath*sizeof(PLINT*));
+	PLINT **pathy=(PLINT**)malloc(nPath*sizeof(PLINT*));
+	pathnxy[0]=0;
+	pathx[0]=&(llx[0]);
+	pathy[0]=&(lly[0]);
+    for ( int i=0; i< len; ++i )
+    {
+        cx = vects[i].x, cy = vects[i].y;
+		x = *p_xorg + cx * scale;
+		y = *p_yorg + cy * scale;
+		lx = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
+		ly = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+        switch (vects[i].type) {
+            case STBTT_vmove:
+				if (l!=0) { //not for the start
+					pathnxy[ipath] = n; //finish previous path
+					ipath++;
+				}
+				llx[l] = lx;
+				lly[l] = ly;
+				n = 1;
+				pathx[ipath] = &(llx[l]);
+				pathy[ipath] = &(lly[l]);
+				l++;
+				break;
+            case STBTT_vline:
+				llx[l] = -1; l++; n++; //line
+				llx[l] = lx;
+				lly[l] = ly;
+				l++;
+				n++;
+               break;
+            case STBTT_vcurve:
+				llx[l] = -2; l++; n++; //quadratic , 2 pair of coords follow
+				cx = vects[i].cx, cy = vects[i].cy;
+		        x = *p_xorg + cx * scale;
+		        y = *p_yorg + cy * scale;
+				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
+				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+				l++; n++;
+				llx[l] = lx;
+				lly[l] = ly;
+				l++;
+				n++;
+               break;
+            case STBTT_vcubic:
+				llx[l] = -3; l++; n++; //cubic , 3 pair of coords follow
+				cx = vects[i].cx, cy = vects[i].cy;
+		        x = *p_xorg + cx * scale;
+		        y = *p_yorg + cy * scale;
+				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
+				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+				l++; n++;
+				cx = vects[i].cx1, cy = vects[i].cy1;
+		        x = *p_xorg + cx * scale;
+		        y = *p_yorg + cy * scale;
+				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
+				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+				l++; n++;
+				llx[l] = lx;
+				lly[l] = ly;
+				l++;
+				n++;
+               break;
+         }
+	}
+	if (l > 2) { //3 for filling
+	    pathnxy[nPath-1]=n;
+		plP_polyfill( pathx, pathy, pathnxy, nPath);
+		l = 0;
+	} else l=0;
+	free(llx);
+	free(lly);
+	free(pathnxy);
+	free(pathx);
+	free(pathy);
+}
+
 
 //--------------------------------------------------------------------------
 // PLFLT plstrl()
@@ -1033,7 +1204,7 @@ plP_script_scale( PLBOOL ifupper, PLINT *level,
 
 #include <fcntl.h>
 
-void plfntld(char* file) {
+void hersheyFontLoad(char* file) {
 	long mask = 0x7fffffffUL;
 	int fd = open(file, O_RDONLY);
 	if (fd == -1) {printf("No fontfile %s available, exiting.\n",file); exit(1);}
@@ -1090,6 +1261,55 @@ void plfntld(char* file) {
 	return;
 
 
+}
+extern char* getFontPath(const char* name);
+extern int getFontIndex(const char* name);
+extern const char* getFontName(int n);
+extern int loadFontPath(const char *name);
+void c_ttFontSet(int n) {
+	if (getFontName(n) != NULL) {
+		plsc->fci=n;
+		plsc->charHeightCorr = charHeightCorr[n];
+	} else printf("loading of font #%d failed.\n",n);
+}
+void c_ttFontLoad(const char* fontName) {
+	int n=getFontIndex(fontName);
+	if (n < 0) {
+		n=loadFontPath(fontName); //happens when stream is initialized
+	    if (n < 0) return; // too silent...
+	}
+    long size;
+    unsigned char* fontBuffer;
+    char* fontPath=getFontPath(fontName);
+	if (fontPath==NULL) return; 
+    FILE* fontFile = fopen(fontPath, "rb");
+	
+    fseek(fontFile, 0, SEEK_END);
+    size = ftell(fontFile); /* how long is the file ? */
+    fseek(fontFile, 0, SEEK_SET); /* reset */
+    
+    fontBuffer = malloc(size);
+    
+    fread(fontBuffer, size, 1, fontFile);
+    fclose(fontFile);
+
+    /* prepare font */
+    stbtt_fontinfo* info=(stbtt_fontinfo*) malloc(sizeof(stbtt_fontinfo));
+    if (!stbtt_InitFont(info, fontBuffer, 0))
+    {
+        printf("loading of %s failed.\n",fontName);
+    }
+    ttfVectors[n]=info;
+	plsc->fci=n;
+	// to be optimized:
+	int x0, y0, x1, y1;
+	stbtt_GetFontBoundingBox(info, &x0, &y0, &x1, &y1);
+	//the height of the “average” character is determined by the width of the rectangle
+	float averheight = (float) (x1 - x0);
+	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
+	float aspectratiooffont = (float) (y1 - y0) / averheight;
+	charHeightCorr[n] = 20. / (averheight * aspectratiooffont); //!D.Y_CH_SIZE * 2 but why 2?
+	plsc->charHeightCorr = charHeightCorr[n];
 }
 //--------------------------------------------------------------------------
 // void plfontrel()

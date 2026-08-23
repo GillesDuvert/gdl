@@ -421,7 +421,10 @@ public:
 
     void hist( PLINT n, const PLFLT *data, PLFLT datmin, PLFLT datmax,
                PLINT nbin, PLINT oldwin );
-
+// load a true type font (make it current)
+	void loadtt(const char *name);
+	void settt(int n);
+	
 // Initializes PLplot, using preset or default options
 
     void init( void );

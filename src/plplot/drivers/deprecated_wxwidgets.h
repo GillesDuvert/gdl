@@ -96,6 +96,7 @@ public: // methods
     virtual void DrawPolyline( short *xa, short *ya, PLINT npts )       = 0;
     virtual void ClearBackground( PLINT bgr, PLINT bgg, PLINT bgb, PLINT x1 = -1, PLINT y1 = -1, PLINT x2 = -1, PLINT y2 = -1 ) = 0;
     virtual void FillPolygon( PLStream *pls ) = 0;
+    virtual void FillPolygons( PLStream *pls ) = 0;
     virtual void BlitRectangle( wxDC* dc, int vX, int vY, int vW, int vH ) = 0;
     void AddtoClipRegion( int x1, int y1, int x2, int y2 );
     virtual void CreateCanvas()                    = 0;
@@ -208,6 +209,7 @@ public: // methods
     void DrawPolyline( short *xa, short *ya, PLINT npts );
     void ClearBackground( PLINT bgr, PLINT bgg, PLINT bgb, PLINT x1 = -1, PLINT y1 = -1, PLINT x2 = -1, PLINT y2 = -1 );
     void FillPolygon( PLStream *pls );
+    void FillPolygons( PLStream *pls );
     void BlitRectangle( wxDC* dc, int vX, int vY, int vW, int vH );
     void CreateCanvas();
     void SetWidth( PLStream *pls );

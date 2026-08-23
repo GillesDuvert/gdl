@@ -560,7 +560,11 @@ plabort( PLCHAR_VECTOR errormsg );
 // Loads the font.
 
 void
-plfntld();
+hersheyFontLoad(char* file);
+
+// load tt font
+
+void ttFontLoad(const char* fontName);
 // Release memory for fonts.
 
 void
@@ -1033,6 +1037,11 @@ plP_polyline( short *x, short *y, PLINT npts );
 
 PLDLLIMPEXP void
 plP_fill( short *x, short *y, PLINT npts );
+
+// Fill polygon
+
+PLDLLIMPEXP void
+plP_polyfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly );
 
 // Render gradient
 

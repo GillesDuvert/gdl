@@ -23,7 +23,7 @@
 
 
 
-GDLWXStream::GDLWXStream( int width, int height )
+GDLWXStream::GDLWXStream( int width, int height, DString &defaultfontname )
 : GDLGStream( width, height,"wxwidgets")
   , streamDC(NULL)
   , streamBitmap(NULL)
@@ -44,7 +44,6 @@ GDLWXStream::GDLWXStream( int width, int height )
   spage(0,0, width, height, 0, 0 ); //width and height have importance. dpi is best left to plplot.
 
 //select the fonts in all cases...
-// If wxwidgets have freetype (determined by PL_HAVE_FREETYPE, see src/plplot/modules/freetype, driver will have freetype enabled.
   std::string what = "hrshsym=0,text=1"; //no smooth available
   setopt("drvopt", what.c_str());
 
@@ -59,8 +58,9 @@ GDLWXStream::GDLWXStream( int width, int height )
   // in our copy of the state of plplot trimmed for our useage, we use their old but fast driver.
   // we can then set the font to hershey or freetype. (the plplot new driver was buggy with hershey anyway)
   PLINT doFont = ((PLINT) SysVar::GetPFont() > -1) ? 1 : 0;
-  pls->dev_text=doFont;
-  
+  pls->dev_unicode=doFont;
+  this->LoadCurrentFont(defaultfontname);
+
   
   plstream::cmd(PLESC_DEVINIT, (void*)streamDC );
   // AFTER initialization, force a default font
@@ -495,10 +495,12 @@ DLong GDLWXStream::GetVisualDepth() {
 return 24;
 }
 
-void GDLWXStream::SetCurrentFont(std::string fontname){
-  if (fontname.size() > 0) {
-   wxFont font=wxFont(wxString(fontname.c_str( ), wxConvLibc));
-   if (!font.IsSameAs(wxNullFont)) streamDC->SetFont(font);
+ void GDLWXStream::SetCurrentFont(int n) {this->settt(n);}
+ void GDLWXStream::LoadCurrentFont(std::string f){
+  if (f.size() > 0) {
+   this->loadtt(f.c_str());
+//   wxFont font=wxFont(wxString(fontname.c_str( ), wxConvLibc));
+//   if (!font.IsSameAs(wxNullFont)) streamDC->SetFont(font);
   }
 }
 DString GDLWXStream::GetVisualName() {

@@ -16,8 +16,46 @@
  ***************************************************************************/
 
 #include "plotting.hpp"
+
 #include <gsl/gsl_const_mksa.h> // GSL_CONST_MKSA_INCH
 
+#include "findttfonts.h"
+
+//for truetype fonts: stores fontname and full font .ttf path
+std::map<std::string, std::pair<std::string,int>>KnownFontNames;
+#define NUMBERHERSHEYFONTS 40
+static int numberFonts=NUMBERHERSHEYFONTS; //provide room for the truetype equivalents of hershey fonts defined by drivers.
+
+extern "C" const char* getFontPath(const char* name) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  it = KnownFontNames.find(std::string(name));
+    if (it != KnownFontNames.end()) return (*it).second.first.c_str();
+  return NULL;
+}
+extern "C" int getFontIndex(const char* name) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  it = KnownFontNames.find(std::string(name));
+    if (it != KnownFontNames.end()) return (*it).second.second;
+  return -1;
+}
+extern "C" const char* getFontName(int n) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  for (it = KnownFontNames.begin(); it !=KnownFontNames.end(); ++it ) {
+    if ((*it).second.second == n) return (*it).second.first.c_str();
+  }
+  return NULL;
+}
+
+extern "C" int loadFontPath(const char *name) {
+  std::string fontPath = FindFontPath(name);
+  std::cerr<<fontPath<<std::endl;
+  if (fontPath.length() > 0) { //Note: LINUX (Fontconfig) will ALWAYS return something.
+    // register it, even if specific device does not support it
+    KnownFontNames[name] = std::pair<std::string, int>(fontPath, numberFonts++);
+    return numberFonts-1;
+  }
+  return -1;
+}
 namespace lib {
 
   using namespace std;
@@ -58,7 +96,17 @@ namespace lib {
       if (e->KeywordPresent(set_fontIx)||e->KeywordPresent(fontIx)||e->KeywordPresent(userfontIx)) {
         setfontpresent = true;
         DStringGDL* pattern = e->GetKWAs<DStringGDL>(set_fontIx);
-        if (!actDevice->SetFont((*pattern)[0])) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
+        // font exists?
+        int n=getFontIndex((*pattern)[0].c_str());
+        if (n >= 0) {
+          if (!actDevice->SetFont(n)) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
+          return;
+        }
+        n=loadFontPath((*pattern)[0].c_str());
+        if (n >= 0 ) { //Note: LINUX (Fontconfig) will ALWAYS return something.
+          // register it, even if specific device does not support it
+          if (!actDevice->LoadFont((*pattern)[0])) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
+        } else e->Throw("Unknown True Type font "+(*pattern)[0]);
       }
     }
 

@@ -238,6 +238,7 @@ public:
     (*res)[1]= YPageSize*SVG_DPI*SVG_CM2IN;
     return res;
   }
+  virtual bool LoadFont(DString &f) final {fontname=f; return true;}
 };
 
 #endif

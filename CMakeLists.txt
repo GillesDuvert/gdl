@@ -203,6 +203,18 @@ check_include_file(mpi.h HAVE_MPI_H)
 include_directories(src)
 
 #-------------------------------MANDATORY MODULES-------------------------------------
+#We use Fontconfig on linux  machines for locating true type fonts files.
+#It's almost certainly there on linux, but this to avoid problems:
+if (NOT WIN32 AND NOT APPLE) 
+ find_package(Fontconfig QUIET)
+ if (Fontconfig_FOUND)
+  set(HAVE_FONTCONFIG 1)
+  set(LIBRARIES ${LIBRARIES} ${Fontconfig_LIBRARIES})
+  include_directories(${Fontconfig_INCLUDE_DIRS})
+ endif()
+endif()
+
+#-------ncurses 
 if (NOT WIN32)
     # Ncurses MANDATORY for readline on POSIX
     # -DNCURSESDIR=DIR

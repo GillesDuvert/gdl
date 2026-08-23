@@ -501,6 +501,12 @@ plP_fill( short *x, short *y, PLINT npts )
     }
 }
 
+void
+plP_polyfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly  )
+{
+	grpolyfill( x, y, npts, npoly );
+}
+
 
 // Account for driver ability to draw text itself
 //
@@ -712,20 +718,34 @@ grpolyline( short *x, short *y, PLINT npts )
 }
 
 static void
-grfill( short *x, short *y, PLINT npts )
-{
-    char * save_locale;
-    plsc->dev_npts = npts;
-    plsc->dev_x    = x;
-    plsc->dev_y    = y;
+grfill(short *x, short *y, PLINT npts) {
+	char * save_locale;
+	plsc->dev_npts = npts;
+	plsc->dev_x = x;
+	plsc->dev_y = y;
 
-    save_locale = plsave_set_locale();
-    if ( !plsc->stream_closed )
-    {
-        ( *plsc->dispatch_table->pl_esc )( (struct PLStream_struct *) plsc,
-            PLESC_FILL, NULL );
-    }
-    plrestore_locale( save_locale );
+	save_locale = plsave_set_locale();
+	if (!plsc->stream_closed) {
+		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
+				PLESC_FILL, NULL);
+	}
+	plrestore_locale(save_locale);
+}
+
+static void
+grpolyfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath) {
+	char * save_locale;
+	plsc->dev_npath = npath;
+	plsc->dev_pathx = x;
+	plsc->dev_pathy = y;
+	plsc->dev_pathnxy=npts;
+
+	save_locale = plsave_set_locale();
+	if (!plsc->stream_closed) {
+		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
+				PLESC_FILL_MULTIPATH, NULL);
+	}
+	plrestore_locale(save_locale);
 }
 
 //--------------------------------------------------------------------------
@@ -1699,7 +1719,8 @@ c_plinit( void )
 // Load fonts
 
     plsc->cfont = 3;
-	plfntld("/usr/local/share/gnudatalanguage/hersh1.chr");
+	printf("Warning, using /usr/local/share/gnudatalanguage/hersh1.chr!\n");
+	hersheyFontLoad("/usr/local/share/gnudatalanguage/hersh1.chr");
 
 // Set up subpages
 

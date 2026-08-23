@@ -58,6 +58,7 @@ static void init_freetype_lv2( PLStream *pls );
 //static void wxRunApp( PLStream *pls, bool runonce = false );
 //static void GetCursorCmd( PLStream *pls, PLGraphicsIn *ptr );
 static void fill_polygon( PLStream *pls );
+static void fill_multiple_polygon( PLStream *pls );
 
 #ifdef __WXMAC__
         #include <Carbon/Carbon.h>
@@ -720,7 +721,9 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
     case PLESC_FILL:
         fill_polygon( pls );
         break;
-
+      case PLESC_FILL_MULTIPATH:
+        fill_multiple_polygon( pls );
+        break;
     case PLESC_XORMOD:
       printf("PLESC_XORMOD not implemented, FIXME\n");
         // switch between wxXOR and wxCOPY
@@ -741,7 +744,7 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
       case PLESC_LOAD_FONT:
         dev->PSSetFont(* (PLUNICODE*) ptr);
         break;
-    case PLESC_HAS_TEXT:
+      case PLESC_HAS_TEXT:
 //        if ( !( dev->ready ) )            install_buffer( pls );
 
         if ( dev->freetype )
@@ -842,6 +845,37 @@ static void fill_polygon( PLStream *pls )
 //            dev->comcount = 0;
 //        }
 //    }
+}
+//--------------------------------------------------------------------------
+//  static void fill_polygon( PLStream *pls )
+//
+//  Fill polygon described in points pls->dev_x[] and pls->dev_y[].
+//--------------------------------------------------------------------------
+static void fill_multiple_polygon( PLStream *pls) {
+  // Log_Verbose( "fill_polygon(), npts=%d, x[0]=%d, y[0]=%d", pls->dev_npts, pls->dev_y[0], pls->dev_y[0] );
+
+  wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
+
+  //    if ( !( dev->ready ) )        install_buffer( pls );
+
+  if (Status3D == 1) { //enable use everywhere.
+    //perform conversion on the fly
+    for (PLINT i = 0; i < pls->dev_npath; ++i) {
+      PLINT *x = pls->dev_pathx[i];
+      PLINT *y = pls->dev_pathy[i];
+      for (PLINT j = 0; j < pls->dev_pathnxy[i]; ++j) {
+        // 3D convert, must take into account that y is inverted.
+        int ix=x[j];
+        int iy=y[j];
+        if (ix >= 0) {
+          SelfTransform3D(&ix, &iy); //avoid negative "codes"
+        x[j]=ix;
+        y[j]=iy;
+        }
+      }
+    }
+  }
+  dev->FillPolygons(pls);
 }
 
 

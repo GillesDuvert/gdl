@@ -309,6 +309,7 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_APPEND_BUFFER             40 // append the given byte string to the buffer
 #define PLESC_FLUSH_REMAINING_BUFFER    41 // flush the remaining buffer e.g. after new data was appended
 #define PLESC_LOAD_FONT                 42 // driver loads font
+#define PLESC_FILL_MULTIPATH            43 // fill multiple polygon
 
 // Alternative unicode text handling control characters
 #define PLTEXT_FONTCHANGE               0 // font change in the text stream
@@ -725,6 +726,8 @@ typedef struct
 #define    plgfci                   c_plgfci
 #define    plgfnam                  c_plgfnam
 #define    plgfont                  c_plgfont
+#define    ttFontLoad               c_ttFontLoad
+#define    ttFontSet                c_ttFontSet
 #define    plglevel                 c_plglevel
 #define    plgpage                  c_plgpage
 #define    plgra                    c_plgra
@@ -1112,6 +1115,14 @@ c_plgfnam( PLCHAR_NC_VECTOR fnam );
 
 PLDLLIMPEXP void
 c_plgfont( PLINT_NC_SCALAR p_family, PLINT_NC_SCALAR p_style, PLINT_NC_SCALAR p_weight );
+
+// load a truetype font
+PLDLLIMPEXP void
+c_ttFontLoad(const char* name );
+
+// set current truetype font
+PLDLLIMPEXP void
+c_ttFontSet(int n);
 
 // Get the (current) run level.
 

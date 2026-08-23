@@ -30,7 +30,6 @@ class DeviceZ: public GraphicsDevice
   char*  memBuffer;
   DInt*  zBuffer;
   int    decomposed;
-  DString fontname;
     
   void SetZBuffer( DLong x, DLong y)
   {
@@ -241,7 +240,8 @@ public:
     return decomposed;  
   }
     
-    virtual bool SetFont(DString &f) final {fontname=f; return true;}
+    virtual bool LoadFont(DString &f) final {fontname=f; return true;}
+    virtual bool SetFont(int n) final {return false;}
 
 };
 

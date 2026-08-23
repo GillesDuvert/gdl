@@ -566,6 +566,11 @@ typedef struct
 
     PLINT   dev_npts;
     short   *dev_x, *dev_y;
+	
+    PLINT   dev_npath;
+    PLINT** dev_pathx;
+	PLINT** dev_pathy;
+    PLINT*  dev_pathnxy;
 
     // variables for plimage()
 
@@ -735,9 +740,11 @@ typedef struct
     PLINT     alt_unicode; // The alternative interface for unicode text rendering.
 
     PLUNICODE fci;
+	
+	float     charHeightCorr; //the magic factor for each truetype font inner size to pixels.
 
     PLINT     dev_hrshsym;
-
+	
 // Used to keep a hold of a temporary copy of the original character height
 // which I overload as a quick hack to fix up a bug in freetype an plsym()
 //
