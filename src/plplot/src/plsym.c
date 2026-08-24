@@ -97,7 +97,7 @@ int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 // Static function prototypes
 
 static void
-pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode);
+pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text);
 static void
 plchar( short *xygrid, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
@@ -424,7 +424,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	args.unicode_array_len = 0;
 	PLUNICODE *symbol = args.unicode_array;
 
-	pldeco(symbol, &length, string, plsc->dev_unicode); // decode embedded commands, encode to unicode or hershey, depending.
+	pldeco(symbol, &length, string); // decode embedded commands, encode to unicode or hershey, depending.
 
 	PLUNICODE ifont = plsc->cfont;
 	PLUNICODE oldifont = ifont;
@@ -844,7 +844,7 @@ plcvec( PLINT ch, signed char **xygr )
 //--------------------------------------------------------------------------
 
 static void
-pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode)
+pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 {
     PLUNICODE     ch, ifont = plsc->cfont;
 	PLINT ig, j = 0, lentxt = (PLINT) strlen( text );
