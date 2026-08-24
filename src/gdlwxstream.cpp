@@ -499,8 +499,6 @@ return 24;
  void GDLWXStream::LoadCurrentFont(std::string f){
   if (f.size() > 0) {
    this->loadtt(f.c_str());
-//   wxFont font=wxFont(wxString(fontname.c_str( ), wxConvLibc));
-//   if (!font.IsSameAs(wxNullFont)) streamDC->SetFont(font);
   }
 }
 DString GDLWXStream::GetVisualName() {

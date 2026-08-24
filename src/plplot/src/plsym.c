@@ -377,16 +377,17 @@ c_plptex( PLFLT wx, PLFLT wy, PLFLT dx, PLFLT dy, PLFLT just, PLCHAR_VECTOR text
 // Note, all calculations are done in terms of millimetres. These are scaled
 // as necessary before plotting the string on the page.
 //--------------------------------------------------------------------------
+
 PLFLT
 plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y, PLINT refx, PLINT refy) {
 	static PLFLT saverestore[1000] = {};
 	int counter = -1;
 	short *charPoints = 0;
-	PLFLT save_form[4]={1,0,0,1};
+	PLFLT save_form[4] = {1, 0, 0, 1};
 #define HEIGHTRATIO 1.6
 	PLINT ch, i, length, style, oline = 0;
 	PLFLT width = 0., xorg = 0., yorg = 0., yline = 0., yref = 0., def, ht, dscale, scale;
-	plgchr(&def, &ht);
+	plgchr(&def, &ht); printf("def=%f, ht=%f\n",def,ht);
 	dscale = 0.05 * ht;
 	scale = dscale;
 	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
@@ -406,11 +407,11 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	args.text_type = PL_STRING_TEXT;
 	args.base = base;
 	args.just = just;
-	args.scale= dscale;
+	args.scale = dscale;
 	//must make a copy of xform because 'args.xform' is modified afterwards and must be resetted each
 	// time the string position is called
 	args.xform = save_form;
-	if (xform) for (int i=0; i< 4; ++i) save_form[i]=xform[i]; //xform may be NULL!
+	if (xform) for (int i = 0; i < 4; ++i) save_form[i] = xform[i]; //xform may be NULL!
 	args.x = x;
 	args.y = y;
 	args.refx = refx;
@@ -428,254 +429,136 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	PLUNICODE ifont = plsc->cfont;
 	PLUNICODE oldifont = ifont;
 	int revert = 0;
-	PLINT oldglyph=-1; //for char-to-char advance
-	if (0) //plsc->dev_text) // Does the device render it's own text ?
-	{
-/*
-		for (i = 0; i < length; i++) {
-			ch = symbol[i];
-			switch (ch) {
-				case A: // !A Shift above the division line.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args); args.unicode_array_len=0;
-					yorg = yref = yline + linespacing / 2;
-					ilev = 0;
-					scale = dscale;
-					break;
-				case B: // !B Shift below the division line.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					yorg = yref = yline - linespacing / 2;
-					ilev = 0;
-					scale = dscale;
-					break;
-				case C: // !C shift back to the starting position and down one line
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					xorg = 0;
-					yline -= linespacing;
-					yorg = yref = yline;
-					scale = dscale;
-					ilev = 0;
-					break;
-				case D: // !D Shift down to the first level subscript, shrink the character size by 38%.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					yorg = yref = yline + firstlevsubs;
-					ilev = 1;
-					scale = dscale38;
-					break;
-				case U:// !U Shift to first and unique upper subscript level, shrink the character size by 38%.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					yorg = yref = yline + levsuper;
-					scale = dscale38;
-					write = 1;
-					break;
-				case L: // !L Shift down to the second level subscript, shrink the character size by 38%.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					yorg = yref = yline + secondlevsubs;
-					ilev = 1;
-					scale = dscale38;
-					write = 1;
-					break;
-					// 2 variable sizes
-				case E: // !E Shift up to the exponent level, shrink the character size by 56%.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					yorg = yref + (HEIGHTRATIO * ht) * scales[ilev]; //not exactly same as IDL
-					scale = dscale * scales[ilev];
-					write = 1;
-					break;
-				case I: // !I Shift down to the index level, shrink the character size by 56%.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					yorg = yref - (HEIGHTRATIO * ht) * scales[ilev]; //idem
-					scale = dscale * scales[ilev];
-					write = 1;
-					break;
-				case M: // !M Switch to the !9 symbol font for one character, then switch back.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					oldifont = ifont;
-					ifont = 9;
-					revert = 1;
-					plP_esc(PLESC_LOAD_FONT, &ifont);
-				case N: // !N Shift back to the normal level and original character size.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					scale = dscale;
-					yorg = yref = yline;
-					ilev = 0;
-					write = 1;
-					break;
-				case R: // !R Restore position from the top of the saved positions stack.
-					if (counter >= 0) {
-					    if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-						xorg = saverestore[counter--];
-					} else {
-						fprintf(stderr, "Error using Hershey characters: Restore without save.\n");
-						return xorg;
-					}
-					break;
-				case S:// !S Save position to the top of the saved positions stack.
-					saverestore[++counter] = xorg;
-					break;
-				case V: // !V Switch to the !20 symbol font for one character, then switch back.
-					if (args.unicode_array_len > 0)	plP_esc(PLESC_HAS_TEXT, &args);args.unicode_array_len=0;
-					oldifont = ifont;
-					ifont = 20;
-					revert = 1;
-					plP_esc(PLESC_LOAD_FONT, &ifont);
-/*
-				case SP:// SPACE : Just add space size
-					xorg += ht * args.scale * plsc->xpmm * 10;
-					break;
-*/
-/*
-				default:
-				{
-					args.unicode_array[args.unicode_array_len++] = ch; //if (ch < PRIVATE_UNICODE_PLANE) xorg+=ht*scale;
-					if (length_only) {
-						if (ch < PRIVATE_UNICODE_PLANE) xorg += ht * scale;
+	PLINT oldglyph = -1; //for char-to-char advance
+	for (i = 0; i < length; i++) {
+		ch = symbol[i];
+		switch (ch) {
+			case A: // !A Shift above the division line.
+				yorg = yref = yline + linespacing / 2;
+				ilev = 0;
+				scale = dscale;
+				break;
+			case B: // !B Shift below the division line.
+				yorg = yref = yline - linespacing / 2;
+				ilev = 0,
+						scale = dscale;
+				break;
+			case C: // !C shift back to the starting position and down one line
+				xorg = 0;
+				yline -= linespacing;
+				yorg = yref = yline;
+				scale = dscale;
+				ilev = 0;
+				break;
+			case D: // !D Shift down to the first level subscript, shrink the character size by 38%.
+				yorg = yref = yline + firstlevsubs;
+				ilev = 1;
+				scale = dscale38;
+				break;
+			case U:// !U Shift to first and unique upper subscript level, shrink the character size by 38%.
+				yorg = yref = yline + levsuper;
+				ilev = 1;
+				scale = dscale38;
+				break;
+			case L: // !L Shift down to the second level subscript, shrink the character size by 38%.
+				yorg = yref = yline + secondlevsubs;
+				ilev = 1;
+				scale = dscale38;
+				break;
+				// 2 variable sizes
+			case E: // !E Shift up to the exponent level, shrink the character size by 56%.
+				yorg = yref + (HEIGHTRATIO * ht) * scales[ilev]; //not exactly same as IDL
+				scale = dscale * scales[ilev];
+				break;
+			case I: // !I Shift down to the index level, shrink the character size by 56%.
+				yorg = yref - (HEIGHTRATIO * ht) * scales[ilev]; //idem
+				scale = dscale * scales[ilev];
+				break;
+			case M: // !M Switch to the !9 symbol font for one character, then switch back.
+				oldifont = ifont; oldglyph=-1;
+				ifont = 9;
+				revert = 1;
+			case N: // !N Shift back to the normal level and original character size.
+				scale = dscale;
+				yorg = yref = yline;
+				ilev = 0;
+				break;
+			case R: // !R Restore position from the top of the saved positions stack.
+				if (counter >= 0) {
+					xorg = saverestore[counter--];
+				} else {
+					fprintf(stderr, "Error using Hershey characters: Restore without save.\n");
+					return xorg;
+				}
+				break;
+			case S:// !S Save position to the top of the saved positions stack.
+				saverestore[++counter] = xorg;
+				break;
+			case V: // !V Switch to the !20 symbol font for one character, then switch back.
+				oldifont = ifont; oldglyph=-1;
+				ifont = 20;
+				revert = 1;
+			case SP:// SPACE : Just add space size
+				xorg += ht;
+				break;
+			default:
+				if (plsc->dev_unicode && plsc->dev_text) {
+					if (ch >= PRIVATE_UNICODE_PLANE) {
+						ifont = ch - PRIVATE_UNICODE_PLANE;
+						c_ttFontSet(ifont);
 						break;
 					}
-					xorg += ht * args.scale * plsc->xpmm; //plsc->string_length; printf("%f,%f\n",x,xorg);
-					args.x = x + xorg;
-					printf("x=%d\n", args.x);
-					args.y = y + yorg * plsc->ypmm;
-					args.scale = scale;
-					if (xform) for (int i = 0; i < 4; ++i) save_form[i] = xform[i]; //restore original xform
-				}
-			}
-			if (revert) {
-				revert = 0;
-				ifont = oldifont;
-				plP_esc(PLESC_LOAD_FONT, &ifont);
-			}
-		}
-*/
-	} else {
-		for (i = 0; i < length; i++) {
-			ch = symbol[i];
-			switch (ch) {
-				case A: // !A Shift above the division line.
-					yorg = yref = yline + linespacing / 2;
-					ilev = 0;
-					scale = dscale;
-					break;
-				case B: // !B Shift below the division line.
-					yorg = yref = yline - linespacing / 2;
-					ilev = 0,
-							scale = dscale;
-					break;
-				case C: // !C shift back to the starting position and down one line
-					xorg = 0;
-					yline -= linespacing;
-					yorg = yref = yline;
-					scale = dscale;
-					ilev = 0;
-					break;
-				case D: // !D Shift down to the first level subscript, shrink the character size by 38%.
-					yorg = yref = yline + firstlevsubs;
-					ilev = 1;
-					scale = dscale38;
-					break;
-				case U:// !U Shift to first and unique upper subscript level, shrink the character size by 38%.
-					yorg = yref = yline + levsuper;
-					ilev = 1;
-					scale = dscale38;
-					break;
-				case L: // !L Shift down to the second level subscript, shrink the character size by 38%.
-					yorg = yref = yline + secondlevsubs;
-					ilev = 1;
-					scale = dscale38;
-					break;
-					// 2 variable sizes
-				case E: // !E Shift up to the exponent level, shrink the character size by 56%.
-					yorg = yref + (HEIGHTRATIO * ht) * scales[ilev]; //not exactly same as IDL
-					scale = dscale * scales[ilev];
-					break;
-				case I: // !I Shift down to the index level, shrink the character size by 56%.
-					yorg = yref - (HEIGHTRATIO * ht) * scales[ilev]; //idem
-					scale = dscale * scales[ilev];
-					break;
-				case M: // !M Switch to the !9 symbol font for one character, then switch back.
-					oldifont = ifont;
-					ifont = 9;
-					revert = 1;
-				case N: // !N Shift back to the normal level and original character size.
-					scale = dscale;
-					yorg = yref = yline;
-					ilev = 0;
-					break;
-				case R: // !R Restore position from the top of the saved positions stack.
-					if (counter >= 0) {
-						xorg = saverestore[counter--];
-					} else {
-						fprintf(stderr, "Error using Hershey characters: Restore without save.\n");
-						return xorg;
+					int glyph = stbtt_FindGlyphIndex(ttfVectors[plsc->fci], ch);
+					int ax;
+					int lsb;
+					stbtt_GetGlyphHMetrics(ttfVectors[plsc->fci], glyph, &ax, &lsb);
+					if (oldglyph != -1) {
+						ax += stbtt_GetGlyphKernAdvance(ttfVectors[plsc->fci], oldglyph, glyph);
 					}
-					break;
-				case S:// !S Save position to the top of the saved positions stack.
-					saverestore[++counter] = xorg;
-					break;
-				case V: // !V Switch to the !20 symbol font for one character, then switch back.
-					oldifont = ifont;
-					ifont = 20;
-					revert = 1;
-				case SP:// SPACE : Just add space size
-					xorg += ht * args.scale * plsc->xpmm * 10;
-					break;
-				default:
-					if (plsc->dev_unicode && plsc->dev_text) {
-						if (ch >= PRIVATE_UNICODE_PLANE) {
-							ifont = ch - PRIVATE_UNICODE_PLANE;
-							c_ttFontSet(ifont);
-							break;
-						}
-						int glyph=stbtt_FindGlyphIndex(ttfVectors[plsc->fci], ch);
-						int ax;
-						int lsb;
-						stbtt_GetGlyphHMetrics(ttfVectors[plsc->fci], glyph, &ax, &lsb);
-						if (oldglyph != -1) {
-							ax+=stbtt_GetGlyphKernAdvance(ttfVectors[plsc->fci], oldglyph, glyph);
-						}
-					    oldglyph=glyph;
-						//ax is advance width, so corr*ax will be advance in pixels.
-						width = ax*plsc->charHeightCorr;
-/*
-						printf("ax=%d, corr=%f, xppm=%f, width=%f\n",ax,plsc->charHeightCorr,plsc->xpmm,width);
-*/
-						if (length_only) {
-							xorg += (width * scale);
-							break; // do not draw anything, just add to xorg
-						}
-						stbtt_vertex *vertices;
-						int nvecs=stbtt_GetGlyphShape(ttfVectors[plsc->fci], glyph, &vertices);
-					    plttf(vertices, nvecs, xform, refx, refy, scale*plsc->charHeightCorr,
-								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
-   						stbtt_FreeShape(ttfVectors[plsc->fci], vertices);
+					oldglyph = glyph;
+					//ax is advance width, so corr*ax will be advance in pixels.
+					width = ax;
+					if (length_only) {
 						xorg += (width * scale);
-
-					} else {
-						if (ch >= PRIVATE_UNICODE_PLANE) {
-							ifont = ch - PRIVATE_UNICODE_PLANE;
-							break;
-						}
-					    if (hersheyNumberChars[ifont] == 0) break;
-						if ((ch - 32) > hersheyNumberChars[ifont]) break;
-						int offset = hersheyFontLookupStruct[ifont][ch - 32].offset;
-						int nvecs = hersheyFontLookupStruct[ifont][ch - 32].nvecs;
-						width = hersheyFontLookupStruct[ifont][ch - 32].width;
-						if (length_only) {
-							xorg += width * scale;
-							break; // do not draw anything, just add to xorg
-						}
-						charPoints = &(hersheyFontVectors[ifont][offset]);
-						plchar(charPoints, nvecs, xform, refx, refy, scale,
-								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+						break; // do not draw anything, just add to xorg
 					}
-			}
-			if (revert) {
-				revert = 0;
-				ifont = oldifont;
-			}
+/*
+					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,plsc->charHeightCorr,scale,width);
+*/
+					stbtt_vertex *vertices;
+					int nvecs = stbtt_GetGlyphShape(ttfVectors[plsc->fci], glyph, &vertices);
+					plttf(vertices, nvecs, xform, refx, refy, scale,
+							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+					stbtt_FreeShape(ttfVectors[plsc->fci], vertices);
+				} else {
+					if (ch >= PRIVATE_UNICODE_PLANE) {
+						ifont = ch - PRIVATE_UNICODE_PLANE;
+						break;
+					}
+					if (hersheyNumberChars[ifont] == 0) break;
+					if ((ch - 32) > hersheyNumberChars[ifont]) break;
+					int offset = hersheyFontLookupStruct[ifont][ch - 32].offset;
+					int nvecs = hersheyFontLookupStruct[ifont][ch - 32].nvecs;
+					width = hersheyFontLookupStruct[ifont][ch - 32].width;
+					if (length_only) {
+						xorg += width * scale;
+						break; // do not draw anything, just add to xorg
+					}
+/*
+					printf("glyph: %c, scale=%f, width=%f\n",ch,scale,width);
+*/
+					charPoints = &(hersheyFontVectors[ifont][offset]);
+					plchar(charPoints, nvecs, xform, refx, refy, scale,
+							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+				}
+		}
+		if (revert) {
+			revert = 0;
+			ifont = oldifont; oldglyph=-1;
 		}
 	}
 	if (length_only) return xorg; //avoid problems with null-valued xform
-	
+
 	if (plsc->dev_text) // Does the device render it's own text ?
 	{
 		if (args.unicode_array_len) plP_esc(PLESC_HAS_TEXT, &args);
@@ -689,7 +572,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 //--------------------------------------------------------------------------
 // plchar()
 //
-// Plots out a given stroke font character.
+// Plots out Hershey fonts
 //--------------------------------------------------------------------------
 static void
 plchar( short *vects, int len, PLFLT *xform, 
@@ -715,6 +598,8 @@ plchar( short *vects, int len, PLFLT *xform,
         cy = vects[i] & 127;
         if (cx & 64) cx-=128;
         if (cy & 64) cy-=128;
+		cy-=10; //baseline. check with:
+		//erase & for i=0.1,1.1,0.1 do begin & XYOUTS, 0, i,'mjmym#m;:',SIZE = 10*i, /NORMAL, width=w &plots,[0,w],replicate(i,2),/norm & end
         penup = ((vects[i] & 16384) != 0);
 		x = *p_xorg + cx * scale;
 		y = *p_yorg + cy * scale;
@@ -869,6 +754,7 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
 	free(pathnxy);
 	free(pathx);
 	free(pathy);
+    *p_xorg = *p_xorg + width * scale;
 }
 
 
@@ -1270,6 +1156,7 @@ void c_ttFontSet(int n) {
 	if (getFontName(n) != NULL) {
 		plsc->fci=n;
 		plsc->charHeightCorr = charHeightCorr[n];
+		c_plschr( charHeightCorr[n]/10. , 1);
 	} else printf("loading of font #%d failed.\n",n);
 }
 void c_ttFontLoad(const char* fontName) {
@@ -1304,12 +1191,14 @@ void c_ttFontLoad(const char* fontName) {
 	// to be optimized:
 	int x0, y0, x1, y1;
 	stbtt_GetFontBoundingBox(info, &x0, &y0, &x1, &y1);
-	//the height of the “average” character is determined by the width of the rectangle
-	float averheight = (float) (x1 - x0);
+	//the height of the “average” character (for IDL it is determined by the width of the rectangle?)
+	float averheight = (float) (y1 - y0);
 	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
-	float aspectratiooffont = (float) (y1 - y0) / averheight;
-	charHeightCorr[n] = 20. / (averheight * aspectratiooffont); //!D.Y_CH_SIZE * 2 but why 2?
+	float aspectratiooffont = averheight / (float) (x1 - x0);
+	charHeightCorr[n] = 10. / averheight; //!D.Y_CH_SIZE
 	plsc->charHeightCorr = charHeightCorr[n];
+	printf("averheight=%f, corr=%f\n",averheight,plsc->charHeightCorr);
+	c_plschr( averheight, 1);
 }
 //--------------------------------------------------------------------------
 // void plfontrel()
