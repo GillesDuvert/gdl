@@ -869,7 +869,7 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text, int doUnicode)
         {
             test = text[j++];
 			switch(test) {
-				case 0x21 : sym[( *length )++] = doUnicode?  gdlHersheyToUnicode ( fontindex[ifont][test-32]):ch; break; // + ( ifont - 1 ) * numberchars + ch ); break;
+				case 0x21 : sym[( *length )++] = ch; break; 
 				case '3':
 				case '4':
 				case '5':
