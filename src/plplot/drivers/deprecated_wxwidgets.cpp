@@ -795,8 +795,8 @@ static void fill_multiple_polygon( PLStream *pls) {
         // 3D convert, must take into account that y is inverted.
         int ix=x[j];
         int iy=y[j];
-        if (ix >= 0) {
-          SelfTransform3D(&ix, &iy); //avoid negative "codes"
+        if (ix >= 0) { //avoid transforming the negative codes...
+          SelfTransform3D(&ix, &iy);
         x[j]=ix;
         y[j]=iy;
         }

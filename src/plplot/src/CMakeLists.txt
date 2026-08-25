@@ -30,7 +30,6 @@ set(plplot_LIB_SRCS
   plf2ops.c
   plfill.c
   plline.c
-  plmetafile.c
   plot3d.c
   plpage.c
   plsdef.c
