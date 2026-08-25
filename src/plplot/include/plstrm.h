@@ -742,6 +742,7 @@ typedef struct
     PLUNICODE fci;
 	
 	float     charHeightCorr; //the magic factor for each truetype font inner size to pixels.
+	int       charDescentValue; //to align a char on the line
 
     PLINT     dev_hrshsym;
 	

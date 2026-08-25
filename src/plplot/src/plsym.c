@@ -76,6 +76,7 @@ static struct CTAB *hersheyFontLookupStruct[NUMBERHERSHEYFONTS]={};
 static short int *hersheyFontVectors[NUMBERHERSHEYFONTS]={};
 static stbtt_fontinfo* ttfVectors[MAXTTFONTS]={0};
 static float charHeightCorr[MAXTTFONTS]={0};
+static int   charDescent[MAXTTFONTS]={0};
 static short int   *fntlkup;
 static long   *fntindx;
 static signed char *fntbffr;
@@ -83,9 +84,7 @@ static short int   numberfonts, numberchars;
 static long   indxleng;
 
 static short       fontloaded = 0;
-// moved to plstr.h, plsc->cfont  static PLINT font = 1;  current font
 
-//#define PLMAXSTR    300
 #define STLEN       250
 
 //static PLUNICODE symbol_buffer[PLMAXSTR];
@@ -383,11 +382,14 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	static PLFLT saverestore[1000] = {};
 	int counter = -1;
 	short *charPoints = 0;
-	PLFLT save_form[4] = {1, 0, 0, 1};
 #define HEIGHTRATIO 1.6
-	PLINT ch, i, length, style, oline = 0;
+	PLINT ch, i, length, style;
 	PLFLT width = 0., xorg = 0., yorg = 0., yline = 0., yref = 0., def, ht, dscale, scale;
-	plgchr(&def, &ht); printf("def=%f, ht=%f\n",def,ht);
+	plgchr(&def, &ht);
+	// TrueType fonts need a special correction as their size is all different.
+	// The correction itself depends on the size of the hershey fonts, all this is quite relative
+	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
+	if (plsc->dev_unicode && plsc->dev_text) ht*=charHeightCorr[plsc->fci];
 	dscale = 0.05 * ht;
 	scale = dscale;
 	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
@@ -397,32 +399,12 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	const PLFLT firstlevsubs = -HEIGHTRATIO * ht * 0.5 + 0.5 * ht * dscale38;
 	const PLFLT secondlevsubs = -HEIGHTRATIO * ht * 0.75 + 0.5 * ht * dscale38;
 	int ilev = 0;
-	int write = 0;
-	// Line style must be continuous
 
+	// Line style must be continuous
 	style = plsc->nms;
 	plsc->nms = 0;
 
-	EscText args = {};
-	args.text_type = PL_STRING_TEXT;
-	args.base = base;
-	args.just = just;
-	args.scale = dscale;
-	//must make a copy of xform because 'args.xform' is modified afterwards and must be resetted each
-	// time the string position is called
-	args.xform = save_form;
-	if (xform) for (int i = 0; i < 4; ++i) save_form[i] = xform[i]; //xform may be NULL!
-	args.x = x;
-	args.y = y;
-	args.refx = refx;
-	args.refy = refy;
-	// Always store the string passed by the caller, even for unicode
-	// enabled drivers.  The plmeta driver will use this field to store
-	// the string data in the metafile.
-	args.string = string;
-	args.unicode_array = (PLUNICODE*) calloc(strlen(string), sizeof (PLUNICODE));
-	args.unicode_array_len = 0;
-	PLUNICODE *symbol = args.unicode_array;
+	PLUNICODE *symbol = (PLUNICODE*) calloc(strlen(string), sizeof (PLUNICODE));
 
 	pldeco(symbol, &length, string); // decode embedded commands, encode to unicode or hershey, depending.
 
@@ -441,7 +423,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 			case B: // !B Shift below the division line.
 				yorg = yref = yline - linespacing / 2;
 				ilev = 0,
-						scale = dscale;
+				scale = dscale;
 				break;
 			case C: // !C shift back to the starting position and down one line
 				xorg = 0;
@@ -517,7 +499,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 					}
 					oldglyph = glyph;
 					//ax is advance width, so corr*ax will be advance in pixels.
-					width = ax;
+					width = ax ;
 					if (length_only) {
 						xorg += (width * scale);
 						break; // do not draw anything, just add to xorg
@@ -557,15 +539,9 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 			ifont = oldifont; oldglyph=-1;
 		}
 	}
-	if (length_only) return xorg; //avoid problems with null-valued xform
-
-	if (plsc->dev_text) // Does the device render it's own text ?
-	{
-		if (args.unicode_array_len) plP_esc(PLESC_HAS_TEXT, &args);
-	}
-	free(args.unicode_array);
+	free(symbol);
+	//reset line style
 	plsc->nms = style;
-
 	return xorg; //length
 }
 
@@ -641,7 +617,7 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
 
 	if (len == 0) return;
 	
-	PLINT lx, ly, clx, cly, cclx, clly;
+	PLINT lx, ly;
     PLFLT x, y;
     PLINT cx, cy;
 	PLINT l = 0;
@@ -685,7 +661,7 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
 	pathy[0]=&(lly[0]);
     for ( int i=0; i< len; ++i )
     {
-        cx = vects[i].x, cy = vects[i].y;
+        cx = vects[i].x, cy = vects[i].y + plsc->charDescentValue;
 		x = *p_xorg + cx * scale;
 		y = *p_yorg + cy * scale;
 		lx = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
@@ -712,7 +688,7 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
                break;
             case STBTT_vcurve:
 				llx[l] = -2; l++; n++; //quadratic , 2 pair of coords follow
-				cx = vects[i].cx, cy = vects[i].cy;
+				cx = vects[i].cx, cy = vects[i].cy + plsc->charDescentValue;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
 				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
@@ -725,13 +701,13 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
                break;
             case STBTT_vcubic:
 				llx[l] = -3; l++; n++; //cubic , 3 pair of coords follow
-				cx = vects[i].cx, cy = vects[i].cy;
+				cx = vects[i].cx, cy = vects[i].cy + plsc->charDescentValue;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
 				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
 				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
 				l++; n++;
-				cx = vects[i].cx1, cy = vects[i].cy1;
+				cx = vects[i].cx1, cy = vects[i].cy1 + plsc->charDescentValue ;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
 				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
@@ -1156,7 +1132,7 @@ void c_ttFontSet(int n) {
 	if (getFontName(n) != NULL) {
 		plsc->fci=n;
 		plsc->charHeightCorr = charHeightCorr[n];
-		c_plschr( charHeightCorr[n]/10. , 1);
+		plsc->charDescentValue = charDescent[n];
 	} else printf("loading of font #%d failed.\n",n);
 }
 void c_ttFontLoad(const char* fontName) {
@@ -1195,10 +1171,13 @@ void c_ttFontLoad(const char* fontName) {
 	float averheight = (float) (y1 - y0);
 	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
 	float aspectratiooffont = averheight / (float) (x1 - x0);
-	charHeightCorr[n] = 10. / averheight; //!D.Y_CH_SIZE
+	charHeightCorr[n] = 20. / averheight; //value found experimentally (?)
 	plsc->charHeightCorr = charHeightCorr[n];
-	printf("averheight=%f, corr=%f\n",averheight,plsc->charHeightCorr);
-	c_plschr( averheight, 1);
+	int ascent, descent, lineGap;
+    stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);
+	charDescent[n] = 2.5*descent; //value found experimentally (?)
+	plsc->charDescentValue= charDescent[n];	
+	//printf("averheight=%f, aspectratio=%f, ascent=%d, descent=%d, lineGap=%d, corr=%f\n",averheight,aspectratiooffont, ascent, descent,lineGap, plsc->charHeightCorr);
 }
 //--------------------------------------------------------------------------
 // void plfontrel()
@@ -1216,75 +1195,6 @@ plfontrel( void )
         free_mem( fntlkup )
         fontloaded = 0;
     }
-}
-
-//--------------------------------------------------------------------------
-//  int plhershey2unicode ( int in )
-//
-//  Function searches for in, the input hershey code, in a lookup table and
-//  returns the corresponding index in that table.
-//  Using this index you can work out the unicode equivalent as well as
-//  the closest approximate to the font-face. If the returned index is
-//  -1 then no match was possible.
-//
-//  Two versions of the function exist, a simple linear search version,
-//  and a more complex, but significantly faster, binary search version.
-//  If there seem to be problems with the binary search method, the brain-dead
-//  linear search can be enabled by defining SIMPLE_BUT_SAFE_HERSHEY_LOOKUP
-//  at compile time.
-//--------------------------------------------------------------------------
-
-int plhershey2unicode( int in )
-{
-#ifdef SIMPLE_BUT_SAFE_HERSHEY_LOOKUP
-    int ret = -1;
-    int i;
-
-    for ( i = 0; ( i < number_of_entries_in_hershey_to_unicode_table ) && ( ret == -1 ); i++ )
-    {
-        if ( hershey_to_unicode_lookup_table[i].Hershey == in )
-            ret = i;
-    }
-
-    return ( ret );
-
-#else
-
-    int jlo = -1, jmid, jhi = number_of_entries_in_hershey_to_unicode_table;
-    while ( jhi - jlo > 1 )
-    {
-        // Note that although jlo or jhi can be just outside valid
-        // range (see initialization above) because of while condition
-        // jlo < jmid < jhi and jmid must be in valid range.
-        //
-        jmid = ( jlo + jhi ) / 2;
-        // convert hershey_to_unicode_lookup_table[jmid].Hershey to signed
-        // integer since we don't lose information - the number range
-        // is from 1 and 2932 at the moment
-        if ( in > (int) ( hershey_to_unicode_lookup_table[jmid].Hershey ) )
-            jlo = jmid;
-        else if ( in < (int) ( hershey_to_unicode_lookup_table[jmid].Hershey ) )
-            jhi = jmid;
-        else
-            // We have found it!
-            // in == hershey_to_unicode_lookup_table[jmid].Hershey
-            //
-            return ( jmid );
-    }
-    // jlo is invalid or it is valid and in > hershey_to_unicode_lookup_table[jlo].Hershey.
-    // jhi is invalid or it is valid and in < hershey_to_unicode_lookup_table[jhi].Hershey.
-    // All these conditions together imply in cannot be found in
-    // hershey_to_unicode_lookup_table[j].Hershey, for all j.
-    //
-    return ( -1 );
-#endif
-}
-
-PLUNICODE gdlHersheyToUnicode( int hersh )
-{
-	int ret=plhershey2unicode(hersh);
-	if (ret > -1) { return hershey_to_unicode_lookup_table[ret].Unicode; } else return 0;
-
 }
 
 //--------------------------------------------------------------------------

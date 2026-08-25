@@ -1176,12 +1176,7 @@ plfvect( PLFLT ( *plf2eval )( PLINT, PLINT, PLPointer ),
          void ( *pltr )( PLFLT, PLFLT, PLFLT *, PLFLT *, PLPointer ),
          PLPointer pltr_data );
 
-//
-//  Internal function to get an index to the hershey table
-//
-int
-plhershey2unicode( int in );
-PLUNICODE gdlHersheyToUnicode( int in );
+
 // struct used for FCI to FontName lookups.
 typedef struct
 {
