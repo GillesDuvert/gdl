@@ -48,7 +48,6 @@ extern "C" const char* getFontName(int n) {
 
 extern "C" int loadFontPath(const char *name) {
   std::string fontPath = FindFontPath(name);
-  std::cerr<<fontPath<<std::endl;
   if (fontPath.length() > 0) { //Note: LINUX (Fontconfig) will ALWAYS return something.
     // register it, even if specific device does not support it
     KnownFontNames[name] = std::pair<std::string, int>(fontPath, numberFonts++);

@@ -496,7 +496,7 @@ return 24;
 }
 
  void GDLWXStream::SetCurrentFont(int n) {this->settt(n);}
- void GDLWXStream::LoadCurrentFont(std::string f){
+ void GDLWXStream::LoadCurrentFont(std::string &f){
   if (f.size() > 0) {
    this->loadtt(f.c_str());
   }

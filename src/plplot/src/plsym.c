@@ -1137,6 +1137,9 @@ void c_ttFontSet(int n) {
 }
 void c_ttFontLoad(const char* fontName) {
 	int n=getFontIndex(fontName);
+/*
+	printf("c_ttFontLoad(%s) gives index n=%d.\n",fontName,n);
+*/
 	if (n < 0) {
 		n=loadFontPath(fontName); //happens when stream is initialized
 	    if (n < 0) return; // too silent...
@@ -1144,7 +1147,7 @@ void c_ttFontLoad(const char* fontName) {
     long size;
     unsigned char* fontBuffer;
     char* fontPath=getFontPath(fontName);
-	if (fontPath==NULL) return; 
+	if (fontPath==NULL) { printf("invalid Font Path!!!\n",n); return;} 
     FILE* fontFile = fopen(fontPath, "rb");
 	
     fseek(fontFile, 0, SEEK_END);

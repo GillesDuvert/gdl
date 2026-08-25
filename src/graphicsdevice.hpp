@@ -125,7 +125,7 @@ class GraphicsDevice
   
 protected:
   static unsigned wTag, xSTag, ySTag, xVSTag, yVSTag, n_colorsTag; // !D tag indices
-  DString fontname;
+  DString fontname="Courier";
 
   static std::vector<GDLCT> CT; // predefined colortables
   static GDLCT           actCT; // actual used colortable

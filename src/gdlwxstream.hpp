@@ -93,7 +93,7 @@ public:
     bool CursorStandard(int cursorNumber);
     bool CursorImage(char* v, int x, int y, char* m);
     DLong GetVisualDepth();
-    void LoadCurrentFont(std::string fontname);
+    void LoadCurrentFont(std::string &fontname);
     void SetCurrentFont(int n);
     DString GetVisualName();
     bool GetScreenResolution(double& resx, double& resy);

@@ -288,7 +288,7 @@ public:
   bool IsPixmapWindow() {return usedAsPixmap;}
   virtual bool IsPlot() {return true;} //except some wxWidgets
   virtual BaseGDL* GetBitmapData(int xoff, int yoff, int nx, int ny){return NULL;}
-  virtual void LoadCurrentFont(std::string fontname){}//do nothing
+  virtual void LoadCurrentFont(std::string &fontname){}//do nothing
   virtual void SetCurrentFont(int n){}//do nothing
   int GetRegion(DLong& xs, DLong& ys, DLong& nx, DLong& ny);//{return false;}
   bool SetRegion(DLong& xd, DLong& yd, DLong& nx, DLong& ny);//{return false;}

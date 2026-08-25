@@ -673,7 +673,6 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
 
     case PLESC_DEVINIT:
         dev->SetExternalBuffer( ptr );
-
         // replay begin of page call and state settings
         plD_bop_wxwidgets( pls );
         break;
