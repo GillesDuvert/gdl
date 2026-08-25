@@ -106,7 +106,7 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, charsize=ch
   ; plotting characters
   if keyword_set(tt) then begin
      !P.FONT=1
-     DEVICE, SET_FONT=num ;, /TT_FONT
+     DEVICE, SET_FONT=num, /TT_FONT
      for i = offin, offin+255 do begin
         c=STRING(i, FORMAT='("!Z(",Z4.4,")")')
         xyouts, (i mod base), base * (i / base) +sz/2 , c,CHARSIZE=chrsz
