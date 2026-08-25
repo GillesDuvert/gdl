@@ -29,10 +29,6 @@
 // some special wxWidgets headers
 #include <wx/spinctrl.h>
 #include <wx/graphics.h>
-// freetype headers and macros
-#ifdef PL_HAVE_FREETYPE
-  #include "plfreetype.h"
-#endif
 
 #ifndef max_number_of_grey_levels_used_in_text_smoothing
   #define max_number_of_grey_levels_used_in_text_smoothing    64
@@ -141,10 +137,6 @@ public: // variables
     int  clipminx, clipmaxx;
     int  clipminy, clipmaxy;
     bool newclipregion;
-
-    // variables for antializing
-    int          freetype;
-    int          smooth_text;
 
     const char   ** devDesc;    // Descriptive names for file-oriented devices.  Malloc'ed.
     const char   ** devName;    // Keyword names of file-oriented devices. Malloc'ed.

@@ -44,15 +44,6 @@
 #define POLYLINE2D plD_polyline_wxwidgets
 #include "plplot3d.h"
 
-// Static function prototypes
-#ifdef PL_HAVE_FREETYPE
-static void plD_pixel_wxwidgets( PLStream *pls, short x, short y );
-static PLINT plD_read_pixel_wxwidgets( PLStream *pls, short x, short y );
-static void plD_set_pixel_wxwidgets( PLStream *pls, short x, short y, PLINT colour );
-static void init_freetype_lv1( PLStream *pls );
-static void init_freetype_lv2( PLStream *pls );
-#endif
-
 // private functions needed by the wxwidgets Driver
 //static void install_buffer( PLStream *pls );
 //static void wxRunApp( PLStream *pls, bool runonce = false );
@@ -172,9 +163,6 @@ wxPLDevBase::wxPLDevBase( int bcknd ) : backend( bcknd )
     clipminy      = 800;
     clipmaxy      = 0;
 
-    freetype    = 0;
-    smooth_text = 0;
-
     devName = (const char **) malloc( NDEV * sizeof ( char** ) );
     memset( devName, '\0', NDEV * sizeof ( char** ) );
     devDesc = (const char **) malloc( NDEV * sizeof ( char** ) );
@@ -283,12 +271,6 @@ wxPLDevBase* common_init( PLStream *pls) {
   PLFLT downscale, downscale2;
 
   // default options
-#ifdef PL_HAVE_FREETYPE
-  static PLINT freetype = 1;
-#else
-  static PLINT freetype = -1;
-#endif
-  static PLINT smooth_text = 1;
   static PLINT text = -1;
   static PLINT hrshsym = 0;
 
@@ -296,10 +278,6 @@ wxPLDevBase* common_init( PLStream *pls) {
   static PLINT backend = wxBACKEND_GC;
 
   DrvOpt wx_options[] = {
-#ifdef PL_HAVE_FREETYPE
-    { "freetype", DRV_INT, &freetype, "Use FreeType library"},
-    { "smooth", DRV_INT, &smooth_text, "Turn text smoothing on (1) or off (0)"},
-#endif
     { "hrshsym", DRV_INT, &hrshsym, "Use Hershey symbol set (hrshsym=0|1)"},
     { "text", DRV_INT, &text, "Use own text routines (text=0|1)"},
     { NULL, DRV_INT, NULL, NULL}
@@ -317,7 +295,6 @@ wxPLDevBase* common_init( PLStream *pls) {
   // by default the own text routines are used for wxGC
   if (text == -1)
     text = 1;
-  freetype = 0; // this backend is vector oriented and doesn't know pixels
   if (dev == NULL) {
     plexit("Insufficient memory");
   }
@@ -342,26 +319,6 @@ wxPLDevBase* common_init( PLStream *pls) {
     if (hrshsym)
       pls->dev_hrshsym = 1;
   }
-
-#ifdef PL_HAVE_FREETYPE
-  // own text routines have higher priority over freetype
-  // if text and freetype option are set to 1
-  if (!text) {
-    dev->smooth_text = smooth_text;
-    dev->freetype = freetype;
-  }
-
-  if (dev->freetype) {
-    pls->dev_text = 1; // want to draw text
-    pls->dev_unicode = 1; // want unicode
-    if (hrshsym)
-      pls->dev_hrshsym = 1;
-
-    init_freetype_lv1(pls);
-    FT_Data* FT = (FT_Data *) pls->FT;
-    FT->want_smooth_text = smooth_text;
-  }
-#endif
 
   // initialize frame size and position
   if (pls->xlength <= 0 || pls->ylength <= 0)
@@ -405,11 +362,6 @@ wxPLDevBase* common_init( PLStream *pls) {
    
   // set dpi
   plspage(VIRTUAL_PIXELS_PER_IN / dev->scalex, VIRTUAL_PIXELS_PER_IN / dev->scaley, 0, 0, 0, 0);
-
-#ifdef PL_HAVE_FREETYPE
-  if (dev->freetype)
-    init_freetype_lv2(pls);
-#endif
 
   // find out what file drivers are available
   plgFileDevs(&dev->devDesc, &dev->devName, &dev->ndev);
@@ -631,22 +583,6 @@ void plD_tidy_wxwidgets( PLStream *pls )
 
     wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
 
-#ifdef PL_HAVE_FREETYPE
-    if ( dev->freetype )
-    {
-        FT_Data *FT = (FT_Data *) pls->FT;
-        plscmap0n( FT->ncol0_org );
-        plD_FreeType_Destroy( pls );
-    }
-#endif
-
-//    if ( dev->ownGUI )
-//    {
-//        wxPLGetApp().RemoveFrame( dev->m_frame );
-//        if ( !wxPLGetApp().FrameCount() )
-//            wxUninitialize();
-//    }
-
     delete dev;
     pls->dev = NULL; // since in plcore.c pls->dev is free_mem'd
 }
@@ -745,15 +681,7 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
         dev->PSSetFont(* (PLUNICODE*) ptr);
         break;
       case PLESC_HAS_TEXT:
-//        if ( !( dev->ready ) )            install_buffer( pls );
 
-        if ( dev->freetype )
-        {
-#ifdef PL_HAVE_FREETYPE
-            plD_render_freetype_text( pls, (EscText *) ptr );
-#endif
-        }
-        else
             dev->ProcessString( pls, (EscText *) ptr );
         break;
 
@@ -930,16 +858,6 @@ void wx_set_size( PLStream* pls, int width, int height )
         dev->ClearBackground( bgr, bgg, bgb );
   }
 
-    // freetype parameters must also be changed
-#ifdef PL_HAVE_FREETYPE
-    if ( dev->freetype )
-    {
-        FT_Data *FT = (FT_Data *) pls->FT;
-        FT->scalex = dev->scalex;
-        FT->scaley = dev->scaley;
-        FT->ymax   = dev->height;
-    }
-#endif
 }
 
 
@@ -976,355 +894,3 @@ void plD_erroraborthandler_wxwidgets( const char *errormessage )
     }
 }
 
-
-
-
-#ifdef PL_HAVE_FREETYPE
-
-//--------------------------------------------------------------------------
-//  static void plD_pixel_wxwidgets( PLStream *pls, short x, short y )
-//
-//  callback function, of type "plD_pixel_fp", which specifies how a single
-//  pixel is set in the current colour.
-//--------------------------------------------------------------------------
-static void plD_pixel_wxwidgets( PLStream *pls, short x, short y )
-{
-    // Log_Verbose( "plD_pixel_wxwidgets" );
-
-    wxPLDevBase *dev = (wxPLDevBase *) pls->dev;
-
-    if ( !( dev->ready ) )
-        install_buffer( pls );
-
-    dev->PutPixel( x, y );
-
-//    if ( !( dev->resizing ) && dev->ownGUI )
-//    {
-//        dev->comcount++;
-//        if ( dev->comcount > MAX_COMCOUNT )
-//        {
-//            wxRunApp( pls, true );
-//            dev->comcount = 0;
-//        }
-//    }
-}
-
-
-//--------------------------------------------------------------------------
-//  static void plD_pixel_wxwidgets( PLStream *pls, short x, short y )
-//
-//  callback function, of type "plD_pixel_fp", which specifies how a single
-//  pixel is set in the current colour.
-//--------------------------------------------------------------------------
-static void plD_set_pixel_wxwidgets( PLStream *pls, short x, short y, PLINT colour )
-{
-    // Log_Verbose( "plD_set_pixel_wxwidgets" );
-
-    wxPLDevBase *dev = (wxPLDevBase *) pls->dev;
-
-    if ( !( dev->ready ) )
-        install_buffer( pls );
-
-    dev->PutPixel( x, y, colour );
-
-//    if ( !( dev->resizing ) && dev->ownGUI )
-//    {
-//        dev->comcount++;
-//        if ( dev->comcount > MAX_COMCOUNT )
-//        {
-//            wxRunApp( pls, true );
-//            dev->comcount = 0;
-//        }
-//    }
-}
-
-
-//--------------------------------------------------------------------------
-//  void plD_read_pixel_wxwidgets (PLStream *pls, short x, short y)
-//
-//  callback function, of type "plD_pixel_fp", which specifies how a single
-//  pixel is read.
-//--------------------------------------------------------------------------
-static PLINT plD_read_pixel_wxwidgets( PLStream *pls, short x, short y )
-{
-    // Log_Verbose( "plD_read_pixel_wxwidgets" );
-
-    wxPLDevBase *dev = (wxPLDevBase *) pls->dev;
-
-    if ( !( dev->ready ) )
-        install_buffer( pls );
-
-    return dev->GetPixel( x, y );
-}
-
-
-//--------------------------------------------------------------------------
-//  void init_freetype_lv1 (PLStream *pls)
-//
-//  "level 1" initialisation of the freetype library.
-//  "Level 1" initialisation calls plD_FreeType_init(pls) which allocates
-//  memory to the pls->FT structure, then sets up the pixel callback
-//  function.
-//--------------------------------------------------------------------------
-static void init_freetype_lv1( PLStream *pls )
-{
-    // Log_Verbose( "init_freetype_lv1" );
-
-    plD_FreeType_init( pls );
-
-    FT_Data *FT = (FT_Data *) pls->FT;
-    FT->pixel = (plD_pixel_fp) plD_pixel_wxwidgets;
-
-    //
-    //  See if we have a 24 bit device (or better), in which case
-    //  we can use the better antialising.
-    //
-    // the bitmap we are using in the antialized case has always
-    // 32 bit depth
-    FT->BLENDED_ANTIALIASING = 1;
-    FT->read_pixel           = (plD_read_pixel_fp) plD_read_pixel_wxwidgets;
-    FT->set_pixel            = (plD_set_pixel_fp) plD_set_pixel_wxwidgets;
-}
-
-
-//--------------------------------------------------------------------------
-//  void init_freetype_lv2 (PLStream *pls)
-//
-//  "Level 2" initialisation of the freetype library.
-//  "Level 2" fills in a few setting that aren't public until after the
-//  graphics sub-syetm has been initialised.
-//  The "level 2" initialisation fills in a few things that are defined
-//  later in the initialisation process for the GD driver.
-//
-//  FT->scale is a scaling factor to convert co-ordinates. This is used by
-//  the GD and other drivers to scale back a larger virtual page and this
-//  eliminate the "hidden line removal bug". Set it to 1 if your device
-//  doesn't have scaling.
-//
-//  Some coordinate systems have zero on the bottom, others have zero on
-//  the top. Freetype does it one way, and most everything else does it the
-//  other. To make sure everything is working ok, we have to "flip" the
-//  coordinates, and to do this we need to know how big in the Y dimension
-//  the page is, and whether we have to invert the page or leave it alone.
-//
-//  FT->ymax specifies the size of the page FT->invert_y=1 tells us to
-//  invert the y-coordinates, FT->invert_y=0 will not invert the
-//  coordinates.
-//--------------------------------------------------------------------------
-
-static void init_freetype_lv2( PLStream *pls )
-{
-    // Log_Verbose( "init_freetype_lv2" );
-
-    wxPLDevBase *dev = (wxPLDevBase *) pls->dev;
-    FT_Data     *FT  = (FT_Data *) pls->FT;
-
-    FT->scalex      = dev->scalex;
-    FT->scaley      = dev->scaley;
-    FT->ymax        = dev->height;
-    FT->invert_y    = 1;
-    FT->smooth_text = 0;
-
-    if ( ( FT->want_smooth_text == 1 ) && ( FT->BLENDED_ANTIALIASING == 0 ) ) // do we want to at least *try* for smoothing ?
-    {
-        FT->ncol0_org   = pls->ncol0;                                         // save a copy of the original size of ncol0
-        FT->ncol0_xtra  = 16777216 - ( pls->ncol1 + pls->ncol0 );             // work out how many free slots we have
-        FT->ncol0_width = FT->ncol0_xtra / ( pls->ncol0 - 1 );                // find out how many different shades of anti-aliasing we can do
-        if ( FT->ncol0_width > 4 )                                            // are there enough colour slots free for text smoothing ?
-        {
-            if ( FT->ncol0_width > max_number_of_grey_levels_used_in_text_smoothing )
-                FT->ncol0_width = max_number_of_grey_levels_used_in_text_smoothing;           // set a maximum number of shades
-            plscmap0n( FT->ncol0_org + ( FT->ncol0_width * pls->ncol0 ) );                    // redefine the size of cmap0
-            // the level manipulations are to turn off the plP_state(PLSTATE_CMAP0)
-            // call in plscmap0 which (a) leads to segfaults since the GD image is
-            // not defined at this point and (b) would be inefficient in any case since
-            // setcmap is always called later (see plD_bop_png) to update the driver
-            // color palette to be consistent with cmap0.
-            {
-                PLINT level_save;
-                level_save = pls->level;
-                pls->level = 0;
-                pl_set_extended_cmap0( pls, FT->ncol0_width, FT->ncol0_org ); // call the function to add the extra cmap0 entries and calculate stuff
-                pls->level = level_save;
-            }
-            FT->smooth_text = 1; // Yippee ! We had success setting up the extended cmap0
-        }
-        else
-            plwarn( "Insufficient colour slots available in CMAP0 to do text smoothing." );
-    }
-    else if ( ( FT->want_smooth_text == 1 ) && ( FT->BLENDED_ANTIALIASING == 1 ) )    // If we have a truecolour device, we wont even bother trying to change the palette
-    {
-        FT->smooth_text = 1;
-    }
-}
-
-#endif
-
-
-//--------------------------------------------------------------------------
-// GetCursorCmd()
-////
-//// Waits for a graphics input event and returns coordinates.
-////--------------------------------------------------------------------------
-//static void GetCursorCmd( PLStream* pls, PLGraphicsIn* ptr )
-//{
-//    // Log_Verbose( "GetCursorCmd" );
-//
-//    wxPLDevBase  *dev = (wxPLDevBase *) pls->dev;
-//    PLGraphicsIn *gin = &( dev->gin );
-//
-//    // Initialize
-//    plGinInit( gin );
-//    dev->locate_mode = LOCATE_INVOKED_VIA_API;
-//    dev->draw_xhair  = true;
-//
-//    // Run event loop until a point is selected
-//    wxRunApp( pls, false );
-//
-//    *ptr = *gin;
-//    if ( dev->locate_mode )
-//    {
-//        dev->locate_mode = 0;
-//        dev->draw_xhair  = false;
-//    }
-//}
-
-
-
-
-//--------------------------------------------------------------------------
-//  This part includes wxWidgets specific functions, which allow to
-//  open a window from the command line, if needed.
-//--------------------------------------------------------------------------
-
-
-//--------------------------------------------------------------------------
-//  void install_buffer( PLStream *pls )
-//
-//  If this driver is called from a command line executable (and not
-//  from within a wxWidgets program), this function prepares a DC and a
-//  bitmap to plot into.
-//--------------------------------------------------------------------------
-//static void install_buffer( PLStream *pls )
-//{
-//    // Log_Verbose( "install_buffer" );
-//
-//    wxPLDevBase * dev   = (wxPLDevBase *) pls->dev;
-//    static bool initApp = false;
-//
-//    if ( !initApp )
-//    {
-//        // this hack enables to have a GUI on Mac OSX even if the
-//        // program was called from the command line (and isn't a bundle)
-////#ifdef __WXMAC__
-////        ProcessSerialNumber psn;
-////
-////        GetCurrentProcess( &psn );
-////        CPSEnableForegroundOperation( &psn );
-////        SetFrontProcess( &psn );
-////#endif
-//
-//        // initialize wxWidgets
-//        wxInitialize();
-//        wxLog::GetActiveTarget();
-//        wxTRY {
-//            wxPLGetApp().CallOnInit();
-//        }
-//        wxCATCH_ALL( wxPLGetApp().OnUnhandledException(); plexit( "Can't init wxWidgets!" ); )
-//        initApp = true;
-//    }
-//
-//
-//    wxString title( pls->plwindow, *wxConvCurrent );
-//    switch ( dev->backend )
-//    {
-//    case wxBACKEND_DC:
-//        title += wxT( " - wxWidgets (basic)" );
-//        break;
-//    case wxBACKEND_GC:
-//        title += wxT( " - wxWidgets (wxGC)" );
-//        break;
-//    case wxBACKEND_AGG:
-//        title += wxT( " - wxWidgets (AGG)" );
-//        break;
-//    default:
-//        break;
-//    }
-//    dev->m_frame = new wxPLplotFrame( title, pls );
-//    wxPLGetApp().AddFrame( dev->m_frame );
-//
-//    // set size and position of window
-//    dev->m_frame->SetClientSize( dev->width, dev->height );
-//    if ( dev->xpos != 0 || dev->ypos != 0 )
-//        dev->m_frame->SetSize( dev->xpos, dev->ypos,
-//            wxDefaultCoord, wxDefaultCoord,
-//            wxSIZE_USE_EXISTING );
-//
-//    if ( dev->showGUI )
-//    {
-//        dev->m_frame->Show( true );
-//        dev->m_frame->Raise();
-//    }
-//    else
-//        dev->m_frame->Show( false );
-//
-//    // get a DC and a bitmap or an imagebuffer
-////    dev->ownGUI    = true;
-//    dev->bm_width  = dev->width;
-//    dev->bm_height = dev->height;
-//    dev->CreateCanvas();
-//    dev->ready = true;
-//
-//    // Set wx error handler for various errors in plplot
-//    plsexit( plD_errorexithandler_wxwidgets );
-//    plsabort( plD_erroraborthandler_wxwidgets );
-//
-//    // replay command we may have missed
-//    plD_bop_wxwidgets( pls );
-//}
-
-
-//--------------------------------------------------------------------------
-//  void wxRunApp( PLStream *pls, bool runonce )
-//
-//  This is a hacked wxEntry-function, so that wxUninitialize is not
-//  called twice. Here we actually start the wxApplication.
-//--------------------------------------------------------------------------
-//static void wxRunApp( PLStream *pls, bool runonce )
-//{
-//    // Log_Verbose( "wxRunApp" );
-//
-//    wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
-//
-//    dev->waiting = true;
-//    wxTRY
-//    {
-//        class CallOnExit
-//        {
-//public:
-//            // only call OnExit if exit is true (i.e. due an exception)
-//            ~CallOnExit() { if ( exit ) wxPLGetApp().OnExit();}
-//            bool exit;
-//        } callOnExit;
-//
-//        callOnExit.exit = true;
-//        wxPLGetApp().SetAdvanceFlag( runonce );
-//        wxPLGetApp().SetRefreshFlag();
-//
-//        // add an idle event is necessary for Linux (wxGTK2)
-//        // but not for Windows, but it doesn't harm
-//        wxIdleEvent event;
-//        wxPLGetApp().AddPendingEvent( event );
-//        wxPLGetApp().OnRun();           // start wxWidgets application
-//        callOnExit.exit = false;
-//    }
-//    wxCATCH_ALL( wxPLGetApp().OnUnhandledException(); plexit( "Problem running wxWidgets!" ); )
-//
-//    if ( dev->exit )
-//    {
-//        wxPLGetApp().OnExit();
-//        plexit( "" );
-//    }
-//
-//    dev->waiting = false;
-//}

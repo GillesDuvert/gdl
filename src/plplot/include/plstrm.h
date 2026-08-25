@@ -745,12 +745,6 @@ typedef struct
 	int       charDescentValue; //to align a char on the line
 
     PLINT     dev_hrshsym;
-	
-// Used to keep a hold of a temporary copy of the original character height
-// which I overload as a quick hack to fix up a bug in freetype an plsym()
-//
-
-    PLFLT original_chrdef, original_chrht;
 
     //
     // Pointer to postscript document class used by psttf

@@ -1225,23 +1225,6 @@ plwxtik( PLFLT x, PLFLT y, PLBOOL minor, PLBOOL invert );
 void
 plwytik( PLFLT x, PLFLT y, PLBOOL minor, PLBOOL invert );
 
-// get drivers directory
-
-#ifdef PL_HAVE_FREETYPE
-PLDLLIMPEXP void
-plD_FreeType_init( PLStream * );
-
-PLDLLIMPEXP void
-plD_render_freetype_text( PLStream *, EscText * );
-
-PLDLLIMPEXP void
-plD_FreeType_Destroy( PLStream * );
-
-PLDLLIMPEXP void
-pl_set_extended_cmap0( PLStream *, int, int );
-
-#endif
-
 // Create a temporary file securely
 PLDLLIMPEXP FILE *
 pl_create_tempfile( char **fname );
