@@ -266,23 +266,10 @@ plP_esc( PLINT op, void *ptr )
 {
     char   * save_locale;
     PLINT  clpxmi, clpxma, clpymi, clpyma;
-    EscText* args;
 
     // The plot buffer must be called first
     if ( plsc->plbuf_write )
         plbuf_esc( plsc, op, ptr );
-
-    // Text coordinates must pass through the driver interface filter
-    if ( ( op == PLESC_HAS_TEXT && plsc->dev_unicode ) ||
-         ( op == PLESC_END_TEXT && plsc->alt_unicode ) )
-    {
-        // Apply the driver interface filter
-        if ( plsc->difilt )
-        {
-            args = (EscText *) ptr;
-            difilt( &( args->x ), &( args->y ), 1, &clpxmi, &clpxma, &clpymi, &clpyma );
-        }
-    }
 
     save_locale = plsave_set_locale();
     if ( !plsc->stream_closed )
@@ -1795,7 +1782,6 @@ c_plend( void )
             c_plend1();
         }
     }
-    plfontrel();
 
     for ( i = 0; i < nplstaticdevices; i++ )
     {
@@ -2826,51 +2812,6 @@ plgesc( char *p_esc )
         plsc->esc = '#';
 
     *p_esc = plsc->esc;
-}
-
-// Set the FCI (font characterization integer) for unicode-enabled device
-// drivers.
-//
-void
-c_plsfci( PLUNICODE fci )
-{
-    // Always mark FCI as such.
-    plsc->fci = fci | PRIVATE_UNICODE_PLANE;
-}
-
-// Get the FCI (font characterization integer) for unicode-enabled device
-// drivers.
-//
-void
-c_plgfci( PLUNICODE *p_fci )
-{
-    // Always mark FCI as such.
-    *p_fci = plsc->fci | PL_FCI_MARK;
-}
-// Store hex digit value shifted to the left by hexdigit hexadecimal digits
-// into pre-existing FCI.
-//
-void
-plP_hex2fci( unsigned char hexdigit, unsigned char hexpower, PLUNICODE *pfci )
-{
-    PLUNICODE mask;
-    hexpower = hexpower & PL_FCI_HEXPOWER_MASK;
-    mask     = ~( ( (PLUNICODE) PL_FCI_HEXDIGIT_MASK ) << ( (PLUNICODE) 4 * hexpower ) );
-    *pfci    = *pfci & mask;
-    mask     = ( ( (PLUNICODE) ( hexdigit & PL_FCI_HEXDIGIT_MASK ) ) << ( 4 * hexpower ) );
-    *pfci    = *pfci | mask;
-}
-
-// Retrieve hex digit value from FCI that is masked out and shifted to the
-// right by hexpower hexadecimal digits.
-void
-plP_fci2hex( PLUNICODE fci, unsigned char *phexdigit, unsigned char hexpower )
-{
-    PLUNICODE mask;
-    hexpower   = hexpower & PL_FCI_HEXPOWER_MASK;
-    mask       = ( ( (PLUNICODE) PL_FCI_HEXPOWER_MASK ) << ( (PLUNICODE) ( 4 * hexpower ) ) );
-    *phexdigit = (unsigned char) ( ( fci & mask ) >>
-                                   ( (PLUNICODE) ( 4 * hexpower ) ) );
 }
 
 // Get the current library version number

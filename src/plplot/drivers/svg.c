@@ -99,12 +99,6 @@ static int svg_family_check( PLStream * );
 
 static void poly_line( PLStream *, short *, short *, PLINT, short );
 static void write_hex( FILE *, unsigned char );
-static void write_unicode( FILE *, PLUNICODE );
-static void specify_font( FILE *, PLUNICODE );
-
-// String processing
-
-static void proc_str( PLStream *, EscText * );
 
 // PLplot interface functions
 
@@ -297,13 +291,6 @@ void plD_line_svg( PLStream *pls, short x1a, short y1a, short x2a, short y2a )
     SVG *aStream;
 
     aStream = pls->dev;
-
-/*
-    if ( svg_family_check( pls ) )
-    {
-        return;
-    }
-*/
     svg_open( aStream, "polyline" );
     svg_stroke_width( pls );
     svg_stroke_color( pls );
@@ -321,12 +308,6 @@ void plD_line_svg( PLStream *pls, short x1a, short y1a, short x2a, short y2a )
 
 void plD_polyline_svg( PLStream *pls, short *xa, short *ya, PLINT npts )
 {
-/*
-    if ( svg_family_check( pls ) )
-    {
-        return;
-    }
-*/
     poly_line( pls, xa, ya, npts, 0 );
 }
 
@@ -341,13 +322,6 @@ void plD_eop_svg( PLStream *pls )
     SVG *aStream;
 
     aStream = pls->dev;
-/*
-
-    if ( svg_family_check( pls ) )
-    {
-        return;
-    }
-*/
     // write the closing svg tag
 
     svg_close( aStream, "g" );
@@ -390,12 +364,6 @@ void plD_state_svg( PLStream *PL_UNUSED( pls ), PLINT PL_UNUSED( op ) )
 
 void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
 {
-/*
-    if ( svg_family_check( pls ) )
-    {
-        return;
-    }
-*/
     switch ( op )
     {
     case PLESC_FILL:      // fill polygon
@@ -412,9 +380,6 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
           }
         }
         poly_line( pls, pls->dev_x, pls->dev_y, pls->dev_npts, 1 );
-        break;
-    case PLESC_HAS_TEXT:  // render text
-        proc_str( pls, (EscText *) ptr );
         break;
   case PLESC_3D:
     Set3D(ptr);
@@ -489,289 +454,6 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
     aStream->svgIndent -= 2;
 }
 
-//--------------------------------------------------------------------------
-// proc_str()
-//
-// Processes strings for display.
-//
-// NOTE:
-//
-// (1) This was tested on Firefox and Camino where it seemed to display
-// text properly. However, it isn't obvious to me that these browsers
-// conform to the specification. Basically the issue is that some of
-// the text properties (i.e. dy) that you specify inside a tspan element
-// remain in force until the end of the text element. It would seem to
-// me that they should only apply inside the tspan tag. To get around
-// this, and because it was easier anyway, I used what is essentially
-// a list of tspan tags rather than a tree of tspan tags. Perhaps
-// better described as a tree with one branch?
-//
-// (2) To deal with the some whitespace annoyances, the entire text
-// element must be written on a single line. If there are lots of
-// format characters then this line might end up being too long
-// for some SVG implementations.
-//
-// (3) Text placement is not ideal. Vertical offset seems to be
-// particularly troublesome.
-//
-// (4) See additional notes in specify_font re. to sans / serif
-//
-//--------------------------------------------------------------------------
-
-void proc_str( PLStream *pls, EscText *args )
-{
-    char         plplot_esc;
-    short        i;
-    const PLUNICODE    *ucs4 = args->unicode_array;
-    const short        ucs4Len   = (short) args->unicode_array_len;
-    double       ftHt, scaled_offset, scaled_ftHt;
-    PLUNICODE    fci;
-    PLINT        rcx[4], rcy[4];
-    static PLINT prev_rcx[4], prev_rcy[4];
-    PLFLT        rotation, shear, stride, cos_rot, sin_rot, sin_shear, cos_shear;
-    PLFLT        t[4];
-    int          glyph_size, sum_glyph_size;
-    SVG          *aStream;
-    PLFLT        old_sscale, sscale, old_soffset, soffset, old_dup, ddup;
-    PLINT        level;
-    PLINT        same_clip;
-
-    // check that we got unicode
-    if ( ucs4Len == 0 )
-    {
-        printf( "Non unicode string passed to SVG driver, ignoring\n" );
-        return;
-    }
-
-    // get plplot escape character and the current font
-    plgesc( &plplot_esc );
-    plgfci( &fci );
-
-    // determine the font height in points.
-    ftHt = FONT_SIZE_RATIO * pls->chrht * POINTS_PER_INCH / 25.4;
-
-    // Setup & apply text clipping area if desired
-    aStream = (SVG *) pls->dev;
-    if ( aStream->textClipping )
-    {
-        // Use PLplot core routine difilt_clip to appropriately
-        // transform the coordinates of the clipping rectangle
-        difilt_clip( rcx, rcy );
-        same_clip = TRUE;
-        if ( aStream->which_clip == 0 )
-        {
-            same_clip = FALSE;
-        }
-        else
-        {
-            for ( i = 0; i < 4; i++ )
-            {
-                if ( rcx[i] != prev_rcx[i] ||
-                     rcy[i] != prev_rcy[i] )
-                    same_clip = FALSE;
-            }
-        }
-        if ( !same_clip )
-        {
-            svg_open( aStream, "clipPath" );
-            svg_attr_values( aStream, "id", "text-clipping%d", aStream->which_clip );
-            svg_general( aStream, ">\n" );
-
-            // Output a polygon to represent the clipping region.
-            svg_open( aStream, "polygon" );
-            svg_attr_values( aStream,
-                "points",
-                "%f,%f %f,%f %f,%f %f,%f",
-                ( (PLFLT) rcx[0] ) / aStream->scale,
-                ( (PLFLT) rcy[0] ) / aStream->scale,
-                ( (PLFLT) rcx[1] ) / aStream->scale,
-                ( (PLFLT) rcy[1] ) / aStream->scale,
-                ( (PLFLT) rcx[2] ) / aStream->scale,
-                ( (PLFLT) rcy[2] ) / aStream->scale,
-                ( (PLFLT) rcx[3] ) / aStream->scale,
-                ( (PLFLT) rcy[3] ) / aStream->scale );
-            svg_open_end( aStream );
-
-            svg_close( aStream, "clipPath" );
-            for ( i = 0; i < 4; i++ )
-            {
-                prev_rcx[i] = rcx[i];
-                prev_rcy[i] = rcy[i];
-            }
-            aStream->which_clip++;
-        }
-        svg_open( aStream, "g" );
-        svg_attr_values( aStream, "clip-path",
-            "url(#text-clipping%d)", aStream->which_clip - 1 );
-        svg_general( aStream, ">\n" );
-    }
-
-    // This draws the clipping region on the screen which can
-    // be very helpful for debugging.
-
-    //
-    // svg_open(aStream, "polygon");
-    // svg_attr_values(aStream,
-    //              "points",
-    //              "%f,%f %f,%f %f,%f %f,%f",
-    //              ((PLFLT)rcx[0])/aStream->scale,
-    //              ((PLFLT)rcy[0])/aStream->scale,
-    //              ((PLFLT)rcx[1])/aStream->scale,
-    //              ((PLFLT)rcy[1])/aStream->scale,
-    //              ((PLFLT)rcx[2])/aStream->scale,
-    //              ((PLFLT)rcy[2])/aStream->scale,
-    //              ((PLFLT)rcx[3])/aStream->scale,
-    //              ((PLFLT)rcy[3])/aStream->scale);
-    // svg_stroke_width(pls);
-    // svg_stroke_color(pls);
-    // svg_attr_value(aStream, "fill", "none");
-    // svg_open_end(aStream);
-    //
-
-    // Calculate the transformation matrix for SVG based on the
-    // transformation matrix provided by PLplot.
-	//rotate if 3D
-
-/*
-	    plRotationShear( args->xform, &rotation, &shear, &stride );
-		printf("before: rotation=%f, shear=%f, stride=%f\n", rotation*180/PI, shear, stride);
-*/
-		Project3DToPlplotFormMatrix(args->xform);
-	    plRotationShear( args->xform, &rotation, &shear, &stride );
-		printf("after: rotation=%f, shear=%f, stride=%f\n", rotation*180/PI, shear, stride);
-    // N.B. Experimentally, I (AWI) have found the svg rotation angle is
-    // the negative of the libcairo rotation angle, and the svg shear angle
-    // is pi minus the libcairo shear angle.
-    rotation -= pls->diorot * PI / 2.0;
-    cos_rot   = cos( rotation );
-    sin_rot   = -sin( rotation );
-    sin_shear = sin( shear );
-    cos_shear = -cos( shear );
-    t[0]      = cos_rot * stride;
-    t[1]      = -sin_rot * stride;
-    t[2]      = cos_rot * sin_shear + sin_rot * cos_shear;
-    t[3]      = -sin_rot * sin_shear + cos_rot * cos_shear;
-
-    //--------------
-    // open text tag
-    // --------------
-
-    svg_open( aStream, "text" );
-
-    svg_attr_value( aStream, "dominant-baseline", "no-change" );
-
-    // set font color
-    svg_fill_color( pls );
-
-    // white space preserving mode
-    svg_attr_value( aStream, "xml:space", "preserve" );
-
-    // set the font size
-    svg_attr_values( aStream, "font-size", "%d", (int) ftHt );
-
-    // Apply coordinate transform for text display.
-    // The transformation also defines the location of the text in x and y.
-
-	// 3D convert on normalized values
-    SelfTransform3D(&(args->x), &(args->y));
-
-    svg_attr_values( aStream, "transform", "matrix(%f %f %f %f %f %f)",
-        t[0], t[1], t[2], t[3],
-        (double) ( args->x / aStream->scale ),
-        (double) ( args->y / aStream->scale ) );
-
-
-    //----------------------------------------------------------
-    // Write the text with formatting
-    // We just keep stacking up tspan tags, then close them all
-    // after we have written out all of the text.
-    // ----------------------------------------------------------
-
-    // For if_write = 0, we write nothing and instead accumulate the
-    // sum_glyph_size from the fontsize of the individual glyphs which
-    // is then used to figure out the initial x position from text-anchor and
-    // args->just that is used to write out the SVG xml for if_write = 1.
-
-    glyph_size     = (int) ftHt;
-    sum_glyph_size = 0;
-/*
-    if_write       = 0;
-    while ( if_write < 2 )
-    {
-        if ( if_write == 1 )
-        {
-*/
-            //printf("number of characters = %f\n", sum_glyph_size/ftHt);
-            // The above coordinate transform defines the _raw_ x position of the
-            // text without justification so this attribute value depends on
-            // text-anchor and args->just*sum_glyph_size
-            // N.B. sum_glyph_size calculation only correct for monospaced fonts
-            // so generally sum_glyph_size will be overestimated by various amounts
-            // depending on what glyphs are to be rendered, the font, etc.  However,
-            // this correction is differential respect to the end points or the
-            // middle so you should be okay so long as you don't deviate too far
-            // from those anchor points.
-            if ( args->just < 0.33 )
-            {
-                svg_attr_value( aStream, "text-anchor", "start" ); // left justification
-                svg_attr_values( aStream, "x", "%f", (double) ( -args->just * sum_glyph_size ) );
-            }
-            else if ( args->just > 0.66 )
-            {
-                svg_attr_value( aStream, "text-anchor", "end" ); // right justification
-                svg_attr_values( aStream, "x", "%f", (double) ( ( 1. - args->just ) * sum_glyph_size ) );
-            }
-            else
-            {
-                svg_attr_value( aStream, "text-anchor", "middle" ); // center
-                svg_attr_values( aStream, "x", "%f", (double) ( ( 0.5 - args->just ) * sum_glyph_size ) );
-            }
-
-            // The text goes at zero in y since the above
-            // coordinate transform defines the y position of the text
-            svg_attr_values( aStream, "y", "%f",
-                FONT_SHIFT_RATIO * 0.5 * ftHt +
-                FONT_SHIFT_OFFSET );
-
-            fprintf( aStream->svgFile, ">" );
-
-            // specify the initial font
-            specify_font( aStream->svgFile, fci );
-
-        i           = 0;
-		while ( i < ucs4Len )
-        {
-            if ( ucs4[i] < PRIVATE_UNICODE_PLANE )                 // not a font change
-            {
-					write_unicode( aStream->svgFile, ucs4[i] );
-                i++;
-            }
-            else // a font change
-            {
-				fci = ucs4[i]-PRIVATE_UNICODE_PLANE;
-                    fprintf( aStream->svgFile, "</tspan>" );
-					specify_font( aStream->svgFile, fci );
-                i++;
-            }
-        }
-
-        fprintf( aStream->svgFile, "</tspan>" );
-
-    // The following commented out (by AWI) because it is a bad idea to
-    // put line ends in the middle of a text tag.  This was the key to
-    // all the text rendering issues we had.
-    //fprintf(svgFile,"\n");
-    // For the same reason use fprintf and svgIndent -= 2;
-    // to close the text tag rather than svg_close("text"); since
-    // we don't want indentation spaces entering the text.
-    // svg_close("text");
-    fprintf( aStream->svgFile, "</text>\n" );
-    aStream->svgIndent -= 2;
-    if ( aStream->textClipping )
-    {
-        svg_close( aStream, "g" );
-    }
-}
 
 //--------------------------------------------------------------------------
 // svg_open ()
@@ -1036,87 +718,4 @@ void write_hex( FILE *svgFile, unsigned char val )
     }
 }
 
-//--------------------------------------------------------------------------
-// write_unicode ()
-//
-// writes a unicode character, appropriately formatted (i.e. &#xNNN)
-// with invalid xml characters replaced by ' '.
-//--------------------------------------------------------------------------
 
-void write_unicode( FILE *svgFile, PLUNICODE ucs4_char )
-{
-    if ( ucs4_char >= ' ' || ucs4_char == '\t' || ucs4_char == '\n' || ucs4_char == '\r' )
-        fprintf( svgFile, "&#x%x;", ucs4_char );
-    else
-        fprintf( svgFile, "&#x%x;", ' ' );
-}
-
-//--------------------------------------------------------------------------
-// specify_font ()
-//
-// Note:
-// We don't actually specify a font, just the fonts properties.
-// The hope is that this will give the display program the freedom
-// to choose the font with the glyphs that it needs to display
-// the text.
-//
-// Known Issues:
-// (1) On OS-X 10.4 with Firefox and Camino the "serif" font-family
-// looks more like the "italic" font-style.
-//
-//--------------------------------------------------------------------------
-
-void specify_font( FILE *svgFile, PLUNICODE ucs4_char )
-{
-    fprintf( svgFile, "<tspan " );
-
-    // sans, serif, mono, script, symbol
-
-    if ( ( ucs4_char & 0x00F ) == 0x000 )
-    {
-        fprintf( svgFile, "font-family=\"sans-serif\" " );
-    }
-    else if ( ( ucs4_char & 0x00F ) == 0x001 )
-    {
-        fprintf( svgFile, "font-family=\"serif\" " );
-    }
-    else if ( ( ucs4_char & 0x00F ) == 0x002 )
-    {
-        fprintf( svgFile, "font-family=\"mono-space\" " );
-    }
-    else if ( ( ucs4_char & 0x00F ) == 0x003 )
-    {
-        fprintf( svgFile, "font-family=\"cursive\" " );
-    }
-    else if ( ( ucs4_char & 0x00F ) == 0x004 )
-    {
-        // this should be symbol, but that doesn't seem to be available
-        fprintf( svgFile, "font-family=\"sans-serif\" " );
-    }
-
-    // normal, italic, oblique
-
-    if ( ( ucs4_char & 0x0F0 ) == 0x000 )
-    {
-        fprintf( svgFile, "font-style=\"normal\" " );
-    }
-    else if ( ( ucs4_char & 0x0F0 ) == 0x010 )
-    {
-        fprintf( svgFile, "font-style=\"italic\" " );
-    }
-    else if ( ( ucs4_char & 0x0F0 ) == 0x020 )
-    {
-        fprintf( svgFile, "font-style=\"oblique\" " );
-    }
-
-    // normal, bold
-
-    if ( ( ucs4_char & 0xF00 ) == 0x000 )
-    {
-        fprintf( svgFile, "font-weight=\"normal\">" );
-    }
-    else if ( ( ucs4_char & 0xF00 ) == 0x100 )
-    {
-        fprintf( svgFile, "font-weight=\"bold\">" );
-    }
-}

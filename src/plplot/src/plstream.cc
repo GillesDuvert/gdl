@@ -739,15 +739,6 @@ void plstream::gfnam( char *fnam )
     plgfnam( fnam );
 }
 
-// Get the current font family, style and weight
-
-void plstream::gfont( PLINT & family, PLINT & style, PLINT & weight )
-{
-    set_stream();
-
-    plgfont( &family, &style, &weight );
-}
-
 // Get current run level.
 
 void plstream::glevel( PLINT & level )

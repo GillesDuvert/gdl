@@ -216,49 +216,6 @@ void wxPLDevBase::AddtoClipRegion( int x1, int y1, int x2, int y2 )
 }
 
 
-void wxPLDevBase::PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText )
-{
-    int  i = 0;
-
-    unsigned char utf8_string[ucs4Len*4];
-    memset( utf8_string, '\0', ucs4Len*4 );
-
-    // Get PLplot escape character
-    char plplotEsc;
-    plgesc( &plplotEsc );
-
-    //Reset the size metrics
-    textWidth         = 0;
-    textHeight        = 0;
-    superscriptHeight = 0;
-    subscriptDepth    = 0;
-
-    int l=0;
-    int pos=0;
-    while ( i < ucs4Len )
-    {
-        if ( ucs4[i] < PRIVATE_UNICODE_PLANE )                // not a font change
-        {
-            l=ucs4_to_utf8(&utf8_string[pos], ucs4[i]);  pos+=l;
-            i++;
-        }
-        else // a font change
-        {
-            // draw string so far
-            PSDrawTextToDC( utf8_string, drawText ); pos=0;
-
-            // get new font
-            fci = ucs4[i]-PRIVATE_UNICODE_PLANE;
-            PSSetFont( fci );
-            i++;
-        }
-    }
-
-    PSDrawTextToDC( utf8_string, drawText );pos=0;
-    plsc->string_length=textWidth; textWidth=0;
-}
-
-
 //--------------------------------------------------------------------------
 //  void common_init(  PLStream *pls )
 //
@@ -430,19 +387,8 @@ void plD_line_wxwidgets( PLStream *pls, short x1a, short y1a, short x2a, short y
 
     wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
 
-//    if ( !( dev->ready ) )        install_buffer( pls );
-
     dev->DrawLine( x1a, y1a, x2a, y2a );
 
-//    if ( !( dev->resizing ) && dev->ownGUI )
-//    {
-//        dev->comcount++;
-//        if ( dev->comcount > MAX_COMCOUNT )
-//        {
-//            wxRunApp( pls, true );
-//            dev->comcount = 0;
-//        }
-//    }
 }
 
 
@@ -462,16 +408,6 @@ void plD_polyline_wxwidgets( PLStream *pls, short *xa, short *ya, PLINT npts )
 //    if ( !( dev->ready ) )        install_buffer( pls );
 
     dev->DrawPolyline( xa, ya, npts );
-
-//    if ( !( dev->resizing ) && dev->ownGUI )
-//    {
-//        dev->comcount++;
-//        if ( dev->comcount > MAX_COMCOUNT )
-//        {
-//            wxRunApp( pls, true );
-//            dev->comcount = 0;
-//        }
-//    }
 }
 
 
@@ -502,14 +438,6 @@ void plD_eop_wxwidgets( PLStream *pls )
             puts( "Troubles saving file!" );
         memDC.SelectObject( wxNullBitmap );
     }
-//
-//    if ( dev->ownGUI && !dev->resizing )
-//    {
-//        if ( pls->nopause || !dev->showGUI )
-//            wxRunApp( pls, true );
-//        else
-//            wxRunApp( pls );
-//    }
 }
 
 
@@ -657,7 +585,7 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
     case PLESC_FILL:
         fill_polygon( pls );
         break;
-      case PLESC_FILL_MULTIPATH:
+    case PLESC_FILL_MULTIPATH:
         fill_multiple_polygon( pls );
         break;
     case PLESC_XORMOD:
@@ -675,13 +603,6 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
         dev->SetExternalBuffer( ptr );
         // replay begin of page call and state settings
         plD_bop_wxwidgets( pls );
-        break;
-      case PLESC_LOAD_FONT:
-        dev->PSSetFont(* (PLUNICODE*) ptr);
-        break;
-      case PLESC_HAS_TEXT:
-
-            dev->ProcessString( pls, (EscText *) ptr );
         break;
 
     case PLESC_RESIZE:
@@ -763,15 +684,6 @@ static void fill_polygon( PLStream *pls )
     }
     dev->FillPolygon( pls );
 
-//    if ( !( dev->resizing ) && dev->ownGUI )
-//    {
-//        dev->comcount += 10;
-//        if ( dev->comcount > MAX_COMCOUNT )
-//        {
-//            wxRunApp( pls, true );
-//            dev->comcount = 0;
-//        }
-//    }
 }
 //--------------------------------------------------------------------------
 //  static void fill_polygon( PLStream *pls )

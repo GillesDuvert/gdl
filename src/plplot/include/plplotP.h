@@ -523,14 +523,6 @@ int
 plP_clipline( PLINT *p_x1, PLINT *p_y1, PLINT *p_x2, PLINT *p_y2,
               PLINT xmin, PLINT xmax, PLINT ymin, PLINT ymax );
 
-// Stores hex digit value into FCI (font characterization integer).
-void
-plP_hex2fci( unsigned char hexdigit, unsigned char hexpower, PLUNICODE *pfci );
-
-// Retrieves hex digit value from FCI (font characterization integer).
-PLDLLIMPEXP void
-plP_fci2hex( PLUNICODE fci, unsigned char *phexdigit, unsigned char hexpower );
-
 // Pattern fills in software the polygon bounded by the input points.
 
 PLDLLIMPEXP void
@@ -638,59 +630,6 @@ plsave_set_locale( void );
 
 PLDLLIMPEXP void
 plrestore_locale( char * save_lc_numeric_locale );
-
-// Writes the Hershey symbol "ch" centred at the physical coordinate (x,y).
-void
-plhrsh( PLINT ch, PLINT x, PLINT y );
-
-// where should structure definitions that must be seen by drivers and core source files, be?
-
-// structure to be used by plcore.c and anydriver.c, related to plP_text()
-
-typedef struct
-{
-    // Indicates the type of text stored in the structure.  This flag
-    // is used by the plot metafiles to correctly store and then render
-    // the contents.
-    enum { PL_STRING_TEXT, PL_STRING_SYMBOL } text_type;
-
-    // Positioning settings
-    PLINT base;                    // ref point at base(1) or center(0) of text. Currently plplot only use 0
-    PLFLT just;                    // continuous justification, 0 left, 0.5 center, 1 right
-	PLFLT scale;
-    PLFLT *xform;                  // transformation (rotation) matrix
-
-    // raw reference point--after any transformation
-    PLINT x;
-    PLINT y;
-
-    // processed ref. point--after justification, displacement, etc, processing
-    PLINT refx;
-    PLINT refy;
-
-    // font face OPTIONALLY used for rendering hershey codes
-    char  font_face;
-
-    // The following 3 fields are used by the alternative text handling pathway.
-    // The alternative text handling pathway allows the driver to process
-    // each character individually for unicode font handling
-    // See drivers/cairo.h for details about how this works.
-    PLUNICODE n_fci;               // font storage
-    PLUNICODE n_char;              // character storage
-    PLINT     n_ctrl_char;         // control character
-
-    // Used by plsym to store a unicode character for use by plfreetype
-    PLUNICODE unicode_char;        // an int to hold either a Hershey, ASC-II, or Unicode value for plsym calls
-
-    // Used to store a processed unicode string.  Used by plsym and
-    // text rendering by the driver
-    PLUNICODE      *unicode_array; // a pointer to an array of ints holding either a Hershey, ASC-II, or Unicode value for cached plsym
-    unsigned short unicode_array_len;
-
-    // Non-unicode strings and unprocessed string in the unicode case
-    const char     *string;        // text to draw
-    PLINT          symbol;         // plot symbol to draw
-}EscText;
 
 //
 // structure that contains driver specific information, to be used by

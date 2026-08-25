@@ -100,10 +100,6 @@ public: // methods
     virtual void SetColor0( PLStream *pls )        = 0;
     virtual void SetColor1( PLStream *pls )        = 0;
     virtual void SetExternalBuffer( void* buffer ) = 0;
-    virtual void ProcessString( PLStream* pls, EscText* args ) = 0;
-    virtual void PSDrawText( PLUNICODE* ucs4, int ucs4Len, bool drawText );
-    virtual void PSDrawTextToDC(unsigned char* utf8_string, bool drawText ) = 0;
-    virtual void PSSetFont( PLUNICODE fci, PLFLT scale=1) = 0;
 
 public: // variables
     const int    backend;
@@ -177,9 +173,6 @@ public: // methods
     void SetColor0( PLStream *pls );
     void SetColor1( PLStream *pls );
     void SetExternalBuffer( void* buffer );
-    void ProcessString( PLStream* pls, EscText* args );
-    void PSDrawTextToDC(unsigned char* utf8_string, bool drawText );
-    void PSSetFont( PLUNICODE fci , PLFLT scale=1);
 
 private: // variables
     wxBitmap* m_bitmap;
@@ -208,9 +201,6 @@ public: // methods
     void SetColor0( PLStream *pls );
     void SetColor1( PLStream *pls );
     void SetExternalBuffer( void* buffer );
-    void ProcessString( PLStream* pls, EscText* args );
-    void PSDrawTextToDC(unsigned char* utf8_string, bool drawText );
-    void PSSetFont( PLUNICODE fci, PLFLT scale=1 );
 
 private: // variables
     wxBitmap         * m_bitmap;
@@ -230,104 +220,104 @@ private: // variables
 };
 
 
-struct dev_entry
-{
-    wxString dev_name;
-    wxString dev_menu_short;
-    wxString dev_menu_long;
-    wxString dev_file_app;
-    bool     pixelDevice;
-};
-
-
-
-// after how many commands the window should be refreshed
-#define MAX_COMCOUNT    10000
-
-// definition of the actual window/frame shown
-class wxPLplotWindow : public wxWindow
-{
-public:
-    wxPLplotWindow( wxWindow* parent, PLStream *pls );
-
-    void SetRefreshFlag( bool flag = true ) { refresh = flag; };
-    bool GetRefreshFlag( void ) { return refresh; };
-    void SetOrientation( int rot );
-
-private:
-    void OnPaint( wxPaintEvent& event );
-    void OnChar( wxKeyEvent& event );
-    void OnIdle( wxIdleEvent& event );
-    void OnErase( wxEraseEvent & WXUNUSED( event ) );
-    void OnSize( wxSizeEvent & WXUNUSED( event ) );
-    void OnMaximize( wxMaximizeEvent & WXUNUSED( event ) );
-    void OnMouse( wxMouseEvent& event );
-    void Locate( void );
-    void DrawCrosshair();
-
-    PLStream   * m_pls;
-    wxPLDevBase* m_dev; // windows needs to know this structure
-    bool       refresh;
-    bool       xhair_drawn;
-    int        mouse_x, mouse_y, old_mouse_x, old_mouse_y;
-
-    DECLARE_EVENT_TABLE()
-};
-
-
-// declaration of the actual window/frame shown
-class wxPLplotFrame : public wxFrame
-{
-public:
-    wxPLplotFrame( const wxString& title, PLStream* pls );
-    void OnMenu( wxCommandEvent& event );
-    void OnClose( wxCloseEvent& event );
-    bool SavePlot( const char* filename, const char* devname, int width, int height );
-    void SetRefreshFlag( bool flag = true ) { m_window->SetRefreshFlag( flag ); };
-    bool GetRefreshFlag( void ) { return m_window->GetRefreshFlag(); };
-
-private:
-    wxPanel       * m_panel;
-    wxPLplotWindow* m_window;
-    wxPLDevBase   * m_dev; // frame needs to know this structure
-
-    DECLARE_EVENT_TABLE()
-};
-
-// menu ids
-enum { wxPL_Save = 10000, wxPL_Next = 10100, wxPL_Locate, wxPL_Orientation_0, wxPL_Orientation_90,
-       wxPL_Orientation_180, wxPL_Orientation_270 };
-
-
-// Pixel size dialog
-class wxGetSizeDialog : public wxDialog
-{
-public:
-    // constructors and destructors
-    wxGetSizeDialog( wxWindow *parent, wxWindowID id, const wxString &title,
-                     const wxPoint& pos = wxDefaultPosition,
-                     const wxSize& size = wxDefaultSize,
-                     long style = wxDEFAULT_DIALOG_STYLE,
-                     int width = 800, int height = 600 );
-
-    int getWidth()  { return spinControlWidth->GetValue(); }
-    int getHeight()  { return spinControlHeight->GetValue(); }
-
-private:
-    wxSpinCtrl* spinControlWidth;
-    wxSpinCtrl* spinControlHeight;
-
-private:
-    DECLARE_EVENT_TABLE()
-};
-
-
-// workaround against warnings for unused variables
-static inline void Use( void * )
-{
-}
-#define WX_SUPPRESS_UNUSED_WARN( x )    Use( &x )
-
+//struct dev_entry
+//{
+//    wxString dev_name;
+//    wxString dev_menu_short;
+//    wxString dev_menu_long;
+//    wxString dev_file_app;
+//    bool     pixelDevice;
+//};
+//
+//
+//
+//// after how many commands the window should be refreshed
+//#define MAX_COMCOUNT    10000
+//
+//// definition of the actual window/frame shown
+//class wxPLplotWindow : public wxWindow
+//{
+//public:
+//    wxPLplotWindow( wxWindow* parent, PLStream *pls );
+//
+//    void SetRefreshFlag( bool flag = true ) { refresh = flag; };
+//    bool GetRefreshFlag( void ) { return refresh; };
+//    void SetOrientation( int rot );
+//
+//private:
+//    void OnPaint( wxPaintEvent& event );
+//    void OnChar( wxKeyEvent& event );
+//    void OnIdle( wxIdleEvent& event );
+//    void OnErase( wxEraseEvent & WXUNUSED( event ) );
+//    void OnSize( wxSizeEvent & WXUNUSED( event ) );
+//    void OnMaximize( wxMaximizeEvent & WXUNUSED( event ) );
+//    void OnMouse( wxMouseEvent& event );
+//    void Locate( void );
+//    void DrawCrosshair();
+//
+//    PLStream   * m_pls;
+//    wxPLDevBase* m_dev; // windows needs to know this structure
+//    bool       refresh;
+//    bool       xhair_drawn;
+//    int        mouse_x, mouse_y, old_mouse_x, old_mouse_y;
+//
+//    DECLARE_EVENT_TABLE()
+//};
+//
+//
+//// declaration of the actual window/frame shown
+//class wxPLplotFrame : public wxFrame
+//{
+//public:
+//    wxPLplotFrame( const wxString& title, PLStream* pls );
+//    void OnMenu( wxCommandEvent& event );
+//    void OnClose( wxCloseEvent& event );
+//    bool SavePlot( const char* filename, const char* devname, int width, int height );
+//    void SetRefreshFlag( bool flag = true ) { m_window->SetRefreshFlag( flag ); };
+//    bool GetRefreshFlag( void ) { return m_window->GetRefreshFlag(); };
+//
+//private:
+//    wxPanel       * m_panel;
+//    wxPLplotWindow* m_window;
+//    wxPLDevBase   * m_dev; // frame needs to know this structure
+//
+//    DECLARE_EVENT_TABLE()
+//};
+//
+//// menu ids
+//enum { wxPL_Save = 10000, wxPL_Next = 10100, wxPL_Locate, wxPL_Orientation_0, wxPL_Orientation_90,
+//       wxPL_Orientation_180, wxPL_Orientation_270 };
+//
+//
+//// Pixel size dialog
+//class wxGetSizeDialog : public wxDialog
+//{
+//public:
+//    // constructors and destructors
+//    wxGetSizeDialog( wxWindow *parent, wxWindowID id, const wxString &title,
+//                     const wxPoint& pos = wxDefaultPosition,
+//                     const wxSize& size = wxDefaultSize,
+//                     long style = wxDEFAULT_DIALOG_STYLE,
+//                     int width = 800, int height = 600 );
+//
+//    int getWidth()  { return spinControlWidth->GetValue(); }
+//    int getHeight()  { return spinControlHeight->GetValue(); }
+//
+//private:
+//    wxSpinCtrl* spinControlWidth;
+//    wxSpinCtrl* spinControlHeight;
+//
+//private:
+//    DECLARE_EVENT_TABLE()
+//};
+//
+//
+//// workaround against warnings for unused variables
+//static inline void Use( void * )
+//{
+//}
+//#define WX_SUPPRESS_UNUSED_WARN( x )    Use( &x )
+//
 
 //--------------------------------------------------------------------------
 //  Declarations for the device.
@@ -358,27 +348,27 @@ void plD_erroraborthandler_wxwidgets( char *errormessage );
 // #define _DEBUG_VERBOSE //
 void Log_Verbose( const char *fmt, ... );
 void Log_Debug( const char *fmt, ... );
-
-
-//--------------------------------------------------------------------------
-// Font style and weight lookup tables
-//--------------------------------------------------------------------------
-const wxFontFamily fontFamilyLookup[5] = {
-    wxFONTFAMILY_SWISS,      // sans-serif
-    wxFONTFAMILY_ROMAN,      // serif
-    wxFONTFAMILY_TELETYPE,   // monospace
-    wxFONTFAMILY_SCRIPT,     // script
-    wxFONTFAMILY_SWISS       // symbol
-};
-
-const int          fontStyleLookup[3] = {
-    wxFONTFLAG_DEFAULT,      // upright
-    wxFONTFLAG_ITALIC,       // italic
-    wxFONTFLAG_SLANT         // oblique
-};
-
-const int          fontWeightLookup[2] = {
-    wxFONTFLAG_DEFAULT,     // medium
-    wxFONTFLAG_BOLD         // bold
-};
+//
+//
+////--------------------------------------------------------------------------
+//// Font style and weight lookup tables
+////--------------------------------------------------------------------------
+//const wxFontFamily fontFamilyLookup[5] = {
+//    wxFONTFAMILY_SWISS,      // sans-serif
+//    wxFONTFAMILY_ROMAN,      // serif
+//    wxFONTFAMILY_TELETYPE,   // monospace
+//    wxFONTFAMILY_SCRIPT,     // script
+//    wxFONTFAMILY_SWISS       // symbol
+//};
+//
+//const int          fontStyleLookup[3] = {
+//    wxFONTFLAG_DEFAULT,      // upright
+//    wxFONTFLAG_ITALIC,       // italic
+//    wxFONTFLAG_SLANT         // oblique
+//};
+//
+//const int          fontWeightLookup[2] = {
+//    wxFONTFLAG_DEFAULT,     // medium
+//    wxFONTFLAG_BOLD         // bold
+//};
 #endif // __WXWIDGETS_H__

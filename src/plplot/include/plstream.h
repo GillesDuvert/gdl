@@ -356,10 +356,6 @@ public:
 
     void gfnam( char *fnam );
 
-// Get the current font family, style and weight
-
-    void gfont( PLINT& family, PLINT& style, PLINT& weight );
-
 // Get the (current) run level.
 
     void glevel( PLINT &p_level );

@@ -367,29 +367,6 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PL_PARSE_NODASH               0x0040 // Set if leading dash NOT required
 #define PL_PARSE_SKIP                 0x0080 // Skip over unrecognized args
 
-// FCI (font characterization integer) related constants.
-#define PL_FCI_MARK                   0x80000000
-#define PL_FCI_IMPOSSIBLE             0x00000000
-#define PL_FCI_HEXDIGIT_MASK          0xf
-#define PL_FCI_HEXPOWER_MASK          0x7
-#define PL_FCI_HEXPOWER_IMPOSSIBLE    0xf
-// These define hexpower values corresponding to each font attribute.
-#define PL_FCI_FAMILY                 0x0
-#define PL_FCI_STYLE                  0x1
-#define PL_FCI_WEIGHT                 0x2
-// These are legal values for font family attribute
-#define PL_FCI_SANS                   0x0
-#define PL_FCI_SERIF                  0x1
-#define PL_FCI_MONO                   0x2
-#define PL_FCI_SCRIPT                 0x3
-#define PL_FCI_SYMBOL                 0x4
-// These are legal values for font style attribute
-#define PL_FCI_UPRIGHT                0x0
-#define PL_FCI_ITALIC                 0x1
-#define PL_FCI_OBLIQUE                0x2
-// These are legal values for font weight attribute
-#define PL_FCI_MEDIUM                 0x0
-#define PL_FCI_BOLD                   0x1
 
 // Option table definition
 
@@ -723,9 +700,7 @@ typedef struct
 #define    plgdiplt                 c_plgdiplt
 #define    plgdrawmode              c_plgdrawmode
 #define    plgfam                   c_plgfam
-#define    plgfci                   c_plgfci
 #define    plgfnam                  c_plgfnam
-#define    plgfont                  c_plgfont
 #define    ttFontLoad               c_ttFontLoad
 #define    ttFontSet                c_ttFontSet
 #define    plglevel                 c_plglevel
@@ -797,7 +772,6 @@ typedef struct
 #define    plsesc                   c_plsesc
 #define    plsetopt                 c_plsetopt
 #define    plsfam                   c_plsfam
-#define    plsfci                   c_plsfci
 #define    plsfnam                  c_plsfnam
 #define    plsfont                  c_plsfont
 #define    plshade                  c_plshade
@@ -1096,11 +1070,6 @@ c_plgdiplt( PLFLT_NC_SCALAR p_xmin, PLFLT_NC_SCALAR p_ymin, PLFLT_NC_SCALAR p_xm
 PLDLLIMPEXP PLINT
 c_plgdrawmode( void );
 
-// Get FCI (font characterization integer)
-
-PLDLLIMPEXP void
-c_plgfci( PLUNICODE_NC_SCALAR p_fci );
-
 // Get family file parameters
 
 PLDLLIMPEXP void
@@ -1110,11 +1079,6 @@ c_plgfam( PLINT_NC_SCALAR p_fam, PLINT_NC_SCALAR p_num, PLINT_NC_SCALAR p_bmax )
 
 PLDLLIMPEXP void
 c_plgfnam( PLCHAR_NC_VECTOR fnam );
-
-// Get the current font family, style and weight
-
-PLDLLIMPEXP void
-c_plgfont( PLINT_NC_SCALAR p_family, PLINT_NC_SCALAR p_style, PLINT_NC_SCALAR p_weight );
 
 // load a truetype font
 PLDLLIMPEXP void
@@ -1564,11 +1528,6 @@ c_plsesc( char esc );
 
 PLDLLIMPEXP void
 c_plsfam( PLINT fam, PLINT num, PLINT bmax );
-
-// Set FCI (font characterization integer)
-
-PLDLLIMPEXP void
-c_plsfci( PLUNICODE fci );
 
 // Set the output file name.
 
