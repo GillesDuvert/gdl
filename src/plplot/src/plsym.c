@@ -48,7 +48,7 @@
 #include "plplotP.h"
 #include <float.h>
 #include <ctype.h>
-#include "plhershey-unicode.h"
+#include "hershey_mapping.h"
 #define STB_TRUETYPE_IMPLEMENTATION 
 #include "stb_truetype.h"
 
