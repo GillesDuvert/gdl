@@ -35,7 +35,7 @@
 #include "plplotP.h"
 
 // std and driver headers
-#include "deprecated_wxwidgets.h"
+#include "wxwidgets.h"
 //define LINE2D, POLYLINE2D
 #define LINE2D dummy_line
 #define POLYLINE2D dummy_polyline

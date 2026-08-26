@@ -36,7 +36,7 @@
 
 // std and driver headers
 #include <cmath>
-#include "deprecated_wxwidgets.h"
+#include "wxwidgets.h"
 
 #ifdef USE_DEVICE_CONTEXT_ALSO
 

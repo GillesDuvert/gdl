@@ -39,50 +39,13 @@ extern "C" {
 //
 // with suitable editing afterward to remove file name prepend "PLDLLIMPEXP_DRIVER " and append ";"
 
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_aqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_epscairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_extcairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_memcairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_pdfcairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_pngcairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_pscairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_svgcairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_wincairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_xcairo( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_cgm( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_gif( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_jpeg( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_png( PLDispatchTable *pdt );
 PLDLLIMPEXP_DRIVER void plD_dispatch_init_mem( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_ntk( PLDispatchTable *pdt );
 PLDLLIMPEXP_DRIVER void plD_dispatch_init_null( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_pdf( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_plm( PLDispatchTable *pdt );
 PLDLLIMPEXP_DRIVER void plD_dispatch_init_psc( PLDispatchTable *pdt );
 PLDLLIMPEXP_DRIVER void plD_dispatch_init_ps( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_pstex( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_psttfc( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_psttf( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_bmpqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_epsqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_extqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_jpgqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_memqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_pdfqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_pngqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_ppmqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_qtwidget( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_svgqt( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_tiffqt( PLDispatchTable *pdt );
 PLDLLIMPEXP_DRIVER void plD_dispatch_init_svg( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_tk( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_tkwin( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_wingcc( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_wxpng( PLDispatchTable *pdt );
 PLDLLIMPEXP_DRIVER void plD_dispatch_init_wxwidgets( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_xfig( PLDispatchTable *pdt );
 PLDLLIMPEXP_DRIVER void plD_dispatch_init_xw( PLDispatchTable *pdt );
-PLDLLIMPEXP_DRIVER void plD_dispatch_init_wingdi( PLDispatchTable *pdt );
 
 // Prototypes for plot buffer calls.
 

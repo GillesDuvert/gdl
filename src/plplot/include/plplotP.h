@@ -386,7 +386,7 @@ enum { AT_BOP, DRAWING, AT_EOP };
 #define PL_FILESIZE_KB    1000
 #endif
 
-//to suffer from GDL drastic unicode support
+//to suffer from GDL drastic unicode support where truetype fonts are used and passed as shapes to all drivers uniformly.
 enum positionCode {PRIVATE_UNICODE_PLANE=1048576, //start of UNICODE <Plane 16 Private Use> 
 F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13,F14,F15,F16,F17,F18,F19,F20,//leave space for font number (see pldeco)
 A, 
@@ -395,27 +395,6 @@ B, C, D,E,I,L,M,N,R,S,U,V,SP};
 
 // Maximum size for path strings in the plplot code
 #define PLPLOT_MAX_PATH    1024
-
-//
-//   Some stuff that is included (and compiled into) plsym.h
-//   Other modules might want this, so we will "extern" it
-//
-//
-
-#ifndef __PLSYM_H__
-
-//typedef struct
-//{
-//    unsigned int Hershey;
-//    PLUNICODE    Unicode;
-//    char         Font;
-//} Hershey_to_Unicode_table;
-//
-//extern int number_of_entries_in_hershey_to_unicode_table;
-//extern Hershey_to_Unicode_table hershey_to_unicode_lookup_table[];
-
-
-#endif
 
 
 //--------------------------------------------------------------------------

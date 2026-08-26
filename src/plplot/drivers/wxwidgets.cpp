@@ -37,7 +37,7 @@
 // C/C++ headers
 #include <cstdio>
 
-#include "deprecated_wxwidgets.h"
+#include "wxwidgets.h"
 
 //define LINE2D, POLYLINE2D
 #define LINE2D plD_line_wxwidgets
