@@ -144,7 +144,6 @@ public: // variables
     double           fontSize;
     double           fontScale;
     double           textWidth, textHeight;
-    PLUNICODE        fci;
     //the distance between the superscript top and subscript base from the baseline
     wxCoord          superscriptHeight, subscriptDepth;
     double           lineSpacing;
@@ -348,27 +347,5 @@ void plD_erroraborthandler_wxwidgets( char *errormessage );
 // #define _DEBUG_VERBOSE //
 void Log_Verbose( const char *fmt, ... );
 void Log_Debug( const char *fmt, ... );
-//
-//
-////--------------------------------------------------------------------------
-//// Font style and weight lookup tables
-////--------------------------------------------------------------------------
-//const wxFontFamily fontFamilyLookup[5] = {
-//    wxFONTFAMILY_SWISS,      // sans-serif
-//    wxFONTFAMILY_ROMAN,      // serif
-//    wxFONTFAMILY_TELETYPE,   // monospace
-//    wxFONTFAMILY_SCRIPT,     // script
-//    wxFONTFAMILY_SWISS       // symbol
-//};
-//
-//const int          fontStyleLookup[3] = {
-//    wxFONTFLAG_DEFAULT,      // upright
-//    wxFONTFLAG_ITALIC,       // italic
-//    wxFONTFLAG_SLANT         // oblique
-//};
-//
-//const int          fontWeightLookup[2] = {
-//    wxFONTFLAG_DEFAULT,     // medium
-//    wxFONTFLAG_BOLD         // bold
-//};
+
 #endif // __WXWIDGETS_H__

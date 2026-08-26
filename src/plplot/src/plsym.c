@@ -389,7 +389,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	// TrueType fonts need a special correction as their size is all different.
 	// The correction itself depends on the size of the hershey fonts, all this is quite relative
 	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
-	if (plsc->dev_unicode && plsc->dev_text) ht*=charHeightCorr[plsc->fci];
+	if (plsc->dev_unicode && plsc->dev_text) ht*=charHeightCorr[plsc->fontIndex];
 	dscale = 0.05 * ht;
 	scale = dscale;
 	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
@@ -490,12 +490,12 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 						c_ttFontSet(ifont);
 						break;
 					}
-					int glyph = stbtt_FindGlyphIndex(ttfVectors[plsc->fci], ch);
+					int glyph = stbtt_FindGlyphIndex(ttfVectors[plsc->fontIndex], ch);
 					int ax;
 					int lsb;
-					stbtt_GetGlyphHMetrics(ttfVectors[plsc->fci], glyph, &ax, &lsb);
+					stbtt_GetGlyphHMetrics(ttfVectors[plsc->fontIndex], glyph, &ax, &lsb);
 					if (oldglyph != -1) {
-						ax += stbtt_GetGlyphKernAdvance(ttfVectors[plsc->fci], oldglyph, glyph);
+						ax += stbtt_GetGlyphKernAdvance(ttfVectors[plsc->fontIndex], oldglyph, glyph);
 					}
 					oldglyph = glyph;
 					//ax is advance width, so corr*ax will be advance in pixels.
@@ -508,10 +508,10 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,plsc->charHeightCorr,scale,width);
 */
 					stbtt_vertex *vertices;
-					int nvecs = stbtt_GetGlyphShape(ttfVectors[plsc->fci], glyph, &vertices);
+					int nvecs = stbtt_GetGlyphShape(ttfVectors[plsc->fontIndex], glyph, &vertices);
 					plttf(vertices, nvecs, xform, refx, refy, scale,
 							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
-					stbtt_FreeShape(ttfVectors[plsc->fci], vertices);
+					stbtt_FreeShape(ttfVectors[plsc->fontIndex], vertices);
 				} else {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
 						ifont = ch - PRIVATE_UNICODE_PLANE;
@@ -995,74 +995,6 @@ plP_stsearch( PLCHAR_VECTOR str, int chr )
         return FALSE;
 }
 
-//--------------------------------------------------------------------------
-//! Calculate scale of font size and scale of magnitude of vertical
-//! offset associated with superscripts and subscripts.
-//! Notes on arguments: ifupper must be either TRUE or FALSE on every
-//! call to plP_script_scale.  The contents of the location pointed to
-//! by the level pointer must be zero on the first call to
-//! plP_script_scale, but not modified externally from then on.  The
-//! contents of the locations pointed to by all other pointer
-//! arguments are initialized internally, and should not be modified
-//! externally.
-//!
-//! @param ifupper Value which is TRUE if superscripting, i.e., if
-//! incrementing the previous level, and FALSE if subscripting, i.e.,
-//! decrementing the previous level.
-//! @param level Pointer to a location which contains the value of the
-//! superscript/subscript level.  That value is 0, +-1, +-2, etc., for
-//! no superscript/subscript, the first level of
-//! superscript/subscript, the second level of superscript/subscript,
-//! etc.  Before the call the value is the old level, and after the
-//! call the value will be incremented (ifupper TRUE) or decremented
-//! (ifupper FALSE) from the previous value.
-//! @param old_scale A pointer to a location that contains after the
-//! call the old font size scale value.
-//! @param scale A pointer to a location that contains after the call
-//! the font size scale value.  This value is 0.75^{|level|} where
-//! |level| is the magnitude of the value of the superscript/subscript
-//! level after the call.
-//! @param old_offset A pointer to a location that contains after the
-//! call the old value of the magnitude of the superscript/subscript
-//! offset.
-//! @param offset A pointer to a location that contains after the call
-//! the value of the magnitude of the superscript/subscript offset
-//! which is zero for |level|=0 and sum_{i=1}^{i=|level|} 0.75^{i-1},
-//! otherwise.
-
-void
-plP_script_scale( PLBOOL ifupper, PLINT *level,
-                  PLFLT *old_scale, PLFLT *scale,
-                  PLFLT *old_offset, PLFLT *offset )
-{
-    if ( *level == 0 )
-    {
-        *old_scale  = 1.;
-        *old_offset = 0.;
-    }
-    else
-    {
-        *old_scale  = *scale;
-        *old_offset = *offset;
-    }
-    if ( ( *level >= 0 && ifupper ) || ( *level <= 0 && !ifupper ) )
-    {
-        // If superscript of subscript moves further away from centerline....
-        *scale  = 0.75 * *old_scale;
-        *offset = *old_offset + *old_scale;
-    }
-    else
-    {
-        // If superscript of subscript moves closer to centerline....
-        *scale  = *old_scale / 0.75;
-        *offset = *old_offset - *scale;
-    }
-    if ( ifupper )
-        ( *level )++;
-    else
-        ( *level )--;
-}
-
 
 #include <fcntl.h>
 
@@ -1130,7 +1062,7 @@ extern const char* getFontName(int n);
 extern int loadFontPath(const char *name);
 void c_ttFontSet(int n) {
 	if (getFontName(n) != NULL) {
-		plsc->fci=n;
+		plsc->fontIndex=n;
 		plsc->charHeightCorr = charHeightCorr[n];
 		plsc->charDescentValue = charDescent[n];
 	} else printf("loading of font #%d failed.\n",n);
@@ -1166,7 +1098,7 @@ void c_ttFontLoad(const char* fontName) {
         printf("loading of %s failed.\n",fontName);
     }
     ttfVectors[n]=info;
-	plsc->fci=n;
+	plsc->fontIndex=n;
 	// to be optimized:
 	int x0, y0, x1, y1;
 	stbtt_GetFontBoundingBox(info, &x0, &y0, &x1, &y1);

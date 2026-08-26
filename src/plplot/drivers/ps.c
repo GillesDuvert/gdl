@@ -366,7 +366,6 @@ ps_init( PLStream *pls )
     fprintf( OF, "/G {setgray} def\n" );
 // try to make linewidth more like IDL
     fprintf( OF, "/W { XScale YScale add 2 div div 2 div setlinewidth} def %% note: IDL scale is fixed to 0.028346 \n" );
-    fprintf( OF, "/SF {selectfont} def\n" );
     fprintf( OF, "/R {rotate} def\n" );
     fprintf( OF, "/SW {stringwidth 2 index mul exch 2 index mul exch rmoveto pop} bind def\n" );
     fprintf( OF, "/B {Z %d %d M %d %d D %d %d D %d %d D %d %d closepath} def\n",

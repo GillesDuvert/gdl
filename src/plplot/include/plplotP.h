@@ -404,15 +404,15 @@ B, C, D,E,I,L,M,N,R,S,U,V,SP};
 
 #ifndef __PLSYM_H__
 
-typedef struct
-{
-    unsigned int Hershey;
-    PLUNICODE    Unicode;
-    char         Font;
-} Hershey_to_Unicode_table;
-
-extern int number_of_entries_in_hershey_to_unicode_table;
-extern Hershey_to_Unicode_table hershey_to_unicode_lookup_table[];
+//typedef struct
+//{
+//    unsigned int Hershey;
+//    PLUNICODE    Unicode;
+//    char         Font;
+//} Hershey_to_Unicode_table;
+//
+//extern int number_of_entries_in_hershey_to_unicode_table;
+//extern Hershey_to_Unicode_table hershey_to_unicode_lookup_table[];
 
 
 #endif
@@ -557,10 +557,6 @@ hersheyFontLoad(char* file);
 // load tt font
 
 void ttFontLoad(const char* fontName);
-// Release memory for fonts.
-
-void
-plfontrel( void );
 
 // A replacement for strdup(), which isn't portable.
 
@@ -605,14 +601,6 @@ difilt( PLINT *, PLINT *, PLINT,
 
 PLDLLIMPEXP void
 difilt_clip( PLINT *, PLINT * );
-
-// Calculate scale of font size and scale of magnitude of vertical
-// offset associated with superscripts and subscripts.
-
-PLDLLIMPEXP void
-plP_script_scale( PLBOOL ifupper, PLINT *level,
-                  PLFLT *old_scale, PLFLT *scale,
-                  PLFLT *old_offset, PLFLT *offset );
 
 // Driver draws text
 

@@ -41,15 +41,6 @@
 
 #define POINTS_PER_INCH    72
 
-#define MAX_STRING_LEN     1000
-
-// This has been generated empirically by looking carefully at results from
-// examples 1 and 2.
-
-#define FONT_SIZE_RATIO      1.34
-#define FONT_SHIFT_RATIO     0.705
-#define FONT_SHIFT_OFFSET    0.5
-
 // local variables
 
 PLDLLIMPEXP_DRIVER const char* plD_DEVICE_INFO_svg = "svg:Scalable Vector Graphics (SVG 1.1):1:svg:57:svg\n";
@@ -70,8 +61,6 @@ typedef struct
     FILE  *svgFile;
     //  char curColor[7];
 } SVG;
-
-// font stuff
 
 // Debugging extras
 

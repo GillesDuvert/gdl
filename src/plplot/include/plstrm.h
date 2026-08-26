@@ -462,7 +462,7 @@ typedef struct
 //
 // Font related variables
 //
-// currentFont     Current font number
+// currentFont     Current font index (PLUNICODE)
 //
 //--------------------------------------------------------------------------
 //
@@ -707,8 +707,8 @@ typedef struct
 
 // Unicode section
 
-    PLUNICODE            currentFont; //current font (index), PLUNICODE 
-    PLUNICODE fci;
+    PLUNICODE currentFont; //current font (index)
+    PLUNICODE fontIndex; // a fot index, in UNICOD as it may be embbedded in a UNICODE string
     PLINT     dev_unicode;
 	float     charHeightCorr; //the magic factor for each truetype font inner size to pixels.
 	int       charDescentValue; //to align a char on the line

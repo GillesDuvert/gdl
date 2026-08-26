@@ -308,16 +308,7 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_IMPORT_BUFFER             39 // set the contents of the buffer to a specified byte string
 #define PLESC_APPEND_BUFFER             40 // append the given byte string to the buffer
 #define PLESC_FLUSH_REMAINING_BUFFER    41 // flush the remaining buffer e.g. after new data was appended
-#define PLESC_LOAD_FONT                 42 // driver loads font
-#define PLESC_FILL_MULTIPATH            43 // fill multiple polygon
-
-// Alternative unicode text handling control characters
-#define PLTEXT_FONTCHANGE               0 // font change in the text stream
-#define PLTEXT_SUPERSCRIPT              1 // superscript in the text stream
-#define PLTEXT_SUBSCRIPT                2 // subscript in the text stream
-#define PLTEXT_BACKCHAR                 3 // back-char in the text stream
-#define PLTEXT_OVERLINE                 4 // toggle overline in the text stream
-#define PLTEXT_UNDERLINE                5 // toggle underline in the text stream
+#define PLESC_FILL_MULTIPATH            42 // fill multiple polygon
 
 // image operations
 #define ZEROW2B                         1
@@ -773,7 +764,6 @@ typedef struct
 #define    plsetopt                 c_plsetopt
 #define    plsfam                   c_plsfam
 #define    plsfnam                  c_plsfnam
-#define    plsfont                  c_plsfont
 #define    plshade                  c_plshade
 #define    plshades                 c_plshades
 #define    plslabelfunc             c_plslabelfunc
@@ -1004,11 +994,6 @@ c_plfill( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y );
 
 PLDLLIMPEXP void
 c_plflush( void );
-
-// Load specified font set.
-
-PLDLLIMPEXP void
-c_plfontld( PLINT fnt );
 
 // Get character default height and current (scaled) height
 
@@ -1533,11 +1518,6 @@ c_plsfam( PLINT fam, PLINT num, PLINT bmax );
 
 PLDLLIMPEXP void
 c_plsfnam( PLCHAR_VECTOR fnam );
-
-// Set the current font family, style and weight
-
-PLDLLIMPEXP void
-c_plsfont( PLINT family, PLINT style, PLINT weight );
 
 // Shade region.
 

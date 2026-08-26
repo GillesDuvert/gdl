@@ -45,19 +45,6 @@ set(plplot_LIB_SRCS
   plstream.cc
   )
 
-option(HERSHEY_FALLBACK "Hershey fallback for Unicode fonts" ON)
-
-if(NOT HERSHEY_FALLBACK)
-  get_source_file_property(PLSYM_COMPILE_PROPS plsym.c COMPILE_FLAGS)
-  if(NOT PLSYM_COMPILE_PROPS)
-    set(PLSYM_COMPILE_PROPS)
-  endif(NOT PLSYM_COMPILE_PROPS)
-  set_source_files_properties(
-    plsym.c
-    PROPERTIES COMPILE_FLAGS "${PLSYM_COMPILE_PROPS} -DPL_TEST_FOR_MISSING_GLYPHS"
-    )
-endif(NOT HERSHEY_FALLBACK)
-
 set(pc_libplplot_COMPILE_FLAGS)
 
 get_source_file_property(PLCORE_COMPILE_PROPS plcore.c COMPILE_FLAGS)
@@ -141,9 +128,6 @@ if(PLD_wxwidgets AND RT_LIB)
 endif(PLD_wxwidgets AND RT_LIB)
 
 message(STATUS "libplplot_LINK_LIBRARIES = ${libplplot_LINK_LIBRARIES}")
-
-#configure_library_build(plplot "" "${plplot_LIB_SRCS}" "${libplplot_LINK_LIBRARIES}" "${LIB_INSTALL_RPATH}")
-#add_dependencies(${WRITEABLE_TARGET}plplot plhershey-unicode.h_built)
 
 message("pc_libplplot_LINK_FLAGS = ${pc_libplplot_LINK_FLAGS}")
 
