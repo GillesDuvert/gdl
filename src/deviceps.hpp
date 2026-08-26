@@ -94,7 +94,7 @@ class DevicePS: public GraphicsDevice
     // default: black+white (IDL behaviour)
     //? force TTF fonts as scaling of hershey fonts will not be good 
     short text=(SysVar::GetPFont()>=0)?1:0;
-    string what="hrshsym=1,text="+i2s(text)+",color="+i2s(color)+",epsf="+i2s(encapsulated);
+    string what="color="+i2s(color)+",epsf="+i2s(encapsulated);
     actStream->setopt( "drvopt",what.c_str());
     actStream->scolbg(255,255,255); // start with a white background
 

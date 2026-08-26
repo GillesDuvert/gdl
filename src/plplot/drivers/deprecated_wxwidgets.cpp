@@ -229,19 +229,9 @@ wxPLDevBase* common_init( PLStream *pls) {
 
   // default options
   static PLINT text = -1;
-  static PLINT hrshsym = 0;
 
   // we use wxGraphicsContext
   static PLINT backend = wxBACKEND_GC;
-
-  DrvOpt wx_options[] = {
-    { "hrshsym", DRV_INT, &hrshsym, "Use Hershey symbol set (hrshsym=0|1)"},
-    { "text", DRV_INT, &text, "Use own text routines (text=0|1)"},
-    { NULL, DRV_INT, NULL, NULL}
-  };
-
-  // Check for and set up driver options
-  plParseDrvOpts(wx_options);
 
   // allocate memory for the device storage
 #if wxUSE_GRAPHICS_CONTEXT
@@ -249,9 +239,6 @@ wxPLDevBase* common_init( PLStream *pls) {
 #else
   dev = new wxPLDevDC; printf("!!!!!!!!!!!!!! USING Device Context!\n");
 #endif
-  // by default the own text routines are used for wxGC
-  if (text == -1)
-    text = 1;
   if (dev == NULL) {
     plexit("Insufficient memory");
   }
@@ -270,12 +257,8 @@ wxPLDevBase* common_init( PLStream *pls) {
   pls->dev_dash = 0;
   pls->dev_clear = 1; // driver supports clear
 
-  if (text) {
     pls->dev_text = 1; // want to draw text
     pls->dev_unicode = 1; // want unicode
-    if (hrshsym)
-      pls->dev_hrshsym = 1;
-  }
 
   // initialize frame size and position
   if (pls->xlength <= 0 || pls->ylength <= 0)

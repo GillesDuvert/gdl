@@ -1101,33 +1101,6 @@ typedef struct
     PLFLT xmin, ymin, dx, dy;
 } IMG_DT;
 
-//
-// void plfvect()
-//
-// Internal routine to plot a vector array with arbitrary coordinate
-// and vector transformations.
-// This is not currently intended to be called direct by the user
-//
-PLDLLIMPEXP void
-plfvect( PLFLT ( *plf2eval )( PLINT, PLINT, PLPointer ),
-         PLPointer f2evalv_data, PLPointer f2evalc_data,
-         PLINT nx, PLINT ny, PLFLT scale,
-         void ( *pltr )( PLFLT, PLFLT, PLFLT *, PLFLT *, PLPointer ),
-         PLPointer pltr_data );
-
-
-// struct used for FCI to FontName lookups.
-typedef struct
-{
-    PLUNICODE           fci;
-    const unsigned char *pfont;
-} FCI_to_FontName_Table;
-
-// Internal function to obtain a pointer to a valid font name.
-PLDLLIMPEXP const char *
-plP_FCI2FontName( PLUNICODE fci,
-                  const FCI_to_FontName_Table lookup[], const int nlookup );
-
 
 // Internal function to free memory from driver options
 void

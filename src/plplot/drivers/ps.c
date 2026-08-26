@@ -70,15 +70,11 @@ static void ps_dispatch_init_helper( PLDispatchTable *pdt,
                                      int type, int seq, plD_init_fp init );
 #define OUTBUF_LEN    128
 static char   outbuf[OUTBUF_LEN];
-static int    text = 1;
 static int    color;
-static int    hrshsym = 1;
 static int    epsf = 1;
 
-static DrvOpt ps_options[] = { { "text",    DRV_INT, &text,    "Use Postscript text (text=0|1)"       },
-                               { "epsf",    DRV_INT, &epsf,    "EncapsulatedPostScript (epsf=0|1)"    },
+static DrvOpt ps_options[] = { { "epsf",    DRV_INT, &epsf,    "EncapsulatedPostScript (epsf=0|1)"    },
                                { "color",   DRV_INT, &color,   "Use color (color=0|1)"                },
-                               { "hrshsym", DRV_INT, &hrshsym, "Use Hershey symbol set (hrshsym=0|1)" },
                                { NULL,      DRV_INT, NULL,     NULL                                   } };
 
 //We have a special processing, default one does not work (meaning the driver is not well written)
@@ -187,13 +183,8 @@ ps_init( PLStream *pls )
     pxlx = YPSSIZE / LPAGE_X;
     pxly = XPSSIZE / LPAGE_Y;
 
-    if ( text )
-    {
-        pls->dev_text    = 1;                // want to draw text
-        pls->dev_unicode = 1;                // want unicode
-        if ( hrshsym )
-            pls->dev_hrshsym = 1;            // want Hershey symbols
-    }
+	pls->dev_text    = 1;                // want to draw text
+	pls->dev_unicode = 1;                // want unicode
 
     pls->dev_fill0 = 1;         // Can do solid fills
 

@@ -159,7 +159,6 @@ typedef struct
 // dev_gradient	PLINT	Set if driver can do (linear) gradients
 // dev_text	PLINT	Set if driver want to do it's only text drawing
 // dev_unicode	PLINT	Set if driver wants unicode
-// dev_hrshsym	PLINT	Set for Hershey symbols to be used
 // dev_fill1	PLINT	Set if driver can do pattern area fills
 // dev_dash     PLINT   Set if driver can do dashed lines
 // dev_di	PLINT	Set if driver wants to handle DI commands
@@ -463,30 +462,7 @@ typedef struct
 //
 // Font related variables
 //
-// cfont           Current font number, replaces global 'font' in plsym.c
-//                 This can be latter extended for font shape, series, family and size
-// fci             FCI (font characterization integer)
-// An FCI is sometimes inserted in the middle of a stream of
-// unicode glyph indices.  Thus to distinguish it from those, the FCI is marked
-// by 0x8 in the most significant 4 bits.  The remaining 7 hex digits
-// stored in the 32-bit integer characterize 7 different font attributes.
-// The font attributes are interpreted as follows:
-// hexdigit =>                    0        1          2        3       4        5
-// hexpower   Font attribute               Possible attribute values
-//    0       font-family     sans-serif  serif    monospace  script  symbol |fantasy
-//    1       font-style        upright   italic    oblique |
-//    2       font-weight       medium     bold  |   bolder    light  lighter
-//    3       font-variant      normal | small caps
-//
-// Everything to the right of the vertical bars is not implemented and is
-// subject to change.  The four font attributes (font-family, font-style,
-// font-weight, and font-variant are stored in the FCI in the order of
-// hexpower, the left shift that is applied to the hex digit to place the
-// hexdigit in the FCI.  The hexpower = 3 position is essentially undefined
-// since there is currently only one hexdigit (0) defined, and similarly
-// for hexpower = 4-6 so there is room for expansion of this scheme into more
-// font attributes if required.  (hexpower = 7 is reserved for the 0x8 marker
-// of the FCI.)
+// currentFont     Current font number
 //
 //--------------------------------------------------------------------------
 //
@@ -725,26 +701,18 @@ typedef struct
 // Other variables
 
     PLINT            dev_compression;
-    PLINT            cfont;
 
     void             *FT;
-
-// Stuff used by the Tkwin driver for Plframe
-    struct PlPlotter *plPlotterPtr;
 
 
 // Unicode section
 
-    PLINT     dev_unicode;
-
-    PLINT     alt_unicode; // The alternative interface for unicode text rendering.
-
+    PLUNICODE            currentFont; //current font (index), PLUNICODE 
     PLUNICODE fci;
-	
+    PLINT     dev_unicode;
 	float     charHeightCorr; //the magic factor for each truetype font inner size to pixels.
 	int       charDescentValue; //to align a char on the line
 
-    PLINT     dev_hrshsym;
 
     //
     // Pointer to postscript document class used by psttf

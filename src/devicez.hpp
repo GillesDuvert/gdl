@@ -91,10 +91,6 @@ class DeviceZ: public GraphicsDevice
     actStream->SetColorMap0( r, g, b, ctSize); 
     actStream->SetColorMap1( r, g, b, ctSize); 
     
-  short myfont = ((int) SysVar::GetPFont()>-1) ? 1 : 0;
-  std::string what = "hrshsym=0,text=" + i2s(myfont);
-  actStream->setopt("drvopt", what.c_str());
-  
    actStream->spage(Z_DPI, Z_DPI, nx, ny, 0, 0 );
 
    actStream->Init();

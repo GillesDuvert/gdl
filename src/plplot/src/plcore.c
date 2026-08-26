@@ -92,9 +92,6 @@
 int
 text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 
-int
-text2fci( PLCHAR_VECTOR text, unsigned char *hexdigit, unsigned char *hexpower );
-
 //--------------------------------------------------------------------------
 // Driver Interface
 //
@@ -126,12 +123,6 @@ text2fci( PLCHAR_VECTOR text, unsigned char *hexdigit, unsigned char *hexpower )
 
 // Initialize device.
 // The plot buffer must be called last.
-
-// The following array of chars is used both here and in plsym.c for
-// translating the Greek characters from the #g escape sequences into
-// the Hershey and Unicode codings
-//
-const char plP_greek_mnemonic[] = "ABGDEZYHIKLMNCOPRSTUFXQWabgdezyhiklmncoprstufxqw";
 
 void
 plP_init( void )
@@ -533,28 +524,6 @@ int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num )
 
     return (int) ( endptr - text );
 }
-
-//--------------------------------------------------------------------------
-//  int text2fci( char *text, unsigned char *hexdigit, unsigned char *hexpower)
-//       char *text - pointer to the text to be parsed
-//       unsigned char *hexdigit - pointer to hex value that is stored.
-//       unsigned char *hexpower - pointer to hex power (left shift) that is stored.
-//
-//    Function takes a pointer to a string, which is looked up in a table
-//    to determine the corresponding FCI (font characterization integer)
-//    hex digit value and hex power (left shift).  All matched strings
-//    start with "<" and end with the two characters "/>".
-//    If the lookup succeeds, hexdigit and hexpower are set to the appropriate
-//    values in the table, and the function returns the number of characters
-//    in text that are consumed by the matching string in the table lookup.
-//
-//    If the lookup fails, hexdigit is set to 0, hexpower is set to and
-//    impossible value, and the function returns 0.
-//--------------------------------------------------------------------------
-
-
-
-static PLUNICODE unicode_buffer_static[1024];
 
 void
 plP_text( PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y,
@@ -1705,7 +1674,7 @@ c_plinit( void )
 
 // Load fonts
 
-    plsc->cfont = 3;
+    plsc->currentFont = 3;
 	printf("Warning, using /usr/local/share/gnudatalanguage/hersh1.chr!\n");
 	hersheyFontLoad("/usr/local/share/gnudatalanguage/hersh1.chr");
 

@@ -408,7 +408,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 
 	pldeco(symbol, &length, string); // decode embedded commands, encode to unicode or hershey, depending.
 
-	PLUNICODE ifont = plsc->cfont;
+	PLUNICODE ifont = plsc->currentFont;
 	PLUNICODE oldifont = ifont;
 	int revert = 0;
 	PLINT oldglyph = -1; //for char-to-char advance
@@ -822,7 +822,7 @@ plcvec( PLINT ch, signed char **xygr )
 static void
 pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 {
-    PLUNICODE     ch, ifont = plsc->cfont;
+    PLUNICODE     ch, ifont = plsc->currentFont;
 	PLINT ig, j = 0, lentxt = (PLINT) strlen( text );
     unsigned char      test, esc;
 
@@ -832,7 +832,7 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
     *length = 0;
 
     plgesc( &esc );
-    if ( ifont > numberfonts || ifont < 3 )  { plsc->cfont=3; ifont = 3;}
+    if ( ifont > numberfonts || ifont < 3 )  { plsc->currentFont=3; ifont = 3;}
 
 // Get next character; treat non-printing characters as spaces.
 
@@ -898,7 +898,7 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 					ifont=12;	sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE;				break;
 				case 'X':
 				case 'x':
-					ifont=plsc->cfont; sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE; break;
+					ifont=plsc->currentFont; sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE; break;
 				case 'A': case 'a':sym[( *length )++] = A; break;
 				case 'B': case 'b':sym[( *length )++] = B; break;
 				case 'C': case 'c':sym[( *length )++] = C; break;

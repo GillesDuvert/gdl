@@ -43,10 +43,6 @@ GDLWXStream::GDLWXStream( int width, int height, DString &defaultfontname )
 
   spage(0,0, width, height, 0, 0 ); //width and height have importance. dpi is best left to plplot.
 
-//select the fonts in all cases...
-  std::string what = "hrshsym=0,text=1"; //no smooth available
-  setopt("drvopt", what.c_str());
-
 //init the driver...  
 //plplot switched from PLESC_DEVINIT to dev_data for wxwidgets around version 5.11
 //#define PLPLOT_TEST_VERSION_NUMBER PLPLOT_VERSION_MAJOR*1000+PLPLOT_VERSION_MINOR
