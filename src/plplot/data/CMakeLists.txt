@@ -20,8 +20,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 set(data_DATAFILES
-  plstnd5.fnt
-  plxtnd5.fnt
   cmap0_default.pal
   cmap1_default.pal
   )

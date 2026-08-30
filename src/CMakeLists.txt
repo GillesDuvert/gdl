@@ -320,6 +320,9 @@ install(DIRECTORY DESTINATION ${CMAKE_INSTALL_PREFIX}/${GDL_DATA_DIR}/dlm )
 INSTALL(CODE "execute_process( COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/bin/gdl ${CMAKE_INSTALL_PREFIX}/bin/libidl${CMAKE_SHARED_LIBRARY_SUFFIX})" )
 install(CODE "message(\"-- Created symlink: ${CMAKE_INSTALL_PREFIX}/bin/gdl  -> ${CMAKE_INSTALL_PREFIX}/bin/libidl${CMAKE_SHARED_LIBRARY_SUFFIX}\")")
 
+#install the new compacted hershey format file.
+install(FILES ${CMAKE_SOURCE_DIR}/resource/fonts/hersh1.chr DESTINATION ${CMAKE_INSTALL_PREFIX}/${GDL_DATA_DIR})
+
 configure_file(
  	${CMAKE_SOURCE_DIR}/scripts/quick_start_GDL.sh.in
 	${CMAKE_BINARY_DIR}/quick_start_GDL.sh
