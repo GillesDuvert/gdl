@@ -53,7 +53,7 @@ public:
 
   virtual void fontChanged() final {
     PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
-    pls->dev_text = doFont;
+    pls->dev_unicode = doFont;
   }
   
 };

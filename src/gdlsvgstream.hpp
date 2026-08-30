@@ -53,6 +53,10 @@ public:
 // Clear is not used on SVG --- but this could be it.
 //  virtual void Clear(DLong chan) final;
 //  virtual void Clear() final;
+  virtual void fontChanged() final {
+    PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
+    pls->dev_unicode = doFont;
+  }
 };
 
 #endif
