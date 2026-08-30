@@ -28,8 +28,7 @@
 # 			    linker flags for dynamic wxwidgets device driver.
 # wxwidgets_RPATH	  - rpath (if needed) for anything linked to the
 #                           wxwidgets libraries.
-# DRIVERS_LINK_FLAGS  	  - list of device LINK_FLAGS for case
-# 			    when ENABLE_DYNDRIVERS OFF.
+# DRIVERS_LINK_FLAGS  	  - list of device LINK_FLAGS 
 # Find wxWidgets needed for driver and binding
 
 if(PLD_wxwidgets)
@@ -91,19 +90,6 @@ if(PLD_wxwidgets)
   endif(wxwidgets_RPATH)
 
   option(OLD_WXWIDGETS "Use old version of wxwidgets device driver, binding, and example" OFF)
-
-    if(WITH_FREETYPE)
-	  message(STATUS "WARNING: old wxwidgets driver and binding components depending on AGG library have been dropped.")
-      set(
-	wxwidgets_COMPILE_FLAGS
-	"${wxwidgets_COMPILE_FLAGS} ${FREETYPE_INCLUDE_CFLAGS}"
-	)
-      set(
-	wxwidgets_LINK_FLAGS
-	${wxwidgets_LINK_FLAGS}
-	${FREETYPE_LIBRARIES}
-	)
-    endif(WITH_FREETYPE)
 
   set(DRIVERS_LINK_FLAGS
     ${DRIVERS_LINK_FLAGS}

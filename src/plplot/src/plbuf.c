@@ -56,6 +56,7 @@ static void     wr_data( PLStream *pls, void *buf, size_t buf_size );
 
 static void     plbuf_control( PLStream *pls, U_CHAR c );
 static void     plbuf_fill( PLStream *pls );
+static void     plbuf_fill_multipath( PLStream *pls );
 static void     plbuf_swin( PLStream *pls, PLWindow *plwin );
 
 static void     rdbuf_init( PLStream *pls );
@@ -69,6 +70,7 @@ static void     rdbuf_image( PLStream *pls );
 static void     rdbuf_text( PLStream *pls );
 static void     rdbuf_text_unicode( PLINT op, PLStream *pls );
 static void     rdbuf_fill( PLStream *pls );
+static void     rdbuf_fill_multipath( PLStream *pls );
 static void     rdbuf_clip( PLStream *pls );
 static void     rdbuf_swin( PLStream *pls );
 static void     rdbuf_di( PLStream *pls );
@@ -394,84 +396,6 @@ plbuf_image( PLStream *pls, IMG_DT *img_dt )
         * (size_t) ( ( pls->dev_nptsX - 1 ) * ( pls->dev_nptsY - 1 ) ) );
 }
 
-//--------------------------------------------------------------------------
-// plbuf_text()
-//
-// Handle text call.
-//--------------------------------------------------------------------------
-
-static void
-plbuf_text( PLStream *pls, EscText *text )
-{
-    dbug_enter( "plbuf_text" );
-
-    // Check for missing data.
-    if ( text == NULL )
-        return;
-
-    // Store the state information needed to render the text
-
-    wr_data( pls, &pls->chrht, sizeof ( pls->chrht ) );
-    wr_data( pls, &pls->diorot, sizeof ( pls->diorot ) );
-    //wr_data( pls, &pls->clpxmi, sizeof ( pls->clpxmi ) );
-//    wr_data( pls, &pls->clpxma, sizeof ( pls->clpxma ) );
-//    wr_data( pls, &pls->clpymi, sizeof ( pls->clpymi ) );
-//    wr_data( pls, &pls->clpyma, sizeof ( pls->clpyma ) );
-
-    // Store the text layout information
-
-    wr_data( pls, &text->base, sizeof ( text->base ) );
-    wr_data( pls, &text->just, sizeof ( text->just ) );
-    wr_data( pls, text->xform, sizeof ( text->xform[0] ) * 4 );
-    wr_data( pls, &text->x, sizeof ( text->x ) );
-    wr_data( pls, &text->y, sizeof ( text->y ) );
-    wr_data( pls, &text->refx, sizeof ( text->refx ) );
-    wr_data( pls, &text->refy, sizeof ( text->refy ) );
-    wr_data( pls, &text->font_face, sizeof ( text->font_face ) );
-
-    // Store the text
-
-    if ( pls->dev_unicode )
-    {
-        PLUNICODE fci;
-
-        // Retrieve and store the font characterization integer
-        plgfci( &fci );
-
-        wr_data( pls, &fci, sizeof ( fci ) );
-
-        wr_data( pls, &text->unicode_array_len, sizeof ( U_SHORT ) );
-        if ( text->unicode_array_len )
-            wr_data( pls,
-                text->unicode_array,
-                sizeof ( PLUNICODE ) * text->unicode_array_len );
-    }
-    else
-    {
-        U_SHORT len;
-
-        // len + 1 to copy the NUL termination
-        len = strlen( text->string ) + 1;
-        wr_data( pls, &len, sizeof ( len ) );
-        if ( len > 0 )
-            wr_data( pls, (void *) text->string, sizeof ( char ) * len );
-    }
-}
-
-//--------------------------------------------------------------------------
-// plbuf_text_unicode()
-//
-// Handle text buffering for the new unicode pathway.
-//--------------------------------------------------------------------------
-
-static void
-plbuf_text_unicode( PLStream *pls, EscText *text )
-{
-    PLUNICODE fci;
-
-    dbug_enter( "plbuf_text_unicode" );
-}
-
 
 //--------------------------------------------------------------------------
 // plbuf_esc()
@@ -505,29 +429,16 @@ plbuf_esc( PLStream *pls, PLINT op, void *ptr )
         plbuf_fill( pls );
         break;
 
-    case PLESC_SWIN:
+    case PLESC_FILL_MULTIPATH:
+        plbuf_fill_multipath( pls );
+        break;
+		
+	case PLESC_SWIN:
         plbuf_swin( pls, (PLWindow *) ptr );
         break;
 
     case PLESC_IMAGE:
         plbuf_image( pls, (IMG_DT *) ptr );
-        break;
-
-    // Unicode and non-Unicode text handling
-    case PLESC_HAS_TEXT:
-        plbuf_text( pls, (EscText *) ptr );
-        break;
-
-    // Alternate Unicode text handling
-    case PLESC_BEGIN_TEXT:
-    case PLESC_TEXT_CHAR:
-    case PLESC_CONTROL_CHAR:
-    case PLESC_END_TEXT:
-        // The alternative unicode processing is not correctly implemented
-        // and is currently only used by Cairo, which handles its own
-        // redraws.  Skip further processing for now
-
-        //plbuf_text_unicode( pls, (EscText *) ptr );
         break;
 
     case PLESC_IMPORT_BUFFER:
@@ -552,13 +463,6 @@ plbuf_esc( PLStream *pls, PLINT op, void *ptr )
         plFlushBuffer( pls, FALSE, (size_t) ( -1 ) );
         break;
 
-#if 0
-    // These are a no-op.  They just need an entry in the buffer.
-    case PLESC_CLEAR:
-    case PLESC_START_RASTERIZE:
-    case PLESC_END_RASTERIZE:
-        break;
-#endif
     }
 }
 
@@ -604,6 +508,23 @@ plbuf_fill( PLStream *pls )
     wr_data( pls, &pls->dev_npts, sizeof ( PLINT ) );
     wr_data( pls, pls->dev_x, sizeof ( short ) * (size_t) pls->dev_npts );
     wr_data( pls, pls->dev_y, sizeof ( short ) * (size_t) pls->dev_npts );
+}
+
+//--------------------------------------------------------------------------
+// plbuf_fill_multipath()
+//
+// Fill polygons (special format for TrueTypeFonts)
+//--------------------------------------------------------------------------
+
+static void
+plbuf_fill_multipath( PLStream *pls )
+{
+    dbug_enter( "plbuf_fill_multipath" );
+
+    wr_data( pls, &pls->dev_npath, sizeof ( PLINT ) );
+    wr_data( pls, pls->dev_pathx, sizeof ( PLINT** ) * (size_t) pls->dev_npath );
+    wr_data( pls, pls->dev_pathy, sizeof ( PLINT** ) * (size_t) pls->dev_npath );
+    wr_data( pls, pls->dev_pathnxy, sizeof ( PLINT ) * (size_t) pls->dev_npts );
 }
 
 //--------------------------------------------------------------------------
@@ -1092,23 +1013,14 @@ rdbuf_esc( PLStream *pls )
     case PLESC_FILL:
         rdbuf_fill( pls );
         break;
+    case PLESC_FILL_MULTIPATH:
+        rdbuf_fill_multipath( pls );
+        break;
     case PLESC_SWIN:
         rdbuf_swin( pls );
         break;
     case PLESC_IMAGE:
         rdbuf_image( pls );
-        break;
-    case PLESC_HAS_TEXT:
-        rdbuf_text( pls );
-        break;
-    case PLESC_BEGIN_TEXT:
-    case PLESC_TEXT_CHAR:
-    case PLESC_CONTROL_CHAR:
-    case PLESC_END_TEXT:
-        // Disable for now because alternative unicode processing is
-        // not correctly implemented
-
-        //rdbuf_text_unicode( op, pls );
         break;
     case PLESC_IMPORT_BUFFER:
         // Place holder until an appropriate action is determined.
@@ -1147,7 +1059,26 @@ rdbuf_fill( PLStream *pls )
 
     plP_fill( xpl, ypl, npts );
 }
+//--------------------------------------------------------------------------
+// rdbuf_fill_multipath()
+//
+// Fill polygons (special format for TrueTypeFonts)
+//--------------------------------------------------------------------------
 
+static void
+rdbuf_fill_multipath(PLStream *pls) {
+	dbug_enter("rdbuf_fill_multipath");
+	PLINT npath;
+	PLINT **pathx;
+	PLINT **pathy;
+	PLINT *pathnxy;
+   rd_data( pls, &npath, sizeof ( PLINT ) );
+   rd_data_no_copy( pls, (void **) &pathx, sizeof ( PLINT**) * (size_t) npath);
+   rd_data_no_copy( pls, (void **) &pathy, sizeof ( PLINT**) * (size_t) npath);
+   rd_data_no_copy( pls, (void **) &pathnxy, sizeof ( PLINT) * (size_t) npath );
+   
+    plP_polyfill( pathx, pathy, pathnxy, npath );
+}
 //--------------------------------------------------------------------------
 //
 // rdbuf_clip()
@@ -1290,100 +1221,6 @@ rdbuf_di( PLStream *pls )
         c_plsdiplt( dipxmin, dipymin, dipxmax, dipymax );
     if ( difilt & PLDI_DEV )
         c_plsdidev( mar, aspect, jx, jy );
-}
-
-//--------------------------------------------------------------------------
-// rdbuf_text()
-//
-// Render text through the driver.
-//--------------------------------------------------------------------------
-
-static void
-rdbuf_text( PLStream *pls )
-{
-    EscText text;
-    PLFLT   xform[4];
-
-    dbug_enter( "rdbuf_text" );
-
-    text.xform = xform;
-
-    // Read the state information
-
-    rd_data( pls, &pls->chrht, sizeof ( pls->chrht ) );
-    rd_data( pls, &pls->diorot, sizeof ( pls->diorot ) );
-    //rd_data( pls, &pls->clpxmi, sizeof ( pls->clpxmi ) );
-//    rd_data( pls, &pls->clpxma, sizeof ( pls->clpxma ) );
-//    rd_data( pls, &pls->clpymi, sizeof ( pls->clpymi ) );
-//    rd_data( pls, &pls->clpyma, sizeof ( pls->clpyma ) );
-
-    // Read the text layout information
-
-    rd_data( pls, &text.base, sizeof ( text.base ) );
-    rd_data( pls, &text.just, sizeof ( text.just ) );
-    rd_data( pls, text.xform, sizeof ( text.xform[0] ) * 4 );
-    rd_data( pls, &text.x, sizeof ( text.x ) );
-    rd_data( pls, &text.y, sizeof ( text.y ) );
-    rd_data( pls, &text.refx, sizeof ( text.refx ) );
-    rd_data( pls, &text.refy, sizeof ( text.refy ) );
-    rd_data( pls, &text.font_face, sizeof ( text.font_face ) );
-
-    // Initialize text arrays to NULL.  This protects drivers that
-    // determine the text representation by looking at which members
-    // are set.
-    text.unicode_array_len = 0;
-    text.unicode_array     = NULL;
-    text.string            = NULL;
-
-    // Read in the text
-    if ( pls->dev_unicode )
-    {
-        PLUNICODE fci;
-
-        rd_data( pls, &fci, sizeof ( fci ) );
-        plsfci( fci );
-
-        rd_data( pls, &text.unicode_array_len, sizeof ( U_SHORT ) );
-        if ( text.unicode_array_len )
-        {
-            // Set the pointer to the unicode data in the buffer.  This avoids
-            // allocating and freeing memory
-            rd_data_no_copy(
-                pls,
-                (void **) ( &text.unicode_array ),
-                sizeof ( PLUNICODE ) * text.unicode_array_len );
-        }
-    }
-    else
-    {
-        U_SHORT len;
-
-        rd_data( pls, &len, sizeof ( len ) );
-        if ( len > 0 )
-        {
-            // Set the pointer to the string data in the buffer.  This avoids
-            // allocating and freeing memory
-            rd_data_no_copy(
-                pls,
-                (void **) ( &text.string ),
-                sizeof ( char ) * len );
-        }
-    }
-
-    plP_esc( PLESC_HAS_TEXT, &text );
-}
-
-//--------------------------------------------------------------------------
-// rdbuf_text_unicode()
-//
-// Draw text for the new unicode handling pathway.
-// This currently does nothing but is here as a placehlder for the future
-//--------------------------------------------------------------------------
-
-static void
-rdbuf_text_unicode( PLINT op, PLStream *pls )
-{
-    dbug_enter( "rdbuf_text_unicode" );
 }
 
 //--------------------------------------------------------------------------

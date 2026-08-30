@@ -386,88 +386,16 @@ enum { AT_BOP, DRAWING, AT_EOP };
 #define PL_FILESIZE_KB    1000
 #endif
 
-// Font file names.
+//to suffer from GDL drastic unicode support where truetype fonts are used and passed as shapes to all drivers uniformly.
+enum positionCode {PRIVATE_UNICODE_PLANE=1048576, //start of UNICODE <Plane 16 Private Use> 
+F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13,F14,F15,F16,F17,F18,F19,F20,//leave space for font number (see pldeco)
+A, 
+B, C, D,E,I,L,M,N,R,S,U,V,SP};
 
-#define PLPLOT5_FONTS
-
-#ifdef PLPLOT5_FONTS
-#define PL_XFONT    "plxtnd5.fnt"
-#define PL_SFONT    "plstnd5.fnt"
-#else
-#define PL_XFONT    "plxtnd4.fnt"
-#define PL_SFONT    "plstnd4.fnt"
-#endif
-
-//--------------------------------------------------------------------------
-// The following environment variables are defined:
-//
-//	PLPLOT_BIN      # where to find executables
-//	PLPLOT_LIB      # where to find library files (fonts, maps, etc)
-//	PLPLOT_TCL      # where to find tcl scripts
-//
-//	PLPLOT_HOME     # basename of plplot hierarchy
-//
-// search order:
-//	1)	the most specific possible locators, one of
-//			$(PLPLOT_BIN)
-//			$(PLPLOT_LIB)
-//			$(PLPLOT_TCL)
-//		as appropriate
-//
-//	2)	the current directory
-//
-//	3)	one of  $(PLPLOT_HOME)/bin
-//			$(PLPLOT_HOME)/lib
-//			$(PLPLOT_HOME)/tcl
-//		as appropriate
-//
-//	4)	as appropriate, the compile-time (Makefile)
-//		BIN_DIR, LIB_DIR, TCL_DIR
-//
-//  8 Jun 1994  mj olesen (olesen@weber.me.queensu.ca)
-//
-// Other notes:
-//
-// In addition to the directories above, the following are also used:
-//
-// Lib file search path: PLLIBDEV (see plctrl.c).  This is checked last,
-// and is a system-dependent hardwired location.
-//
-// Tcl search path: $HOME/tcl is searched before the install location,
-// TCL_DIR.
-//--------------------------------------------------------------------------
-
-#define PLPLOT_BIN_ENV     "PLPLOT_BIN"
-#define PLPLOT_LIB_ENV     "PLPLOT_LIB"
-#define PLPLOT_TCL_ENV     "PLPLOT_TCL"
-#define PLPLOT_HOME_ENV    "PLPLOT_HOME"
 
 // Maximum size for path strings in the plplot code
 #define PLPLOT_MAX_PATH    1024
 
-//
-//   Some stuff that is included (and compiled into) plsym.h
-//   Other modules might want this, so we will "extern" it
-//
-//
-
-#ifndef __PLSYM_H__
-
-typedef struct
-{
-    unsigned int Hershey;
-    PLUNICODE    Unicode;
-    char         Font;
-} Hershey_to_Unicode_table;
-
-extern int number_of_entries_in_hershey_to_unicode_table;
-extern Hershey_to_Unicode_table hershey_to_unicode_lookup_table[];
-
-
-#endif
-
-// Greek character translation array (defined in plcore.c)
-extern const char plP_greek_mnemonic[];
 
 //--------------------------------------------------------------------------
 //		Function Prototypes
@@ -574,14 +502,6 @@ int
 plP_clipline( PLINT *p_x1, PLINT *p_y1, PLINT *p_x2, PLINT *p_y2,
               PLINT xmin, PLINT xmax, PLINT ymin, PLINT ymax );
 
-// Stores hex digit value into FCI (font characterization integer).
-void
-plP_hex2fci( unsigned char hexdigit, unsigned char hexpower, PLUNICODE *pfci );
-
-// Retrieves hex digit value from FCI (font characterization integer).
-PLDLLIMPEXP void
-plP_fci2hex( PLUNICODE fci, unsigned char *phexdigit, unsigned char hexpower );
-
 // Pattern fills in software the polygon bounded by the input points.
 
 PLDLLIMPEXP void
@@ -608,15 +528,14 @@ plwarn( PLCHAR_VECTOR errormsg );
 PLDLLIMPEXP void
 plabort( PLCHAR_VECTOR errormsg );
 
-// Loads either the standard or extended font.
+// Loads the font.
 
 void
-plfntld( PLINT fnt );
+hersheyFontLoad(char* file);
 
-// Release memory for fonts.
+// load tt font
 
-void
-plfontrel( void );
+void ttFontLoad(const char* fontName);
 
 // A replacement for strdup(), which isn't portable.
 
@@ -635,10 +554,9 @@ void
 plstik( PLFLT mx, PLFLT my, PLFLT dx, PLFLT dy );
 
 // Prints out a "string" at reference position with physical coordinates
-// (refx,refy).
-
-void
-plstr( PLINT base, PLFLT *xform, PLINT refx, PLINT refy, PLCHAR_VECTOR string );
+// (refx,refy). Return length if needed.
+PLFLT
+plstr( PLCHAR_VECTOR string , PLINT length_only, PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y, PLINT refx, PLINT refy);
 
 // Draws a tick parallel to x.
 
@@ -663,14 +581,6 @@ difilt( PLINT *, PLINT *, PLINT,
 PLDLLIMPEXP void
 difilt_clip( PLINT *, PLINT * );
 
-// Calculate scale of font size and scale of magnitude of vertical
-// offset associated with superscripts and subscripts.
-
-PLDLLIMPEXP void
-plP_script_scale( PLBOOL ifupper, PLINT *level,
-                  PLFLT *old_scale, PLFLT *scale,
-                  PLFLT *old_offset, PLFLT *offset );
-
 // Driver draws text
 
 void
@@ -687,58 +597,6 @@ plsave_set_locale( void );
 
 PLDLLIMPEXP void
 plrestore_locale( char * save_lc_numeric_locale );
-
-// Writes the Hershey symbol "ch" centred at the physical coordinate (x,y).
-void
-plhrsh( PLINT ch, PLINT x, PLINT y );
-
-// where should structure definitions that must be seen by drivers and core source files, be?
-
-// structure to be used by plcore.c and anydriver.c, related to plP_text()
-
-typedef struct
-{
-    // Indicates the type of text stored in the structure.  This flag
-    // is used by the plot metafiles to correctly store and then render
-    // the contents.
-    enum { PL_STRING_TEXT, PL_STRING_SYMBOL } text_type;
-
-    // Positioning settings
-    PLINT base;                    // ref point at base(1) or center(0) of text. Currently plplot only use 0
-    PLFLT just;                    // continuos justification, 0 left, 0.5 center, 1 right
-    PLFLT *xform;                  // transformation (rotation) matrix
-
-    // raw reference point--after any transformation
-    PLINT x;
-    PLINT y;
-
-    // processed ref. point--after justification, displacement, etc, processing
-    PLINT refx;
-    PLINT refy;
-
-    // font face OPTIONALLY used for rendering hershey codes
-    char  font_face;
-
-    // The following 3 fields are used by the alternative text handling pathway.
-    // The alternative text handling pathway allows the driver to process
-    // each character individually for unicode font handling
-    // See drivers/cairo.h for details about how this works.
-    PLUNICODE n_fci;               // font storage
-    PLUNICODE n_char;              // character storage
-    PLINT     n_ctrl_char;         // control character
-
-    // Used by plsym to store a unicode character for use by plfreetype
-    PLUNICODE unicode_char;        // an int to hold either a Hershey, ASC-II, or Unicode value for plsym calls
-
-    // Used to store a processed unicode string.  Used by plsym and
-    // text rendering by the driver
-    PLUNICODE      *unicode_array; // a pointer to an array of ints holding either a Hershey, ASC-II, or Unicode value for cached plsym
-    unsigned short unicode_array_len;
-
-    // Non-unicode strings and unprocessed string in the unicode case
-    const char     *string;        // text to draw
-    PLINT          symbol;         // plot symbol to draw
-}EscText;
 
 //
 // structure that contains driver specific information, to be used by
@@ -1086,6 +944,11 @@ plP_polyline( short *x, short *y, PLINT npts );
 PLDLLIMPEXP void
 plP_fill( short *x, short *y, PLINT npts );
 
+// Fill polygon
+
+PLDLLIMPEXP void
+plP_polyfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly );
+
 // Render gradient
 
 void
@@ -1205,38 +1068,6 @@ typedef struct
     PLFLT xmin, ymin, dx, dy;
 } IMG_DT;
 
-//
-// void plfvect()
-//
-// Internal routine to plot a vector array with arbitrary coordinate
-// and vector transformations.
-// This is not currently intended to be called direct by the user
-//
-PLDLLIMPEXP void
-plfvect( PLFLT ( *plf2eval )( PLINT, PLINT, PLPointer ),
-         PLPointer f2evalv_data, PLPointer f2evalc_data,
-         PLINT nx, PLINT ny, PLFLT scale,
-         void ( *pltr )( PLFLT, PLFLT, PLFLT *, PLFLT *, PLPointer ),
-         PLPointer pltr_data );
-
-//
-//  Internal function to get an index to the hershey table
-//
-int
-plhershey2unicode( int in );
-
-// struct used for FCI to FontName lookups.
-typedef struct
-{
-    PLUNICODE           fci;
-    const unsigned char *pfont;
-} FCI_to_FontName_Table;
-
-// Internal function to obtain a pointer to a valid font name.
-PLDLLIMPEXP const char *
-plP_FCI2FontName( PLUNICODE fci,
-                  const FCI_to_FontName_Table lookup[], const int nlookup );
-
 
 // Internal function to free memory from driver options
 void
@@ -1244,7 +1075,7 @@ plP_FreeDrvOpts( void );
 
 // Convert a ucs4 unichar to utf8 char string
 PLDLLIMPEXP int
-ucs4_to_utf8( PLUNICODE unichar, char *ptr );
+ucs4_to_utf8(unsigned char *ptr_to_utf , PLUNICODE unichar );
 
 //
 // Wrapper functions for the system IO routines fread, fwrite
@@ -1272,28 +1103,6 @@ plwxtik( PLFLT x, PLFLT y, PLBOOL minor, PLBOOL invert );
 // Draws a tick parallel to y, using world coordinates
 void
 plwytik( PLFLT x, PLFLT y, PLBOOL minor, PLBOOL invert );
-
-// get drivers directory
-
-#ifdef ENABLE_DYNDRIVERS
-PLDLLIMPEXP const char*
-plGetDrvDir( void );
-#endif
-
-#ifdef PL_HAVE_FREETYPE
-PLDLLIMPEXP void
-plD_FreeType_init( PLStream * );
-
-PLDLLIMPEXP void
-plD_render_freetype_text( PLStream *, EscText * );
-
-PLDLLIMPEXP void
-plD_FreeType_Destroy( PLStream * );
-
-PLDLLIMPEXP void
-pl_set_extended_cmap0( PLStream *, int, int );
-
-#endif
 
 // Create a temporary file securely
 PLDLLIMPEXP FILE *

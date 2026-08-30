@@ -159,7 +159,6 @@ typedef struct
 // dev_gradient	PLINT	Set if driver can do (linear) gradients
 // dev_text	PLINT	Set if driver want to do it's only text drawing
 // dev_unicode	PLINT	Set if driver wants unicode
-// dev_hrshsym	PLINT	Set for Hershey symbols to be used
 // dev_fill1	PLINT	Set if driver can do pattern area fills
 // dev_dash     PLINT   Set if driver can do dashed lines
 // dev_di	PLINT	Set if driver wants to handle DI commands
@@ -187,7 +186,6 @@ typedef struct
 // linepos	PLINT	Line count for output stream
 // pdfs		PDFstrm* PDF stream pointer
 // dev_mem_alpha     PLINT  The user supplied memory buffer supports alpha values
-// has_string_length PLINT  The driver can calculate the lengths of strings
 // string_length     PLFLT  Set to the length of the current string (in mm) by the driver
 // get_string_length PLINT  Tells the driver to calculate the length of the string
 //                             but not to render it.
@@ -464,30 +462,7 @@ typedef struct
 //
 // Font related variables
 //
-// cfont           Current font number, replaces global 'font' in plsym.c
-//                 This can be latter extended for font shape, series, family and size
-// fci             FCI (font characterization integer)
-// An FCI is sometimes inserted in the middle of a stream of
-// unicode glyph indices.  Thus to distinguish it from those, the FCI is marked
-// by 0x8 in the most significant 4 bits.  The remaining 7 hex digits
-// stored in the 32-bit integer characterize 7 different font attributes.
-// The font attributes are interpreted as follows:
-// hexdigit =>                    0        1          2        3       4        5
-// hexpower   Font attribute               Possible attribute values
-//    0       font-family     sans-serif  serif    monospace  script  symbol |fantasy
-//    1       font-style        upright   italic    oblique |
-//    2       font-weight       medium     bold  |   bolder    light  lighter
-//    3       font-variant      normal | small caps
-//
-// Everything to the right of the vertical bars is not implemented and is
-// subject to change.  The four font attributes (font-family, font-style,
-// font-weight, and font-variant are stored in the FCI in the order of
-// hexpower, the left shift that is applied to the hex digit to place the
-// hexdigit in the FCI.  The hexpower = 3 position is essentially undefined
-// since there is currently only one hexdigit (0) defined, and similarly
-// for hexpower = 4-6 so there is room for expansion of this scheme into more
-// font attributes if required.  (hexpower = 7 is reserved for the 0x8 marker
-// of the FCI.)
+// currentFont     Current font index (PLUNICODE)
 //
 //--------------------------------------------------------------------------
 //
@@ -543,11 +518,7 @@ typedef struct
     PLFLT width;
     PLINT widthset, widthlock;
 
-// Variables governing arrow
-    PLFLT *arrow_x;
-    PLFLT *arrow_y;
-    PLINT arrow_npts;
-    PLINT arrow_fill;
+    PLINT makeHidden; //converted ex-arrow to make window hidden in a X11 special case 
 
 // Driver dispatch table, obsoletes "device" member below.
 
@@ -571,6 +542,11 @@ typedef struct
 
     PLINT   dev_npts;
     short   *dev_x, *dev_y;
+	
+    PLINT   dev_npath;
+    PLINT** dev_pathx;
+	PLINT** dev_pathy;
+    PLINT*  dev_pathnxy;
 
     // variables for plimage()
 
@@ -725,29 +701,18 @@ typedef struct
 // Other variables
 
     PLINT            dev_compression;
-    PLINT            cfont;
 
     void             *FT;
-
-// Stuff used by the Tkwin driver for Plframe
-    struct PlPlotter *plPlotterPtr;
 
 
 // Unicode section
 
+    PLUNICODE currentFont; //current font (index)
+    PLUNICODE fontIndex; // a fot index, in UNICOD as it may be embbedded in a UNICODE string
     PLINT     dev_unicode;
+	float     charHeightCorr; //the magic factor for each truetype font inner size to pixels.
+	int       charDescentValue; //to align a char on the line
 
-    PLINT     alt_unicode; // The alternative interface for unicode text rendering.
-
-    PLUNICODE fci;
-
-    PLINT     dev_hrshsym;
-
-// Used to keep a hold of a temporary copy of the original character height
-// which I overload as a quick hack to fix up a bug in freetype an plsym()
-//
-
-    PLFLT original_chrdef, original_chrht;
 
     //
     // Pointer to postscript document class used by psttf
@@ -755,7 +720,6 @@ typedef struct
     void *psdoc;
 
     // Gradient section.
-    PLINT       dev_gradient;
     PLINT       ngradient;
     PLINT       *xgradient, *ygradient;
     // The next three variables define the polygon boundary used
@@ -767,7 +731,6 @@ typedef struct
     PLBOOL      stream_closed;
     PLINT       line_style;
     PLINT       dev_mem_alpha;
-    PLINT       has_string_length;
     PLFLT       string_length;
     PLINT       get_string_length;
     PLINT       dev_eofill;

@@ -44,14 +44,6 @@
 #define NEED_PLDEBUG
 #include "plcore.h"
 
-#ifdef ENABLE_DYNDRIVERS
-  #ifndef LTDL_WIN32
-    #include <ltdl.h>
-  #else
-    #include "ltdl_win32.h"
-  #endif
-#endif
-
 #if HAVE_DIRENT_H
 // The following conditional is a workaround for a bug in the MacOSX system.
 // When  the dirent.h file will be fixed upstream by Apple Inc, this should
@@ -100,9 +92,6 @@
 int
 text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 
-int
-text2fci( PLCHAR_VECTOR text, unsigned char *hexdigit, unsigned char *hexpower );
-
 //--------------------------------------------------------------------------
 // Driver Interface
 //
@@ -134,12 +123,6 @@ text2fci( PLCHAR_VECTOR text, unsigned char *hexdigit, unsigned char *hexpower )
 
 // Initialize device.
 // The plot buffer must be called last.
-
-// The following array of chars is used both here and in plsym.c for
-// translating the Greek characters from the #g escape sequences into
-// the Hershey and Unicode codings
-//
-const char plP_greek_mnemonic[] = "ABGDEZYHIKLMNCOPRSTUFXQWabgdezyhiklmncoprstufxqw";
 
 void
 plP_init( void )
@@ -274,23 +257,10 @@ plP_esc( PLINT op, void *ptr )
 {
     char   * save_locale;
     PLINT  clpxmi, clpxma, clpymi, clpyma;
-    EscText* args;
 
     // The plot buffer must be called first
     if ( plsc->plbuf_write )
         plbuf_esc( plsc, op, ptr );
-
-    // Text coordinates must pass through the driver interface filter
-    if ( ( op == PLESC_HAS_TEXT && plsc->dev_unicode ) ||
-         ( op == PLESC_END_TEXT && plsc->alt_unicode ) )
-    {
-        // Apply the driver interface filter
-        if ( plsc->difilt )
-        {
-            args = (EscText *) ptr;
-            difilt( &( args->x ), &( args->y ), 1, &clpxmi, &clpxma, &clpymi, &clpyma );
-        }
-    }
 
     save_locale = plsave_set_locale();
     if ( !plsc->stream_closed )
@@ -509,43 +479,22 @@ plP_fill( short *x, short *y, PLINT npts )
     }
 }
 
-// Render a gradient
-// The plot buffer must be called first
-// N.B. plP_gradient is never called (see plgradient) unless the
-// device driver has set plsc->dev_gradient to true.
-
 void
-plP_gradient( short *x, short *y, PLINT npts )
+plP_polyfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly  )
 {
-    PLINT i, clpxmi, clpxma, clpymi, clpyma;
-
     plsc->page_status = DRAWING;
 
     if ( plsc->plbuf_write )
     {
-        plsc->dev_npts = npts;
-        plsc->dev_x    = x;
-        plsc->dev_y    = y;
-        plbuf_esc( plsc, PLESC_GRADIENT, NULL );
+	plsc->dev_npath = npoly;
+	plsc->dev_pathx = x;
+	plsc->dev_pathy = y;
+	plsc->dev_pathnxy=npts;
+        plbuf_esc( plsc, PLESC_FILL_MULTIPATH, NULL );
     }
-
-    // Render gradient with driver.
-    if ( plsc->difilt )
-    {
-        for ( i = 0; i < npts; i++ )
-        {
-            xscl[i] = x[i];
-            yscl[i] = y[i];
-        }
-        difilt( xscl, yscl, npts, &clpxmi, &clpxma, &clpymi, &clpyma );
-        plP_plfclp( xscl, yscl, npts, clpxmi, clpxma, clpymi, clpyma,
-            grgradient );
-    }
-    else
-    {
-        grgradient( x, y, npts );
-    }
+	grpolyfill( x, y, npts, npoly );
 }
+
 
 // Account for driver ability to draw text itself
 //
@@ -586,604 +535,6 @@ int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num )
     return (int) ( endptr - text );
 }
 
-//--------------------------------------------------------------------------
-//  int text2fci( char *text, unsigned char *hexdigit, unsigned char *hexpower)
-//       char *text - pointer to the text to be parsed
-//       unsigned char *hexdigit - pointer to hex value that is stored.
-//       unsigned char *hexpower - pointer to hex power (left shift) that is stored.
-//
-//    Function takes a pointer to a string, which is looked up in a table
-//    to determine the corresponding FCI (font characterization integer)
-//    hex digit value and hex power (left shift).  All matched strings
-//    start with "<" and end with the two characters "/>".
-//    If the lookup succeeds, hexdigit and hexpower are set to the appropriate
-//    values in the table, and the function returns the number of characters
-//    in text that are consumed by the matching string in the table lookup.
-//
-//    If the lookup fails, hexdigit is set to 0, hexpower is set to and
-//    impossible value, and the function returns 0.
-//--------------------------------------------------------------------------
-
-int text2fci( PLCHAR_VECTOR text, unsigned char *hexdigit, unsigned char *hexpower )
-{
-    typedef struct
-    {
-        PLCHAR_VECTOR ptext;
-        unsigned char hexdigit;
-        unsigned char hexpower;
-    }
-    TextLookupTable;
-    // This defines the various font control commands and the corresponding
-    // hexdigit and hexpower in the FCI.
-    //
-#define N_TextLookupTable    10
-    const TextLookupTable lookup[N_TextLookupTable] = {
-        { "<sans-serif/>", PL_FCI_SANS,    PL_FCI_FAMILY },
-        { "<serif/>",      PL_FCI_SERIF,   PL_FCI_FAMILY },
-        { "<monospace/>",  PL_FCI_MONO,    PL_FCI_FAMILY },
-        { "<script/>",     PL_FCI_SCRIPT,  PL_FCI_FAMILY },
-        { "<symbol/>",     PL_FCI_SYMBOL,  PL_FCI_FAMILY },
-        { "<upright/>",    PL_FCI_UPRIGHT, PL_FCI_STYLE  },
-        { "<italic/>",     PL_FCI_ITALIC,  PL_FCI_STYLE  },
-        { "<oblique/>",    PL_FCI_OBLIQUE, PL_FCI_STYLE  },
-        { "<medium/>",     PL_FCI_MEDIUM,  PL_FCI_WEIGHT },
-        { "<bold/>",       PL_FCI_BOLD,    PL_FCI_WEIGHT }
-    };
-    int i, length;
-    for ( i = 0; i < N_TextLookupTable; i++ )
-    {
-        length = (int) strlen( lookup[i].ptext );
-        if ( !strncmp( text, lookup[i].ptext, (size_t) length ) )
-        {
-            *hexdigit = lookup[i].hexdigit;
-            *hexpower = lookup[i].hexpower;
-            return ( length );
-        }
-    }
-    *hexdigit = 0;
-    *hexpower = PL_FCI_HEXPOWER_IMPOSSIBLE;
-    return ( 0 );
-}
-
-static
-void alternate_unicode_processing( PLCHAR_VECTOR string, EscText * args )
-{
-    size_t        i, len;
-    char          esc;
-    unsigned char hexdigit, hexpower;
-    PLUNICODE     fci;
-    PLUNICODE     orig_fci;
-    PLINT         ig;
-    int           skip;
-    PLUNICODE     code;
-    int           idx = -1;
-
-    // Initialize to an empty string
-    args->unicode_array_len = 0;
-
-    len = strlen( string );
-
-    // If the string is empty, return now
-    if ( len == 0 )
-        return;
-
-    // Get the current escape character
-    plgesc( &esc );
-
-    // Obtain FCI (font characterization integer) for start of string.
-    plgfci( &fci );
-    orig_fci = fci;
-
-    // Signal the begin of text processing to the driver
-    args->n_fci = fci;
-    plP_esc( PLESC_BEGIN_TEXT, args );
-
-    for ( i = 0; i < len; i++ )
-    {
-        skip = 0;
-
-        if ( string[i] == esc )
-        {
-            switch ( string[i + 1] )
-            {
-            case '(': // hershey code
-                i  += 2 + text2num( &string[i + 2], ')', &code );
-                idx = plhershey2unicode( (int) code );
-                if ( 0 <= idx && idx <= number_of_entries_in_hershey_to_unicode_table )
-                    args->n_char = hershey_to_unicode_lookup_table[idx].Unicode;
-                else
-                    args->n_char = (PLUNICODE) 0x00;
-
-                pldebug( "alternate_unicode_processing", "code, idx, args->n_char = %d, %d, %#x\n", (int) code, idx, args->n_char );
-                plP_esc( PLESC_TEXT_CHAR, args );
-
-                skip = 1;
-                break;
-
-            case '[': // unicode
-                i           += 2 + text2num( &string[i + 2], ']', &code );
-                args->n_char = code;
-                plP_esc( PLESC_TEXT_CHAR, args );
-                skip = 1;
-                break;
-
-            case '<': // change font
-                if ( '0' <= string[i + 2] && string[i + 2] <= '9' )
-                {
-                    i += 2 + text2num( &string[i + 2], '>', &code );
-                    if ( code & PL_FCI_MARK )
-                    {
-                        // code is a complete FCI (font characterization
-                        // integer): change FCI to this value.
-                        //
-                        fci  = code;
-                        skip = 1;
-
-                        args->n_fci       = fci;
-                        args->n_ctrl_char = PLTEXT_FONTCHANGE;
-                        plP_esc( PLESC_CONTROL_CHAR, args );
-                    }
-                    else
-                    {
-                        // code is not complete FCI. Change
-                        // FCI with hex power in rightmost hex
-                        // digit and hex digit value in second rightmost
-                        // hex digit.
-                        //
-                        hexdigit = ( code >> 4 ) & PL_FCI_HEXDIGIT_MASK;
-                        hexpower = code & PL_FCI_HEXPOWER_MASK;
-                        plP_hex2fci( hexdigit, hexpower, &fci );
-                        skip = 1;
-
-                        args->n_fci       = fci;
-                        args->n_ctrl_char = PLTEXT_FONTCHANGE;
-                        plP_esc( PLESC_CONTROL_CHAR, args );
-                    }
-                }
-                else
-                {
-                    i += text2fci( &string[i + 1], &hexdigit, &hexpower );
-                    if ( hexpower < 7 )
-                    {
-                        plP_hex2fci( hexdigit, hexpower, &fci );
-                        skip = 1;
-
-                        args->n_fci       = fci;
-                        args->n_ctrl_char = PLTEXT_FONTCHANGE;
-                        plP_esc( PLESC_CONTROL_CHAR, args );
-                    }
-                }
-                break;
-
-            case 'f': // Deprecated Hershey-style font change
-            case 'F': // Deprecated Hershey-style font change
-                // We implement an approximate response here so that
-                // reasonable results are obtained for unicode fonts,
-                // but this method is deprecated and the #<nnn> or
-                // #<command string> methods should be used instead
-                // to change unicode fonts in mid-string.
-                //
-                fci = PL_FCI_MARK;
-                if ( string[i + 2] == 'n' )
-                {
-                    // medium, upright, sans-serif
-                    plP_hex2fci( PL_FCI_SANS, PL_FCI_FAMILY, &fci );
-                }
-                else if ( string[i + 2] == 'r' )
-                {
-                    // medium, upright, serif
-                    plP_hex2fci( PL_FCI_SERIF, PL_FCI_FAMILY, &fci );
-                }
-                else if ( string[i + 2] == 'i' )
-                {
-                    // medium, italic, serif
-                    plP_hex2fci( PL_FCI_ITALIC, PL_FCI_STYLE, &fci );
-                    plP_hex2fci( PL_FCI_SERIF, PL_FCI_FAMILY, &fci );
-                }
-                else if ( string[i + 2] == 's' )
-                {
-                    // medium, upright, script
-                    plP_hex2fci( PL_FCI_SCRIPT, PL_FCI_FAMILY, &fci );
-                }
-                else
-                    fci = PL_FCI_IMPOSSIBLE;
-
-                if ( fci != PL_FCI_IMPOSSIBLE )
-                {
-                    i   += 2;
-                    skip = 1;
-
-                    args->n_fci       = fci;
-                    args->n_ctrl_char = PLTEXT_FONTCHANGE;
-                    plP_esc( PLESC_CONTROL_CHAR, args );
-                }
-                break;
-
-            case 'g': // Greek font
-            case 'G': // Greek font
-                // Get the index in the lookup table
-                // 527 = upper case alpha displacement in Hershey Table
-                // 627 = lower case alpha displacement in Hershey Table
-                //
-                ig = plP_strpos( plP_greek_mnemonic, string[i + 2] );
-                if ( ig >= 0 )
-                {
-                    if ( ig >= 24 )
-                        ig = ig + 100 - 24;
-                    ig = ig + 527;
-                    // Follow pldeco in plsym.c which for
-                    // lower case epsilon, theta, and phi
-                    // substitutes (684, 685, and 686) for
-                    // (631, 634, and 647)
-                    if ( ig == 631 )
-                        ig = 684;
-                    else if ( ig == 634 )
-                        ig = 685;
-                    else if ( ig == 647 )
-                        ig = 686;
-                    idx  = plhershey2unicode( ig );
-                    i   += 2;
-                    skip = 1; // skip is set if we have copied something
-                              // into the unicode table
-
-                    if ( 0 <= idx && idx <= number_of_entries_in_hershey_to_unicode_table )
-                        args->n_char = hershey_to_unicode_lookup_table[idx].Unicode;
-                    else
-                        args->n_char = (PLUNICODE) 0x00;
-
-                    pldebug( "alternate_unicode_processing", "ig, idx, args->n_char = %d, %d, %#x\n", ig, idx, args->n_char );
-                    plP_esc( PLESC_TEXT_CHAR, args );
-                }
-                else
-                {
-                    // Use "unknown" unicode character if string[i+2]
-                    // is not in the Greek array.
-                    i   += 2;
-                    skip = 1;    // skip is set if we have copied something
-                                 // into the unicode table
-
-                    args->n_char = (PLUNICODE) 0x00;
-                    plP_esc( PLESC_TEXT_CHAR, args );
-                }
-                break;
-
-            case 'u':
-                args->n_ctrl_char = PLTEXT_SUPERSCRIPT;
-                plP_esc( PLESC_CONTROL_CHAR, args );
-                i   += 1;
-                skip = 1;
-                break;
-
-            case 'd':
-                args->n_ctrl_char = PLTEXT_SUBSCRIPT;
-                plP_esc( PLESC_CONTROL_CHAR, args );
-                i   += 1;
-                skip = 1;
-                break;
-            case 'b':
-                args->n_ctrl_char = PLTEXT_BACKCHAR;
-                plP_esc( PLESC_CONTROL_CHAR, args );
-                i   += 1;
-                skip = 1;
-                break;
-            case '+':
-                args->n_ctrl_char = PLTEXT_OVERLINE;
-                plP_esc( PLESC_CONTROL_CHAR, args );
-                i   += 1;
-                skip = 1;
-                break;
-            case '-':
-                args->n_ctrl_char = PLTEXT_UNDERLINE;
-                plP_esc( PLESC_CONTROL_CHAR, args );
-                i   += 1;
-                skip = 1;
-                break;
-            }
-        }
-
-        if ( skip == 0 )
-        {
-            PLUNICODE     unichar = 0;
-#ifdef HAVE_LIBUNICODE
-            PLCHAR_VECTOR ptr = unicode_get_utf8( string + i, &unichar );
-#else
-            PLCHAR_VECTOR ptr = utf8_to_ucs4( string + i, &unichar );
-#endif
-            if ( ptr == NULL )
-            {
-                char buf[BUFFER_SIZE];
-                char tmpstring[31];
-                strncpy( tmpstring, string, 30 );
-                tmpstring[30] = '\0';
-                snprintf( buf, BUFFER_SIZE, "UTF-8 string is malformed: %s%s",
-                    tmpstring, strlen( string ) > 30 ? "[...]" : "" );
-                plabort( buf );
-                return;
-            }
-            i += (int) ( ptr - ( string + i ) - 1 );
-
-            // Search for escesc (an unescaped escape) in the input
-            // string and adjust unicode_buffer accordingly).
-            //
-            if ( string[i] == esc && string[i + 1] == esc )
-            {
-                i++;
-                args->n_char = (PLUNICODE) esc;
-            }
-            else
-            {
-                args->n_char = unichar;
-            }
-            plP_esc( PLESC_TEXT_CHAR, args );
-        }
-    }
-
-    // Signal the end of text string processing to the driver
-    plP_esc( PLESC_END_TEXT, args );
-}
-
-static
-void encode_unicode( PLCHAR_VECTOR string, EscText *args )
-{
-    char          esc;
-    PLINT         ig;
-    PLUNICODE     fci;
-    PLUNICODE     orig_fci;
-    unsigned char hexdigit, hexpower;
-    size_t        i, j, len;
-    int           skip;
-    PLUNICODE     code;
-    int           idx = -1;
-
-    // Initialize to an empty string
-    args->unicode_array_len = 0;
-
-    // this length is only used in the loop
-    // counter, we will work out the length of
-    // the unicode string as we go
-    len = strlen( string );
-
-    // If the string is empty, return now
-    if ( len == 0 )
-        return;
-
-    // Get the current escape character
-    plgesc( &esc );
-
-    // At this stage we will do some translations into unicode, like
-    // conversion to Greek , and will save other translations such as
-    // superscript for the driver to do later on. As we move through
-    // the string and do the translations, we will get
-    // rid of the esc character sequence, just replacing it with
-    // unicode.
-    //
-
-    // Obtain FCI (font characterization integer) for start of string.
-    plgfci( &fci );
-    orig_fci = fci;
-
-    // Walk through the string, and convert some stuff to unicode on the fly
-    for ( j = i = 0; i < len; i++ )
-    {
-        skip = 0;
-
-        if ( string[i] == esc )
-        {
-            // We have an escape character, so we need to look at the
-            // next character to determine what action needs to be taken
-            switch ( string[i + 1] )
-            {
-            case '(': // hershey code
-                i  += ( 2 + text2num( &string[i + 2], ')', &code ) );
-                idx = plhershey2unicode( (int) code );
-                if ( 0 <= idx && idx <= number_of_entries_in_hershey_to_unicode_table )
-                    args->unicode_array[j++] = hershey_to_unicode_lookup_table[idx].Unicode;
-                else
-                    args->unicode_array[j++] = (PLUNICODE) 0x00;
-
-                pldebug( "encode_unicode", "code, idx, args->unicode_array[j] = %d, %d, %#x\n", (int) code, idx, args->unicode_array[j] );
-
-                // if unicode_buffer[j-1] corresponds to the escape
-                // character must unescape it by appending one more.
-                // This will probably always be necessary since it is
-                // likely unicode_buffer will always have to contain
-                // escape characters that are interpreted by the device
-                // driver.
-                //
-                if ( args->unicode_array[j - 1] == (PLUNICODE) esc )
-                    args->unicode_array[j++] = (PLUNICODE) esc;
-                j--;
-                skip = 1;
-                break;
-
-            case '[': // unicode
-                i += ( 2 + text2num( &string[i + 2], ']', &code ) );
-                args->unicode_array[j++] = code;
-
-                // if unicode_buffer[j-1] corresponds to the escape
-                // character must unescape it by appending one more.
-                // This will probably always be necessary since it is
-                // likely unicode_buffer will always have to contain
-                // escape characters that are interpreted by the device
-                // driver.
-                //
-                if ( args->unicode_array[j - 1] == (PLUNICODE) esc )
-                    args->unicode_array[j++] = (PLUNICODE) esc;
-                j--;
-                skip = 1;
-                break;
-
-            case '<': // change font
-                if ( '0' <= string[i + 2] && string[i + 2] <= '9' )
-                {
-                    i += 2 + text2num( &string[i + 2], '>', &code );
-                    if ( code & PL_FCI_MARK )
-                    {
-                        // code is a complete FCI (font characterization
-                        // integer): change FCI to this value.
-                        //
-                        fci = code;
-                        args->unicode_array[j] = fci;
-                        skip = 1;
-                    }
-                    else
-                    {
-                        // code is not complete FCI. Change
-                        // FCI with hex power in rightmost hex
-                        // digit and hex digit value in second rightmost
-                        // hex digit.
-                        //
-                        hexdigit = ( code >> 4 ) & PL_FCI_HEXDIGIT_MASK;
-                        hexpower = code & PL_FCI_HEXPOWER_MASK;
-                        plP_hex2fci( hexdigit, hexpower, &fci );
-                        args->unicode_array[j] = fci;
-                        skip = 1;
-                    }
-                }
-                else
-                {
-                    i += text2fci( &string[i + 1], &hexdigit, &hexpower );
-                    if ( hexpower < 7 )
-                    {
-                        plP_hex2fci( hexdigit, hexpower, &fci );
-                        args->unicode_array[j] = fci;
-                        skip = 1;
-                    }
-                }
-                break;
-
-            case 'f': // Deprecated Hershey-style font change
-            case 'F': // Deprecated Hershey-style font change
-                // We implement an approximate response here so that
-                // reasonable results are obtained for unicode fonts,
-                // but this method is deprecated and the #<nnn> or
-                // #<command string> methods should be used instead
-                // to change unicode fonts in mid-string.
-                //
-                fci = PL_FCI_MARK;
-                if ( string[i + 2] == 'n' )
-                {
-                    // medium, upright, sans-serif
-                    plP_hex2fci( PL_FCI_SANS, PL_FCI_FAMILY, &fci );
-                }
-                else if ( string[i + 2] == 'r' )
-                {
-                    // medium, upright, serif
-                    plP_hex2fci( PL_FCI_SERIF, PL_FCI_FAMILY, &fci );
-                }
-                else if ( string[i + 2] == 'i' )
-                {
-                    // medium, italic, serif
-                    plP_hex2fci( PL_FCI_ITALIC, PL_FCI_STYLE, &fci );
-                    plP_hex2fci( PL_FCI_SERIF, PL_FCI_FAMILY, &fci );
-                }
-                else if ( string[i + 2] == 's' )
-                {
-                    // medium, upright, script
-                    plP_hex2fci( PL_FCI_SCRIPT, PL_FCI_FAMILY, &fci );
-                }
-                else
-                    fci = PL_FCI_IMPOSSIBLE;
-
-                if ( fci != PL_FCI_IMPOSSIBLE )
-                {
-                    i += 2;
-                    args->unicode_array[j] = fci;
-                    skip = 1;
-                }
-                break;
-
-            case 'g': // Greek font
-            case 'G': // Greek font
-                // Get the index in the lookup table
-                // 527 = upper case alpha displacement in Hershey Table
-                // 627 = lower case alpha displacement in Hershey Table
-                //
-
-                ig = plP_strpos( plP_greek_mnemonic, string[i + 2] );
-                if ( ig >= 0 )
-                {
-                    if ( ig >= 24 )
-                        ig = ig + 100 - 24;
-                    ig = ig + 527;
-                    // Follow pldeco in plsym.c which for
-                    // lower case epsilon, theta, and phi
-                    // substitutes (684, 685, and 686) for
-                    // (631, 634, and 647)
-                    if ( ig == 631 )
-                        ig = 684;
-                    else if ( ig == 634 )
-                        ig = 685;
-                    else if ( ig == 647 )
-                        ig = 686;
-                    idx = (int) plhershey2unicode( ig );
-                    if ( 0 <= idx && idx <= number_of_entries_in_hershey_to_unicode_table )
-                        args->unicode_array[j++] = hershey_to_unicode_lookup_table[idx].Unicode;
-                    else
-                        args->unicode_array[j++] = (PLUNICODE) 0x00;
-
-                    pldebug( "encode_unicode", "ig, idx, args->unicode_array[j] = %d, %d, %#x\n", (int) ig, idx, args->unicode_array[j] );
-
-                    i   += 2;
-                    skip = 1; // skip is set if we have copied something
-                              // into the unicode table
-                }
-                else
-                {
-                    // Use "unknown" unicode character if string[i+2]
-                    // is not in the Greek array.
-                    args->unicode_array[j++] = (PLUNICODE) 0x00;
-                    i   += 2;
-                    skip = 1;   // skip is set if we have copied something
-                                // into  the unicode table
-                }
-                j--;
-                break;
-            }
-        }
-
-        if ( skip == 0 )
-        {
-            PLUNICODE     unichar = 0;
-#ifdef HAVE_LIBUNICODE
-            PLCHAR_VECTOR ptr = unicode_get_utf8( string + i, &unichar );
-#else
-            PLCHAR_VECTOR ptr = utf8_to_ucs4( string + i, &unichar );
-#endif
-            if ( ptr == NULL )
-            {
-                char buf[BUFFER_SIZE];
-                char tmpstring[31];
-                strncpy( tmpstring, string, 30 );
-                tmpstring[30] = '\0';
-                snprintf( buf, BUFFER_SIZE, "UTF-8 string is malformed: %s%s",
-                    tmpstring, strlen( string ) > 30 ? "[...]" : "" );
-                plabort( buf );
-                return;
-            }
-            args->unicode_array[j] = unichar;
-            i += (int) ( ptr - ( string + i ) - 1 );
-
-            // Search for escesc (an unescaped escape) in the input
-            // string and adjust unicode_buffer accordingly).
-            //
-            if ( args->unicode_array[j] == (PLUNICODE) esc
-                 && string[i + 1] == esc )
-            {
-                i++;
-                args->unicode_array[++j] = (PLUNICODE) esc;
-            }
-        }
-        j++;
-    }
-
-    // Much easier to set the length than
-    // work it out later :-)
-    args->unicode_array_len = (short unsigned int) j;
-}
-
-static PLUNICODE unicode_buffer_static[1024];
-
 void
 plP_text( PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y,
           PLINT refx, PLINT refy, PLCHAR_VECTOR string )
@@ -1195,66 +546,7 @@ plP_text( PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y,
     if ( string == NULL )
         return;
 
-    if ( plsc->dev_text ) // Does the device render it's own text ?
-    {
-        EscText args;
-
-        args.text_type = PL_STRING_TEXT;
-        args.base      = base;
-        args.just      = just;
-        args.xform     = xform;
-        args.x         = x;
-        args.y         = y;
-        args.refx      = refx;
-        args.refy      = refy;
-
-        // Always store the string passed by the caller, even for unicode
-        // enabled drivers.  The plmeta driver will use this field to store
-        // the string data in the metafile.
-        args.string = string;
-
-        // Does the device also understand unicode?
-        if ( plsc->dev_unicode )
-        {
-            if ( plsc->alt_unicode )
-            {
-                // We are using the alternate unicode processing
-                alternate_unicode_processing( string, &args );
-
-                // All text processing is done, so we can exit
-                return;
-            }
-            else
-            {
-                // Setup storage for the unicode array and
-                // process the string to generate the unicode
-                // representation of it.
-                args.unicode_array = unicode_buffer_static;
-                encode_unicode( string, &args );
-
-                len = (size_t) args.unicode_array_len;
-            }
-        }
-        else
-        {
-            //  We are using the char array, NULL out the unicode part
-            args.unicode_array     = NULL;
-            args.unicode_array_len = 0;
-
-            len = strlen( string );
-        }
-
-        // If the string is not empty, ask the driver to display it
-        if ( len > 0 )
-            plP_esc( PLESC_HAS_TEXT, &args );
-
-#ifndef DEBUG_TEXT
-    }
-    else
-    {
-#endif
-        plstr( base, xform, refx, refy, string );
-    }
+    plstr(string ,0, base, just, xform, x, y, refx, refy);
 }
 
 // convert utf8 string to ucs4 unichar
@@ -1328,54 +620,41 @@ utf8_to_ucs4( PLCHAR_VECTOR ptr, PLUNICODE *unichar )
 
 // convert ucs4 unichar to utf8 string
 int
-ucs4_to_utf8( PLUNICODE unichar, char *ptr )
+ucs4_to_utf8( unsigned char* utf8, PLUNICODE unichar )
 {
-    unsigned char *tmp;
     int           len;
-
-    tmp = (unsigned char *) ptr;
 
     if ( ( unichar & 0xffff80 ) == 0 ) // single byte
     {
-        *tmp = (unsigned char) unichar;
-        tmp++;
+        *utf8++ = (unsigned char) unichar;
         len = 1;
     }
     else if ( ( unichar & 0xfff800 ) == 0 ) // two bytes
     {
-        *tmp = (unsigned char) 0xc0 | (unsigned char) ( unichar >> 6 );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( unichar & (PLUINT) 0x3f ) );
-        tmp++;
+        *utf8++ = (unsigned char) 0xc0 | (unsigned char) ( unichar >> 6 );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( unichar & (PLUINT) 0x3f ) );
         len = 2;
     }
     else if ( ( unichar & 0xff0000 ) == 0 ) // three bytes
     {
-        *tmp = (unsigned char) 0xe0 | (unsigned char) ( unichar >> 12 );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | ( (unsigned char) unichar & 0x3f ) );
-        tmp++;
+        *utf8++ = (unsigned char) 0xe0 | (unsigned char) ( unichar >> 12 );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
+        *utf8++ = (unsigned char) ( 0x80 | ( (unsigned char) unichar & 0x3f ) );
         len = 3;
     }
     else if ( ( unichar & 0xe0000 ) == 0 ) // four bytes
     {
-        *tmp = (unsigned char) 0xf0 | (unsigned char) ( unichar >> 18 );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 12 ) & 0x3f ) );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
-        tmp++;
-        *tmp = (unsigned char) ( 0x80 | (unsigned char) ( unichar & 0x3f ) );
-        tmp++;
+        *utf8++ = (unsigned char) 0xf0 | (unsigned char) ( unichar >> 18 );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 12 ) & 0x3f ) );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( ( unichar >> 6 ) & 0x3f ) );
+        *utf8++ = (unsigned char) ( 0x80 | (unsigned char) ( unichar & 0x3f ) );
         len = 4;
     }
     else  // Illegal coding
     {
         len = 0;
     }
-    *tmp = '\0';
+    *utf8 = '\0';
 
     return len;
 }
@@ -1405,37 +684,34 @@ grpolyline( short *x, short *y, PLINT npts )
 }
 
 static void
-grfill( short *x, short *y, PLINT npts )
-{
-    char * save_locale;
-    plsc->dev_npts = npts;
-    plsc->dev_x    = x;
-    plsc->dev_y    = y;
+grfill(short *x, short *y, PLINT npts) {
+	char * save_locale;
+	plsc->dev_npts = npts;
+	plsc->dev_x = x;
+	plsc->dev_y = y;
 
-    save_locale = plsave_set_locale();
-    if ( !plsc->stream_closed )
-    {
-        ( *plsc->dispatch_table->pl_esc )( (struct PLStream_struct *) plsc,
-            PLESC_FILL, NULL );
-    }
-    plrestore_locale( save_locale );
+	save_locale = plsave_set_locale();
+	if (!plsc->stream_closed) {
+		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
+				PLESC_FILL, NULL);
+	}
+	plrestore_locale(save_locale);
 }
 
 static void
-grgradient( short *x, short *y, PLINT npts )
-{
-    char * save_locale;
-    plsc->dev_npts = npts;
-    plsc->dev_x    = x;
-    plsc->dev_y    = y;
+grpolyfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath) {
+	char * save_locale;
+	plsc->dev_npath = npath;
+	plsc->dev_pathx = x;
+	plsc->dev_pathy = y;
+	plsc->dev_pathnxy=npts;
 
-    save_locale = plsave_set_locale();
-    if ( !plsc->stream_closed )
-    {
-        ( *plsc->dispatch_table->pl_esc )( (struct PLStream_struct *) plsc,
-            PLESC_GRADIENT, NULL );
-    }
-    plrestore_locale( save_locale );
+	save_locale = plsave_set_locale();
+	if (!plsc->stream_closed) {
+		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
+				PLESC_FILL_MULTIPATH, NULL);
+	}
+	plrestore_locale(save_locale);
 }
 
 //--------------------------------------------------------------------------
@@ -1521,104 +797,6 @@ difilt( PLINT *xsc, PLINT *ysc, PLINT npts,
         *clpymi = plsc->phyymi;
         *clpyma = plsc->phyyma;
     }
-}
-
-
-// Function is unused except for commented out image code
-// If / when that is fixed, then reinstate this function.
-// Needs a prototype and the casting fixed.
-//
-// void
-// sdifilt( short *xscl, short *yscl, PLINT npts,
-//          PLINT *clpxmi, PLINT *clpxma, PLINT *clpymi, PLINT *clpyma )
-// {
-//     int   i;
-//     short x, y;
-
-// // Map meta coordinates to physical coordinates
-
-//     if ( plsc->difilt & PLDI_MAP )
-//     {
-//         for ( i = 0; i < npts; i++ )
-//         {
-//             xscl[i] = (PLINT) ( plsc->dimxax * xscl[i] + plsc->dimxb );
-//             yscl[i] = (PLINT) ( plsc->dimyay * yscl[i] + plsc->dimyb );
-//         }
-//     }
-
-// // Change orientation
-
-//     if ( plsc->difilt & PLDI_ORI )
-//     {
-//         for ( i = 0; i < npts; i++ )
-//         {
-//             x       = (PLINT) ( plsc->dioxax * xscl[i] + plsc->dioxay * yscl[i] + plsc->dioxb );
-//             y       = (PLINT) ( plsc->dioyax * xscl[i] + plsc->dioyay * yscl[i] + plsc->dioyb );
-//             xscl[i] = x;
-//             yscl[i] = y;
-//         }
-//     }
-
-// // Change window into plot space
-
-//     if ( plsc->difilt & PLDI_PLT )
-//     {
-//         for ( i = 0; i < npts; i++ )
-//         {
-//             xscl[i] = (PLINT) ( plsc->dipxax * xscl[i] + plsc->dipxb );
-//             yscl[i] = (PLINT) ( plsc->dipyay * yscl[i] + plsc->dipyb );
-//         }
-//     }
-
-// // Change window into device space and set clip limits
-// // (this is the only filter that modifies them)
-
-//     if ( plsc->difilt & PLDI_DEV )
-//     {
-//         for ( i = 0; i < npts; i++ )
-//         {
-//             xscl[i] = (PLINT) ( plsc->didxax * xscl[i] + plsc->didxb );
-//             yscl[i] = (PLINT) ( plsc->didyay * yscl[i] + plsc->didyb );
-//         }
-//         *clpxmi = (PLINT) ( plsc->diclpxmi );
-//         *clpxma = (PLINT) ( plsc->diclpxma );
-//         *clpymi = (PLINT) ( plsc->diclpymi );
-//         *clpyma = (PLINT) ( plsc->diclpyma );
-//     }
-//     else
-//     {
-//         *clpxmi = plsc->phyxmi;
-//         *clpxma = plsc->phyxma;
-//         *clpymi = plsc->phyymi;
-//         *clpyma = plsc->phyyma;
-//     }
-// }
-
-//--------------------------------------------------------------------------
-// void difilt_clip
-//
-// This provides the transformed text clipping region for the benefit of
-// those drivers that render their own text.
-//--------------------------------------------------------------------------
-
-void
-difilt_clip( PLINT *x_coords, PLINT *y_coords )
-{
-    PLINT x1c, x2c, y1c, y2c;
-
-    x1c         = plsc->clpxmi;
-    y1c         = plsc->clpymi;
-    x2c         = plsc->clpxma;
-    y2c         = plsc->clpyma;
-    x_coords[0] = x1c;
-    x_coords[1] = x1c;
-    x_coords[2] = x2c;
-    x_coords[3] = x2c;
-    y_coords[0] = y1c;
-    y_coords[1] = y2c;
-    y_coords[2] = y2c;
-    y_coords[3] = y1c;
-    difilt( x_coords, y_coords, 4, &x1c, &x2c, &y1c, &y2c );
 }
 
 
@@ -2267,11 +1445,6 @@ pllib_init()
         return;
     lib_initialized = 1;
 
-#ifdef ENABLE_DYNDRIVERS
-// Create libltdl resources
-    lt_dlinit();
-#endif
-
 // Initialize the dispatch table with the info from the static drivers table
 // and the available dynamic drivers.
 
@@ -2413,8 +1586,9 @@ c_plinit( void )
 
 // Load fonts
 
-    plsc->cfont = 1;
-    plfntld( initfont );
+    plsc->currentFont = 3;
+	printf("Warning, using /usr/local/share/gnudatalanguage/hersh1.chr!\n");
+	hersheyFontLoad("/usr/local/share/gnudatalanguage/hersh1.chr");
 
 // Set up subpages
 
@@ -2442,9 +1616,6 @@ c_plinit( void )
 
     pllsty( 1 );
     plpsty( 0 );
-
-    // Set up default arrow style;
-    plsvect( NULL, NULL, 6, 0 );
 
 // Set clip limits.
 
@@ -2492,31 +1663,7 @@ c_plend( void )
             c_plend1();
         }
     }
-    plfontrel();
-#ifdef ENABLE_DYNDRIVERS
-// Release the libltdl resources
-    lt_dlexit();
-// Free up memory allocated to the dispatch tables
-    for ( i = 0; i < npldynamicdevices; i++ )
-    {
-        free_mem( loadable_device_list[i].devnam );
-        free_mem( loadable_device_list[i].description );
-        free_mem( loadable_device_list[i].drvnam );
-        free_mem( loadable_device_list[i].tag );
-    }
-    free_mem( loadable_device_list );
-    for ( i = 0; i < nloadabledrivers; i++ )
-    {
-        free_mem( loadable_driver_list[i].drvnam );
-    }
-    free_mem( loadable_driver_list );
-    for ( i = nplstaticdevices; i < npldrivers; i++ )
-    {
-        free_mem( dispatch_table[i]->pl_MenuStr );
-        free_mem( dispatch_table[i]->pl_DevName );
-        free_mem( dispatch_table[i] );
-    }
-#endif
+
     for ( i = 0; i < nplstaticdevices; i++ )
     {
         free_mem( dispatch_table[i] );
@@ -2572,11 +1719,6 @@ c_plend1( void )
         free_mem( plsc->plserver );
     if ( plsc->auto_path )
         free_mem( plsc->auto_path );
-
-    if ( plsc->arrow_x )
-        free_mem( plsc->arrow_x );
-    if ( plsc->arrow_y )
-        free_mem( plsc->arrow_y );
 
     if ( plsc->timefmt )
         free_mem( plsc->timefmt );
@@ -2870,8 +2012,6 @@ pllib_devinit()
 
     plSelectDev();
 
-    plLoadDriver();
-
 // offset by one since table is zero-based, but input list is not
     plsc->dispatch_table = dispatch_table[plsc->device - 1];
 }
@@ -2962,47 +2102,7 @@ int plInBuildTree()
     return inBuildTree;
 }
 
-#ifdef ENABLE_DYNDRIVERS
-
-PLCHAR_VECTOR
-plGetDrvDir()
-{
-    PLCHAR_VECTOR drvdir;
-
-// Get drivers directory in PLPLOT_DRV_DIR or DRV_DIR,
-//  on this order
-//
-
-    if ( plInBuildTree() == 1 )
-    {
-        drvdir = BUILD_DIR "/drivers";
-        pldebug( "plGetDrvDir", "Using %s as the driver directory.\n", drvdir );
-    }
-    else
-    {
-        pldebug( "plGetDrvDir", "Trying to read env var PLPLOT_DRV_DIR\n" );
-        drvdir = getenv( "PLPLOT_DRV_DIR" );
-
-        if ( drvdir == NULL )
-        {
-            pldebug( "plGetDrvDir",
-                "Will use drivers dir: " DRV_DIR "\n" );
-            drvdir = DRV_DIR;
-        }
-    }
-
-    return drvdir;
-}
-
-#endif
-
-
-//--------------------------------------------------------------------------
-// void plInitDispatchTable()
-//
-// ...
-//--------------------------------------------------------------------------
-
+// for sorting dispatch table
 static int plDispatchSequencer( const void *p1, const void *p2 )
 {
     const PLDispatchTable* t1 = *(const PLDispatchTable * const *) p1;
@@ -3019,103 +2119,10 @@ plInitDispatchTable()
 {
     int n;
 
-#ifdef ENABLE_DYNDRIVERS
-    char          buf[BUFFER2_SIZE];
-    PLCHAR_VECTOR drvdir;
-    char          *devnam, *devdesc, *devtype, *driver, *tag, *seqstr;
-    int           seq;
-    int           i, j, driver_found, done = 0;
-    FILE          *fp_drvdb   = NULL;
-    DIR           * dp_drvdir = NULL;
-    struct dirent * entry;
-    // lt_dlhandle dlhand;
-
-    // Make sure driver counts are zeroed
-    npldynamicdevices = 0;
-    nloadabledrivers  = 0;
-
-// Open a temporary file in which all the plD_DEVICE_INFO_<driver> strings
-// will be stored
-    fp_drvdb = pl_create_tempfile( NULL );
-    if ( fp_drvdb == NULL )
-    {
-        plabort( "plInitDispatchTable: Could not open temporary file" );
-        return;
-    }
-
-// Open the drivers directory
-    drvdir    = plGetDrvDir();
-    dp_drvdir = opendir( drvdir );
-    if ( dp_drvdir == NULL )
-    {
-        fclose( fp_drvdb );
-        plabort( "plInitDispatchTable: Could not open drivers directory" );
-        return;
-    }
-
-// Loop over each entry in the drivers directory
-
-    pldebug( "plInitDispatchTable", "Scanning dyndrivers dir\n" );
-    while ( ( entry = readdir( dp_drvdir ) ) != NULL )
-    {
-        char   * name = entry->d_name;
-        // Suffix .driver_info has a length of 12 letters.
-        size_t len = strlen( name ) - 12;
-
-        pldebug( "plInitDispatchTable",
-            "Consider file %s\n", name );
-
-// Only consider entries that have the ".driver_info" suffix
-        if ( ( len > 0 ) && ( strcmp( name + len, ".driver_info" ) == 0 ) )
-        {
-            char path[PLPLOT_MAX_PATH];
-            FILE * fd;
-
-// Open the driver's info file
-            snprintf( path, PLPLOT_MAX_PATH, "%s/%s", drvdir, name );
-            fd = fopen( path, "r" );
-            if ( fd == NULL )
-            {
-                closedir( dp_drvdir );
-                fclose( fp_drvdb );
-                snprintf( buf, BUFFER2_SIZE,
-                    "plInitDispatchTable: Could not open driver info file %s\n",
-                    name );
-                plabort( buf );
-                return;
-            }
-
-// Each line in the <driver>.driver_info file corresponds to a specific device.
-// Write it to the drivers db file and take care of leading newline
-// character
-
-            pldebug( "plInitDispatchTable",
-                "Opened driver info file %s\n", name );
-            while ( fgets( buf, BUFFER2_SIZE, fd ) != NULL )
-            {
-                fprintf( fp_drvdb, "%s", buf );
-                if ( buf [strlen( buf ) - 1] != '\n' )
-                    fprintf( fp_drvdb, "\n" );
-                npldynamicdevices++;
-            }
-            fclose( fd );
-        }
-    }
-
-// Make sure that the temporary file containing the drivers database
-// is ready to read and close the directory handle
-    fflush( fp_drvdb );
-    closedir( dp_drvdir );
-
-#endif
-
 // Allocate space for the dispatch table.
     if ( ( dispatch_table = (PLDispatchTable **)
                             malloc( (size_t) ( nplstaticdevices + npldynamicdevices ) * sizeof ( PLDispatchTable * ) ) ) == NULL )
     {
-#ifdef ENABLE_DYNDRIVERS
-        fclose( fp_drvdb );
-#endif
         plexit( "plInitDispatchTable: Insufficient memory" );
     }
 
@@ -3128,9 +2135,6 @@ plInitDispatchTable()
     {
         if ( ( dispatch_table[n] = (PLDispatchTable *) malloc( sizeof ( PLDispatchTable ) ) ) == NULL )
         {
-#ifdef ENABLE_DYNDRIVERS
-            fclose( fp_drvdb );
-#endif
             plexit( "plInitDispatchTable: Insufficient memory" );
         }
 
@@ -3142,100 +2146,6 @@ plInitDispatchTable()
         ( *static_device_initializers[n] )( dispatch_table[n] );
     }
     npldrivers = nplstaticdevices;
-
-#ifdef ENABLE_DYNDRIVERS
-
-// Allocate space for the device and driver specs.  We may not use all of
-// these driver descriptors, but we obviously won't need more drivers than
-// devices...
-    if ( ( ( loadable_device_list = malloc( (size_t) npldynamicdevices * sizeof ( PLLoadableDevice ) ) ) == NULL ) ||
-         ( ( loadable_driver_list = malloc( (size_t) npldynamicdevices * sizeof ( PLLoadableDriver ) ) ) == NULL ) )
-    {
-        fclose( fp_drvdb );
-        plexit( "plInitDispatchTable: Insufficient memory" );
-    }
-
-    rewind( fp_drvdb );
-
-    i    = 0;
-    done = !( i < npldynamicdevices );
-    while ( !done )
-    {
-        char *p = fgets( buf, BUFFER2_SIZE, fp_drvdb );
-
-        if ( p == 0 )
-        {
-            done = 1;
-            continue;
-        }
-
-        devnam  = strtok( buf, ":" );
-        devdesc = strtok( 0, ":" );
-        devtype = strtok( 0, ":" );
-        driver  = strtok( 0, ":" );
-        seqstr  = strtok( 0, ":" );
-        tag     = strtok( 0, "\n" );
-
-        if ( devnam == NULL || devdesc == NULL || devtype == NULL || driver == NULL ||
-             seqstr == NULL || tag == NULL )
-        {
-            continue; // Ill-formatted line, most probably not a valid driver information file
-        }
-
-        seq = atoi( seqstr );
-
-        n = npldrivers++;
-
-        if ( ( dispatch_table[n] = malloc( sizeof ( PLDispatchTable ) ) ) == NULL )
-        {
-            fclose( fp_drvdb );
-            plexit( "plInitDispatchTable: Insufficient memory" );
-        }
-
-        // Initialize to zero to force all function pointers to NULL.  That way optional capabilities
-        // (e.g. wait for user input) do not need to be explicitly set to NULL in the driver's
-        // initialization function nor do we need to do it in this function.
-        memset( dispatch_table[n], 0, sizeof ( PLDispatchTable ) );
-
-        // Fill in the dispatch table entries.
-        dispatch_table[n]->pl_MenuStr = plstrdup( devdesc );
-        dispatch_table[n]->pl_DevName = plstrdup( devnam );
-        dispatch_table[n]->pl_type    = atoi( devtype );
-        dispatch_table[n]->pl_seq     = seq;
-
-        // Add a record to the loadable device list
-        loadable_device_list[i].devnam      = plstrdup( devnam );
-        loadable_device_list[i].description = plstrdup( devdesc );
-        loadable_device_list[i].drvnam      = plstrdup( driver );
-        loadable_device_list[i].tag         = plstrdup( tag );
-
-        // Now see if this driver has been seen before.  If not, add a driver
-        // entry for it.
-        driver_found = 0;
-        for ( j = 0; j < nloadabledrivers; j++ )
-            if ( strcmp( driver, loadable_driver_list[j].drvnam ) == 0 )
-            {
-                driver_found = 1;
-                break;
-            }
-
-        if ( !driver_found )
-        {
-            loadable_driver_list[nloadabledrivers].drvnam = plstrdup( driver );
-            loadable_driver_list[nloadabledrivers].dlhand = 0;
-            nloadabledrivers++;
-        }
-
-        loadable_device_list[i].drvidx = j;
-
-        // Get ready for next loadable device spec
-        i++;
-    }
-
-// RML: close fp_drvdb
-    fclose( fp_drvdb );
-
-#endif
 
     if ( npldrivers == 0 )
     {
@@ -3360,136 +2270,6 @@ plSelectDev()
     }
     plsc->device = dev;
     strcpy( plsc->DevName, dispatch_table[dev - 1]->pl_DevName );
-}
-
-//--------------------------------------------------------------------------
-// void plLoadDriver()
-//
-// Make sure the selected driver is loaded.  Static drivers are already
-// loaded, but if the user selected a dynamically loadable driver, we may
-// have to take care of that now.
-//--------------------------------------------------------------------------
-
-static void
-plLoadDriver( void )
-{
-#ifdef ENABLE_DYNDRIVERS
-    int  i, drvidx;
-    char sym[BUFFER_SIZE];
-    char *tag;
-
-    int  n = plsc->device - 1;
-    PLDispatchTable  *dev    = dispatch_table[n];
-    PLLoadableDriver *driver = 0;
-
-// If the dispatch table is already filled in, then either the device was
-// linked in statically, or else perhaps it was already loaded.  In either
-// case, we have nothing left to do.
-    if ( dev->pl_init )
-        return;
-
-    pldebug( "plLoadDriver", "Device not loaded!\n" );
-
-// Now search through the list of loadable devices, looking for the record
-// that corresponds to the requested device.
-    for ( i = 0; i < npldynamicdevices; i++ )
-        if ( strcmp( dev->pl_DevName, loadable_device_list[i].devnam ) == 0 )
-            break;
-
-// If we couldn't find such a record, then there is some sort of internal
-// logic flaw since plSelectDev is supposed to only select a valid device.
-//
-    if ( i == npldynamicdevices )
-    {
-        fprintf( stderr, "No such device: %s.\n", dev->pl_DevName );
-        plexit( "plLoadDriver detected device logic screwup" );
-    }
-
-// Note the device tag, and the driver index. Note that a given driver could
-// supply multiple devices, each with a unique tag to distinguish the driver
-// entry points for the different supported devices.
-    tag    = loadable_device_list[i].tag;
-    drvidx = loadable_device_list[i].drvidx;
-
-    pldebug( "plLoadDriver", "tag=%s, drvidx=%d\n", tag, drvidx );
-
-    driver = &loadable_driver_list[drvidx];
-
-// Load the driver if it hasn't been loaded yet.
-    if ( !driver->dlhand )
-    {
-        char drvspec[ DRVSPEC_SIZE ];
-#if defined ( LTDL_WIN32 ) || defined ( __CYGWIN__ )
-        snprintf( drvspec, DRVSPEC_SIZE, "%s", driver->drvnam );
-#else
-        snprintf( drvspec, DRVSPEC_SIZE, "%s/%s", plGetDrvDir(), driver->drvnam );
-#endif  // LTDL_WIN32
-
-        pldebug( "plLoadDriver", "Trying to load %s on %s\n",
-            driver->drvnam, drvspec );
-
-        driver->dlhand = lt_dlopenext( drvspec );
-
-        // A few of our drivers do not depend on other libraries.  So
-        // allow them to be completely removed by plend to give clean
-        // valgrind results.  However, the (large) remainder of our
-        // drivers do depend on other libraries so mark them resident
-        // to prevent problems with atexit handlers / library
-        // reinitialisation such as those seen with qt and cairo
-        // drivers.
-        if ( !( strcmp( driver->drvnam, "mem" ) == 0 ||
-                strcmp( driver->drvnam, "null" ) == 0 ||
-                strcmp( driver->drvnam, "plmeta" ) == 0 ||
-                strcmp( driver->drvnam, "ps" ) == 0 ||
-                strcmp( driver->drvnam, "svg" ) == 0 ||
-                strcmp( driver->drvnam, "xfig" ) == 0 ) )
-            lt_dlmakeresident( driver->dlhand );
-    }
-
-// If it still isn't loaded, then we're doomed.
-    if ( !driver->dlhand )
-    {
-        pldebug( "plLoadDriver", "lt_dlopenext failed because of "
-            "the following reason:\n%s\n", lt_dlerror() );
-        fprintf( stderr, "Unable to load driver: %s.\n", driver->drvnam );
-        plexit( "Unable to load driver" );
-    }
-
-// Now we are ready to ask the driver's device dispatch init function to
-// initialize the entries in the dispatch table.
-
-    snprintf( sym, BUFFER_SIZE, "plD_dispatch_init_%s", tag );
-    {
-        PLDispatchInit dispatch_init = (PLDispatchInit) lt_dlsym( driver->dlhand, sym );
-        if ( !dispatch_init )
-        {
-            fprintf( stderr,
-                "Unable to locate dispatch table initialization function for driver: %s.\n",
-                driver->drvnam );
-            return;
-        }
-
-        ( *dispatch_init )( dev );
-    }
-#endif
-}
-
-//--------------------------------------------------------------------------
-// void plfontld()
-//
-// Load specified font set.
-//--------------------------------------------------------------------------
-
-void
-c_plfontld( PLINT ifont )
-{
-    if ( ifont != 0 )
-        ifont = 1;
-
-    if ( plsc->level > 0 )
-        plfntld( ifont );
-    else
-        initfont = ifont;
 }
 
 //--------------------------------------------------------------------------
@@ -3915,51 +2695,6 @@ plgesc( char *p_esc )
     *p_esc = plsc->esc;
 }
 
-// Set the FCI (font characterization integer) for unicode-enabled device
-// drivers.
-//
-void
-c_plsfci( PLUNICODE fci )
-{
-    // Always mark FCI as such.
-    plsc->fci = fci | PL_FCI_MARK;
-}
-
-// Get the FCI (font characterization integer) for unicode-enabled device
-// drivers.
-//
-void
-c_plgfci( PLUNICODE *p_fci )
-{
-    // Always mark FCI as such.
-    *p_fci = plsc->fci | PL_FCI_MARK;
-}
-// Store hex digit value shifted to the left by hexdigit hexadecimal digits
-// into pre-existing FCI.
-//
-void
-plP_hex2fci( unsigned char hexdigit, unsigned char hexpower, PLUNICODE *pfci )
-{
-    PLUNICODE mask;
-    hexpower = hexpower & PL_FCI_HEXPOWER_MASK;
-    mask     = ~( ( (PLUNICODE) PL_FCI_HEXDIGIT_MASK ) << ( (PLUNICODE) 4 * hexpower ) );
-    *pfci    = *pfci & mask;
-    mask     = ( ( (PLUNICODE) ( hexdigit & PL_FCI_HEXDIGIT_MASK ) ) << ( 4 * hexpower ) );
-    *pfci    = *pfci | mask;
-}
-
-// Retrieve hex digit value from FCI that is masked out and shifted to the
-// right by hexpower hexadecimal digits.
-void
-plP_fci2hex( PLUNICODE fci, unsigned char *phexdigit, unsigned char hexpower )
-{
-    PLUNICODE mask;
-    hexpower   = hexpower & PL_FCI_HEXPOWER_MASK;
-    mask       = ( ( (PLUNICODE) PL_FCI_HEXPOWER_MASK ) << ( (PLUNICODE) ( 4 * hexpower ) ) );
-    *phexdigit = (unsigned char) ( ( fci & mask ) >>
-                                   ( (PLUNICODE) ( 4 * hexpower ) ) );
-}
-
 // Get the current library version number
 // Note: you MUST have allocated space for this (80 characters is safe)
 void
@@ -4009,14 +2744,6 @@ c_plsfam( PLINT fam, PLINT num, PLINT bmax )
         plsc->member = num;
     if ( bmax >= 0 )
         plsc->bytemax = bmax;
-}
-
-// Advance to the next family file on the next new page
-
-void
-c_plfamadv( void )
-{
-    plsc->famadv = 1;
 }
 
 //--------------------------------------------------------------------------
@@ -4355,109 +3082,6 @@ PLINT plP_checkdriverinit( char *names )
     return ( ret );
 }
 
-
-//--------------------------------------------------------------------------
-// plP_image
-//
-// Author: Alessandro Mirone, Nov 2001
-//
-// Updated by Hezekiah Carty, Mar 2008.
-//   - Added support for pltr callback
-//   - Commented out the "dev_fastimg" rendering path
-//
-//--------------------------------------------------------------------------
-
-void
-plP_image( PLFLT *z, PLINT nx, PLINT ny, PLFLT xmin, PLFLT ymin, PLFLT dx, PLFLT dy,
-           void ( *pltr )( PLFLT, PLFLT, PLFLT *, PLFLT *, PLPointer ), PLPointer pltr_data )
-{
-    plsc->page_status = DRAWING;
-
-    plimageslow( z, nx, ny, xmin, ymin, dx, dy, pltr, pltr_data );
-
-    //
-    // COMMENTED OUT by Hezekiah Carty, March 2008
-    // The current dev_fastimg rendering method does not work as-is with
-    // the plimagefr coordinate transform support.
-    // This is hopefully temporary, until the dev_fastimg rendering
-    // path can be updated to work with the new plimage internals.
-    // Until then, all plimage* rendering is done by the plimageslow
-    // rendering path.
-    //
-#if 0   // BEGIN dev_fastimg COMMENT
-    PLINT i, npts;
-    short *xscl, *yscl;
-    int   plbuf_write;
-
-    plsc->page_status = DRAWING;
-
-    if ( plsc->dev_fastimg == 0 )
-    {
-        plimageslow( x, y, z, nx - 1, ny - 1,
-            xmin, ymin, dx, dy, zmin, zmax );
-        return;
-    }
-
-    if ( plsc->plbuf_write )
-    {
-        IMG_DT img_dt;
-
-        img_dt.xmin = xmin;
-        img_dt.ymin = ymin;
-        img_dt.dx   = dx;
-        img_dt.dy   = dy;
-
-        plsc->dev_ix    = x;
-        plsc->dev_iy    = y;
-        plsc->dev_z     = z;
-        plsc->dev_nptsX = nx;
-        plsc->dev_nptsY = ny;
-        plsc->dev_zmin  = zmin;
-        plsc->dev_zmax  = zmax;
-
-        plbuf_esc( plsc, PLESC_IMAGE, &img_dt );
-    }
-
-    // avoid re-saving plot buffer while in plP_esc()
-    plbuf_write       = plsc->plbuf_write;
-    plsc->plbuf_write = 0;
-
-    npts = nx * ny;
-    if ( plsc->difilt ) // isn't this odd? when replaying the plot buffer, e.g., when resizing the window, difilt() is caled again! the plot buffer should already contain the transformed data--it would save a lot of time! (and allow for differently oriented plots when in multiplot mode)
-    {
-        PLINT clpxmi, clpxma, clpymi, clpyma;
-
-        if ( ( ( xscl = (short *) malloc( nx * ny * sizeof ( short ) ) ) == NULL ) ||
-             ( ( yscl = (short *) malloc( nx * ny * sizeof ( short ) ) ) == NULL ) )
-        {
-            plexit( "plP_image: Insufficient memory" );
-        }
-
-        for ( i = 0; i < npts; i++ )
-        {
-            xscl[i] = x[i];
-            yscl[i] = y[i];
-        }
-        sdifilt( xscl, yscl, npts, &clpxmi, &clpxma, &clpymi, &clpyma );
-        plsc->imclxmin = clpxmi;
-        plsc->imclymin = clpymi;
-        plsc->imclxmax = clpxma;
-        plsc->imclymax = clpyma;
-        grimage( xscl, yscl, z, nx, ny );
-        free( xscl );
-        free( yscl );
-    }
-    else
-    {
-        plsc->imclxmin = plsc->phyxmi;
-        plsc->imclymin = plsc->phyymi;
-        plsc->imclxmax = plsc->phyxma;
-        plsc->imclymax = plsc->phyyma;
-        grimage( x, y, z, nx, ny );
-    }
-    plsc->plbuf_write = plbuf_write;
-#endif  // END dev_fastimg COMMENT
-}
 
 //--------------------------------------------------------------------------
 // plstransform

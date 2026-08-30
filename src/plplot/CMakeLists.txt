@@ -29,7 +29,6 @@ configure_file(
   )
 # Allow access to the generated plplot_config.h for this build.
 add_definitions("-DPLPLOT_HAVE_CONFIG_H")
-add_subdirectory(fonts) # does not do anything until option BUILD_HERSHEY_FONTS is set to ON
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(data)

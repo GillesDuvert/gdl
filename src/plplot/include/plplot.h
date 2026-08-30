@@ -302,21 +302,13 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_START_RASTERIZE           32 // start rasterized rendering
 #define PLESC_END_RASTERIZE             33 // end rasterized rendering
 #define PLESC_ARC                       34 // render an arc
-#define PLESC_GRADIENT                  35 // render a gradient
 #define PLESC_MODESET                   36 // set drawing mode
 #define PLESC_MODEGET                   37 // get drawing mode
 #define PLESC_FIXASPECT                 38 // set or unset fixing the aspect ratio of the plot
 #define PLESC_IMPORT_BUFFER             39 // set the contents of the buffer to a specified byte string
 #define PLESC_APPEND_BUFFER             40 // append the given byte string to the buffer
 #define PLESC_FLUSH_REMAINING_BUFFER    41 // flush the remaining buffer e.g. after new data was appended
-
-// Alternative unicode text handling control characters
-#define PLTEXT_FONTCHANGE               0 // font change in the text stream
-#define PLTEXT_SUPERSCRIPT              1 // superscript in the text stream
-#define PLTEXT_SUBSCRIPT                2 // subscript in the text stream
-#define PLTEXT_BACKCHAR                 3 // back-char in the text stream
-#define PLTEXT_OVERLINE                 4 // toggle overline in the text stream
-#define PLTEXT_UNDERLINE                5 // toggle underline in the text stream
+#define PLESC_FILL_MULTIPATH            42 // fill multiple polygon
 
 // image operations
 #define ZEROW2B                         1
@@ -366,29 +358,6 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PL_PARSE_NODASH               0x0040 // Set if leading dash NOT required
 #define PL_PARSE_SKIP                 0x0080 // Skip over unrecognized args
 
-// FCI (font characterization integer) related constants.
-#define PL_FCI_MARK                   0x80000000
-#define PL_FCI_IMPOSSIBLE             0x00000000
-#define PL_FCI_HEXDIGIT_MASK          0xf
-#define PL_FCI_HEXPOWER_MASK          0x7
-#define PL_FCI_HEXPOWER_IMPOSSIBLE    0xf
-// These define hexpower values corresponding to each font attribute.
-#define PL_FCI_FAMILY                 0x0
-#define PL_FCI_STYLE                  0x1
-#define PL_FCI_WEIGHT                 0x2
-// These are legal values for font family attribute
-#define PL_FCI_SANS                   0x0
-#define PL_FCI_SERIF                  0x1
-#define PL_FCI_MONO                   0x2
-#define PL_FCI_SCRIPT                 0x3
-#define PL_FCI_SYMBOL                 0x4
-// These are legal values for font style attribute
-#define PL_FCI_UPRIGHT                0x0
-#define PL_FCI_ITALIC                 0x1
-#define PL_FCI_OBLIQUE                0x2
-// These are legal values for font weight attribute
-#define PL_FCI_MEDIUM                 0x0
-#define PL_FCI_BOLD                   0x1
 
 // Option table definition
 
@@ -691,22 +660,15 @@ typedef struct
 #define    pl_setcontlabelformat    c_pl_setcontlabelformat
 #define    pl_setcontlabelparam     c_pl_setcontlabelparam
 #define    pladv                    c_pladv
-#define    plarc                    c_plarc
 #define    plaxes                   c_plaxes
-#define    plbin                    c_plbin
 #define    plbop                    c_plbop
 #define    plbox                    c_plbox
-#define    plbox3                   c_plbox3
-//#define    plbtime                  c_plbtime
 #define    plcalc_world             c_plcalc_world
 #define    plclear                  c_plclear
 #define    plcol0                   c_plcol0
 #define    plcol1                   c_plcol1
-#define    plcolorbar               c_plcolorbar
-#define    plconfigtime             c_plconfigtime
 #define    plcont                   c_plcont
 #define    plcpstrm                 c_plcpstrm
-//#define    plctime                  c_plctime
 #define    plend                    c_plend
 #define    plend1                   c_plend1
 #define    plenv                    c_plenv
@@ -714,12 +676,8 @@ typedef struct
 #define    pleop                    c_pleop
 #define    plerrx                   c_plerrx
 #define    plerry                   c_plerry
-#define    plfamadv                 c_plfamadv
 #define    plfill                   c_plfill
-#define    plfill3                  c_plfill3
 #define    plflush                  c_plflush
-#define    plfont                   c_plfont
-#define    plfontld                 c_plfontld
 #define    plgchr                   c_plgchr
 #define    plgcmap1_range           c_plgcmap1_range
 #define    plgcol0                  c_plgcol0
@@ -733,14 +691,12 @@ typedef struct
 #define    plgdiplt                 c_plgdiplt
 #define    plgdrawmode              c_plgdrawmode
 #define    plgfam                   c_plgfam
-#define    plgfci                   c_plgfci
 #define    plgfnam                  c_plgfnam
-#define    plgfont                  c_plgfont
+#define    ttFontLoad               c_ttFontLoad
+#define    ttFontSet                c_ttFontSet
 #define    plglevel                 c_plglevel
 #define    plgpage                  c_plgpage
 #define    plgra                    c_plgra
-#define    plgradient               c_plgradient
-#define    plgriddata               c_plgriddata
 #define    plgspa                   c_plgspa
 #define    plgstrm                  c_plgstrm
 #define    plgver                   c_plgver
@@ -749,14 +705,10 @@ typedef struct
 #define    plgxax                   c_plgxax
 #define    plgyax                   c_plgyax
 #define    plgzax                   c_plgzax
-#define    plhist                   c_plhist
 #define    plhlsrgb                 c_plhlsrgb
-#define    plimage                  c_plimage
-#define    plimagefr                c_plimagefr
 #define    plinit                   c_plinit
 #define    pljoin                   c_pljoin
 #define    pllab                    c_pllab
-#define    pllegend                 c_pllegend
 #define    pllightsource            c_pllightsource
 #define    plline                   c_plline
 #define    plpath                   c_plpath
@@ -772,19 +724,15 @@ typedef struct
 #define    plmeshc                  c_plmeshc
 #define    plmkstrm                 c_plmkstrm
 #define    plmtex                   c_plmtex
-#define    plmtex3                  c_plmtex3
 #define    plot3d                   c_plot3d
 #define    plot3dc                  c_plot3dc
 #define    plot3dcl                 c_plot3dcl
 #define    plparseopts              c_plparseopts
 #define    plpat                    c_plpat
-#define    plpoin                   c_plpoin
-#define    plpoin3                  c_plpoin3
 #define    plpoly3                  c_plpoly3
 #define    plprec                   c_plprec
 #define    plpsty                   c_plpsty
 #define    plptex                   c_plptex
-#define    plptex3                  c_plptex3
 #define    plrandd                  c_plrandd
 #define    plreplot                 c_plreplot
 #define    plrgbhls                 c_plrgbhls
@@ -815,13 +763,8 @@ typedef struct
 #define    plsesc                   c_plsesc
 #define    plsetopt                 c_plsetopt
 #define    plsfam                   c_plsfam
-#define    plsfci                   c_plsfci
 #define    plsfnam                  c_plsfnam
-#define    plsfont                  c_plsfont
 #define    plshade                  c_plshade
-#ifdef PL_DEPRECATED
-#define    plshade1                 c_plshade1
-#endif // PL_DEPRECATED
 #define    plshades                 c_plshades
 #define    plslabelfunc             c_plslabelfunc
 #define    plsmaj                   c_plsmaj
@@ -847,16 +790,13 @@ typedef struct
 #define    plstyl                   c_plstyl
 #define    plsurf3d                 c_plsurf3d
 #define    plsurf3dl                c_plsurf3dl
-#define    plsvect                  c_plsvect
 #define    plsvpa                   c_plsvpa
 #define    plsxax                   c_plsxax
 #define    plsyax                   c_plsyax
-#define    plsym                    c_plsym
 #define    plszax                   c_plszax
 #define    pltext                   c_pltext
 #define    pltimefmt                c_pltimefmt
 #define    plvasp                   c_plvasp
-#define    plvect                   c_plvect
 #define    plvpas                   c_plvpas
 #define    plvpor                   c_plvpor
 #define    plvsta                   c_plvsta
@@ -934,13 +874,6 @@ c_plbop( void );
 PLDLLIMPEXP void
 c_plbox( PLCHAR_VECTOR xopt, PLFLT xtick, PLINT nxsub,
          PLCHAR_VECTOR yopt, PLFLT ytick, PLINT nysub );
-
-// This is the 3-d analogue of plbox().
-
-PLDLLIMPEXP void
-c_plbox3( PLCHAR_VECTOR xopt, PLCHAR_VECTOR xlabel, PLFLT xtick, PLINT nxsub,
-          PLCHAR_VECTOR yopt, PLCHAR_VECTOR ylabel, PLFLT ytick, PLINT nysub,
-          PLCHAR_VECTOR zopt, PLCHAR_VECTOR zlabel, PLFLT ztick, PLINT nzsub );
 
 // Calculate world coordinates and subpage from relative device coordinates.
 
@@ -1057,25 +990,10 @@ c_plfamadv( void );
 PLDLLIMPEXP void
 c_plfill( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y );
 
-// Pattern fills the 3d polygon bounded by the input points.
-
-PLDLLIMPEXP void
-c_plfill3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z );
-
 // Flushes the output stream.  Use sparingly, if at all.
 
 PLDLLIMPEXP void
 c_plflush( void );
-
-// Sets the global font flag to 'ifont'.
-
-PLDLLIMPEXP void
-c_plfont( PLINT ifont );
-
-// Load specified font set.
-
-PLDLLIMPEXP void
-c_plfontld( PLINT fnt );
 
 // Get character default height and current (scaled) height
 
@@ -1137,11 +1055,6 @@ c_plgdiplt( PLFLT_NC_SCALAR p_xmin, PLFLT_NC_SCALAR p_ymin, PLFLT_NC_SCALAR p_xm
 PLDLLIMPEXP PLINT
 c_plgdrawmode( void );
 
-// Get FCI (font characterization integer)
-
-PLDLLIMPEXP void
-c_plgfci( PLUNICODE_NC_SCALAR p_fci );
-
 // Get family file parameters
 
 PLDLLIMPEXP void
@@ -1152,10 +1065,13 @@ c_plgfam( PLINT_NC_SCALAR p_fam, PLINT_NC_SCALAR p_num, PLINT_NC_SCALAR p_bmax )
 PLDLLIMPEXP void
 c_plgfnam( PLCHAR_NC_VECTOR fnam );
 
-// Get the current font family, style and weight
-
+// load a truetype font
 PLDLLIMPEXP void
-c_plgfont( PLINT_NC_SCALAR p_family, PLINT_NC_SCALAR p_style, PLINT_NC_SCALAR p_weight );
+c_ttFontLoad(const char* name );
+
+// set current truetype font
+PLDLLIMPEXP void
+c_ttFontSet(int n);
 
 // Get the (current) run level.
 
@@ -1173,31 +1089,6 @@ c_plgpage( PLFLT_NC_SCALAR p_xp, PLFLT_NC_SCALAR p_yp,
 PLDLLIMPEXP void
 c_plgra( void );
 
-// Draw gradient in polygon.
-
-PLDLLIMPEXP void
-c_plgradient( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT angle );
-
-// grid irregularly sampled data
-
-PLDLLIMPEXP void
-c_plgriddata( PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT npts,
-              PLFLT_VECTOR xg, PLINT nptsx, PLFLT_VECTOR yg, PLINT nptsy,
-              PLFLT_NC_MATRIX zg, PLINT type, PLFLT data );
-
-PLDLLIMPEXP void
-plfgriddata( PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT npts,
-             PLFLT_VECTOR xg, PLINT nptsx, PLFLT_VECTOR yg, PLINT nptsy,
-             PLF2OPS zops, PLPointer zgp, PLINT type, PLFLT data );
-
-// type of gridding algorithm for plgriddata()
-
-#define GRID_CSA       1 // Bivariate Cubic Spline approximation
-#define GRID_DTLI      2 // Delaunay Triangulation Linear Interpolation
-#define GRID_NNI       3 // Natural Neighbors Interpolation
-#define GRID_NNIDW     4 // Nearest Neighbors Inverse Distance Weighted
-#define GRID_NNLI      5 // Nearest Neighbors Linear Interpolation
-#define GRID_NNAIDW    6 // Nearest Neighbors Around Inverse Distance Weighted
 
 // Get subpage boundaries in absolute coordinates
 
@@ -1273,83 +1164,11 @@ c_pljoin( PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 );
 PLDLLIMPEXP void
 c_pllab( PLCHAR_VECTOR xlabel, PLCHAR_VECTOR ylabel, PLCHAR_VECTOR tlabel );
 
-//flags used for position argument of both pllegend and plcolorbar
-#define PL_POSITION_NULL             0x0
-#define PL_POSITION_LEFT             0x1
-#define PL_POSITION_RIGHT            0x2
-#define PL_POSITION_TOP              0x4
-#define PL_POSITION_BOTTOM           0x8
-#define PL_POSITION_INSIDE           0x10
-#define PL_POSITION_OUTSIDE          0x20
-#define PL_POSITION_VIEWPORT         0x40
-#define PL_POSITION_SUBPAGE          0x80
-
-// Flags for pllegend.
-#define PL_LEGEND_NULL               0x0
-#define PL_LEGEND_NONE               0x1
-#define PL_LEGEND_COLOR_BOX          0x2
-#define PL_LEGEND_LINE               0x4
-#define PL_LEGEND_SYMBOL             0x8
-#define PL_LEGEND_TEXT_LEFT          0x10
-#define PL_LEGEND_BACKGROUND         0x20
-#define PL_LEGEND_BOUNDING_BOX       0x40
-#define PL_LEGEND_ROW_MAJOR          0x80
-
-// Flags for plcolorbar
-#define PL_COLORBAR_NULL             0x0
-#define PL_COLORBAR_LABEL_LEFT       0x1
-#define PL_COLORBAR_LABEL_RIGHT      0x2
-#define PL_COLORBAR_LABEL_TOP        0x4
-#define PL_COLORBAR_LABEL_BOTTOM     0x8
-#define PL_COLORBAR_IMAGE            0x10
-#define PL_COLORBAR_SHADE            0x20
-#define PL_COLORBAR_GRADIENT         0x40
-#define PL_COLORBAR_CAP_NONE         0x80
-#define PL_COLORBAR_CAP_LOW          0x100
-#define PL_COLORBAR_CAP_HIGH         0x200
-#define PL_COLORBAR_SHADE_LABEL      0x400
-#define PL_COLORBAR_ORIENT_RIGHT     0x800
-#define PL_COLORBAR_ORIENT_TOP       0x1000
-#define PL_COLORBAR_ORIENT_LEFT      0x2000
-#define PL_COLORBAR_ORIENT_BOTTOM    0x4000
-#define PL_COLORBAR_BACKGROUND       0x8000
-#define PL_COLORBAR_BOUNDING_BOX     0x10000
-
 // Flags for drawing mode
 #define PL_DRAWMODE_UNKNOWN          0x0
 #define PL_DRAWMODE_DEFAULT          0x1
 #define PL_DRAWMODE_REPLACE          0x2
 #define PL_DRAWMODE_XOR              0x4
-
-// Routine for drawing discrete line, symbol, or cmap0 legends
-PLDLLIMPEXP void
-c_pllegend( PLFLT_NC_SCALAR p_legend_width, PLFLT_NC_SCALAR p_legend_height,
-            PLINT opt, PLINT position, PLFLT x, PLFLT y, PLFLT plot_width,
-            PLINT bg_color, PLINT bb_color, PLINT bb_style,
-            PLINT nrow, PLINT ncolumn,
-            PLINT nlegend, PLINT_VECTOR opt_array,
-            PLFLT text_offset, PLFLT text_scale, PLFLT text_spacing,
-            PLFLT text_justification,
-            PLINT_VECTOR text_colors, PLCHAR_MATRIX text,
-            PLINT_VECTOR box_colors, PLINT_VECTOR box_patterns,
-            PLFLT_VECTOR box_scales, PLFLT_VECTOR box_line_widths,
-            PLINT_VECTOR line_colors, PLINT_VECTOR line_styles,
-            PLFLT_VECTOR line_widths,
-            PLINT_VECTOR symbol_colors, PLFLT_VECTOR symbol_scales,
-            PLINT_VECTOR symbol_numbers, PLCHAR_MATRIX symbols );
-
-// Routine for drawing continuous colour legends
-PLDLLIMPEXP void
-c_plcolorbar( PLFLT_NC_SCALAR p_colorbar_width, PLFLT_NC_SCALAR p_colorbar_height,
-              PLINT opt, PLINT position, PLFLT x, PLFLT y,
-              PLFLT x_length, PLFLT y_length,
-              PLINT bg_color, PLINT bb_color, PLINT bb_style,
-              PLFLT low_cap_color, PLFLT high_cap_color,
-              PLINT cont_color, PLFLT cont_width,
-              PLINT n_labels, PLINT_VECTOR label_opts, PLCHAR_MATRIX labels,
-              PLINT n_axes, PLCHAR_MATRIX axis_opts,
-              PLFLT_VECTOR ticks, PLINT_VECTOR sub_ticks,
-              PLINT_VECTOR n_values, PLFLT_MATRIX values );
 
 // Sets position of the light source
 PLDLLIMPEXP void
@@ -1533,20 +1352,6 @@ c_plpat( PLINT nlin, PLINT_VECTOR inc, PLINT_VECTOR del );
 PLDLLIMPEXP void
 c_plpath( PLINT n, PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 );
 
-// Plots array y against x for n points using ASCII code "code".
-
-PLDLLIMPEXP void
-c_plpoin( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
-
-// Draws a series of points in 3 space.
-
-PLDLLIMPEXP void
-c_plpoin3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLINT code );
-
-// Draws a polygon in 3 space.
-
-PLDLLIMPEXP void
-c_plpoly3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLBOOL_VECTOR draw, PLBOOL ifcc );
 
 // Set the floating point precision (in number of places) in numeric labels.
 
@@ -1562,18 +1367,6 @@ c_plpsty( PLINT patt );
 
 PLDLLIMPEXP void
 c_plptex( PLFLT x, PLFLT y, PLFLT dx, PLFLT dy, PLFLT just, PLCHAR_VECTOR text );
-
-// Prints out "text" at world cooordinate (x,y,z).
-
-PLDLLIMPEXP void
-c_plptex3( PLFLT wx, PLFLT wy, PLFLT wz, PLFLT dx, PLFLT dy, PLFLT dz,
-           PLFLT sx, PLFLT sy, PLFLT sz, PLFLT just, PLCHAR_VECTOR text );
-
-// Random number generator based on Mersenne Twister.
-// Obtain real random number in range [0,1].
-
-PLDLLIMPEXP PLFLT
-c_plrandd( void );
 
 // Replays contents of plot buffer to current device/file.
 
@@ -1721,20 +1514,10 @@ c_plsesc( char esc );
 PLDLLIMPEXP void
 c_plsfam( PLINT fam, PLINT num, PLINT bmax );
 
-// Set FCI (font characterization integer)
-
-PLDLLIMPEXP void
-c_plsfci( PLUNICODE fci );
-
 // Set the output file name.
 
 PLDLLIMPEXP void
 c_plsfnam( PLCHAR_VECTOR fnam );
-
-// Set the current font family, style and weight
-
-PLDLLIMPEXP void
-c_plsfont( PLINT family, PLINT style, PLINT weight );
 
 // Shade region.
 
@@ -1887,17 +1670,6 @@ c_plstransform( PLTRANSFORM_callback coordinate_transform, PLPointer coordinate_
 // directly as UTF-8 or indirectly via the standard text escape
 // sequences allowed for PLplot input strings.
 
-PLDLLIMPEXP void
-c_plstring( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLCHAR_VECTOR string );
-
-// Prints out the same string repeatedly at the n points in world
-// coordinates given by the x, y, and z arrays.  Supersedes plpoin3
-// for the case where text refers to a unicode glyph either directly
-// as UTF-8 or indirectly via the standard text escape sequences
-// allowed for PLplot input strings.
-
-PLDLLIMPEXP void
-c_plstring3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z, PLCHAR_VECTOR string );
 
 // Add a point to a stripchart.
 
@@ -2016,7 +1788,7 @@ c_plsyax( PLINT digmax, PLINT digits );
 // Plots array y against x for n points using Hershey symbol "code"
 
 PLDLLIMPEXP void
-c_plsym( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
+c_plsym_remove( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
 
 // Set z axis labeling parameters
 

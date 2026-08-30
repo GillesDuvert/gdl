@@ -22,7 +22,6 @@
 # Module for configuring all device-related variables.
 
 # Results are contained in the following variables:
-# ENABLE_DYNDRIVERS (ON or OFF): whether to dynamically load device drivers.
 # PLD_devicename (ON or OFF): whether each PLplot-related device is enabled
 #   or not.  devicename is png, jpeg, etc.
 # devicename_COMPILE_FLAGS: compile (e.g., -I) options for each individual
@@ -35,9 +34,6 @@
 #   where at least one of the associated devices is enabled.
 
 set(DRIVERS_LINK_FLAGS)
-option(ENABLE_DYNDRIVERS "Enable dynamic loading of device drivers" OFF)
-  set(enable_dyndrivers_true "#")
-  set(enable_dyndrivers_false "")
 
 # Decide whether to enable each device or not and find special resources
 # when required.
