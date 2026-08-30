@@ -24,7 +24,7 @@
 #define BUILD_DIR                "@CMAKE_BINARY_DIR@"
 
 // Location of package data files
-#define DATA_DIR                 "@CMAKE_INSTALL_PREFIX@@GDL_DATA_DIR@"
+#define GDLDATADIR                 "@CMAKE_INSTALL_PREFIX@@GDL_DATA_DIR@"
 
 // Location of dynamically loaded drivers
 #define DRV_DIR                  "@DRV_DIR@"

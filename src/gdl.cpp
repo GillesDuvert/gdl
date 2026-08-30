@@ -266,7 +266,6 @@ int main(int argc, char *argv[])
   vector<string> batch_files;
   string statement;
   string pretendRelease;
-  bool strict_syntax=false;
   bool syntaxOptionSet=false;
 
   bool force_no_wxgraphics = false;

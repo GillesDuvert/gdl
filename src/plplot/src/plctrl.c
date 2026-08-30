@@ -2131,7 +2131,7 @@ pl_cmd( PLINT op, void *ptr )
 //!	PLPLOT_LIB_ENV = $(PLPLOT_LIB)
 //!	current directory
 //!	PLPLOT_HOME_ENV/lib = $(PLPLOT_HOME)/lib
-//!	DATA_DIR
+//!	GDLDATADIR
 //!	PLLIBDEV
 //!
 //! @param fn Name of the file.
@@ -2166,7 +2166,7 @@ plLibOpen( PLCHAR_VECTOR fn )
 //!	PLPLOT_LIB_ENV = $(PLPLOT_LIB)
 //!	current directory
 //!	PLPLOT_HOME_ENV/lib = $(PLPLOT_HOME)/lib
-//!	DATA_DIR
+//!	GDLDATADIR
 //!	PLLIBDEV
 //!
 //! @param fn Name of the file.
@@ -2226,12 +2226,12 @@ plLibOpenPdfstrm( PLCHAR_VECTOR fn )
 
 //***   search installed location	***
 
-#if defined ( DATA_DIR )
-    plGetName( DATA_DIR, "", fn, &fs );
+#if defined ( GDLDATADIR )
+    plGetName( GDLDATADIR, "", fn, &fs );
 
     if ( ( file = pdf_fopen( fs, "rb" ) ) != NULL )
         goto done;
-#endif  // DATA_DIR
+#endif  // GDLDATADIR
 
 //***   search hardwired location	***
 

@@ -745,51 +745,6 @@ plstrl( PLCHAR_VECTOR string) {
 	return plstr(string, 1, 0,0, NULL,0,0,0,0);
 }
 
-static PLINT
-plcvec( PLINT ch, signed char **xygr )
-{
-    PLINT       k = 0, ib;
-    signed char x, y;
-
-    ch--;
-    if ( ch < 0 || ch >= indxleng )
-        return (PLINT) 0;
-    ib = fntindx[ch] - 2;
-    if ( ib == -2 )
-        return (PLINT) 0;
-	// ? and ?
-	ib++;
-	x           = fntbffr[2 * ib];
-	y           = fntbffr[2 * ib + 1];
-        xygrid[k++] = x;
-        xygrid[k++] = y;
-	//min and max
-	ib++;
-	x           = fntbffr[2 * ib];
-	y           = fntbffr[2 * ib + 1];
-        xygrid[k++] = x;
-        xygrid[k++] = y;
-    do
-    {
-        ib++;
-        x           = fntbffr[2 * ib];
-        y           = fntbffr[2 * ib + 1];
-		if (y!=64) y*=-1;
-        xygrid[k++] = x;
-        xygrid[k++] = y;
-    } while ( ( x != 64 || y != 64 ) && k < ( STLEN - 2 ) );
-
-    if ( k == ( STLEN - 2 ) )
-    {
-        // This is bad if we get here
-        xygrid[k++] = 64;
-        xygrid[k++] = 64;
-    }
-
-    *xygr = xygrid;
-    return (PLINT) 1;
-}
-
 //--------------------------------------------------------------------------
 // void pldeco()
 //

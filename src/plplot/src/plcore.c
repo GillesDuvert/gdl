@@ -1587,8 +1587,7 @@ c_plinit( void )
 // Load fonts
 
     plsc->currentFont = 3;
-	printf("Warning, using /usr/local/share/gnudatalanguage/hersh1.chr!\n");
-	hersheyFontLoad("/usr/local/share/gnudatalanguage/hersh1.chr");
+	hersheyFontLoad(GDLDATADIR"/hersh1.chr");
 
 // Set up subpages
 
