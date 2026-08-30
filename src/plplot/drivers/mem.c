@@ -47,10 +47,8 @@ void plD_dispatch_init_mem( PLDispatchTable *pdt )
 {
   currDispatchTab = pdt;
   Status3D = 0;
-#ifndef ENABLE_DYNDRIVERS
     pdt->pl_MenuStr = "User-supplied memory device";
     pdt->pl_DevName = "mem";
-#endif
     pdt->pl_type     = plDevType_Null;
     pdt->pl_seq      = 45;
     pdt->pl_init     = (plD_init_fp) plD_init_mem;

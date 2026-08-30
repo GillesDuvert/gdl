@@ -6,8 +6,6 @@
 #ifndef __PS_H__
 #define __PS_H__
 
-#include "plunicode-type1.h"
-
 // top level declarations
 
 #define LINELENGTH    78
@@ -49,24 +47,12 @@ typedef struct
     PLFLT xscale_dev, yscale_dev;
 
     int   llx, lly, urx, ury, ptcnt;
-    // font variables.
-    int   nlookup, if_symbol_font;
-    const Unicode_to_Type1_table *lookup;
 
     // These are only used by the pstex driver for the additional
     // file required in this case
     long cur_pos;
     FILE *fp;
 } PSDev;
-
-void plD_init_pstex( PLStream * );
-void plD_line_pstex( PLStream *, short, short, short, short );
-void plD_polyline_pstex( PLStream *, short *, short *, PLINT );
-void plD_eop_pstex( PLStream * );
-void plD_bop_pstex( PLStream * );
-void plD_tidy_pstex( PLStream * );
-void plD_state_pstex( PLStream *, PLINT );
-void plD_esc_pstex( PLStream *, PLINT, void * );
 
 void plD_init_ps( PLStream * );
 void plD_init_psc( PLStream * );
@@ -78,14 +64,5 @@ void plD_tidy_ps( PLStream * );
 void plD_state_ps( PLStream *, PLINT );
 void plD_esc_ps( PLStream *, PLINT, void * );
 
-void plD_init_psttf( PLStream * );
-void plD_init_psttfc( PLStream * );
-void plD_line_psttf( PLStream *, short, short, short, short );
-void plD_polyline_psttf( PLStream *, short *, short *, PLINT );
-void plD_eop_psttf( PLStream * );
-void plD_bop_psttf( PLStream * );
-void plD_tidy_psttf( PLStream * );
-void plD_state_psttf( PLStream *, PLINT );
-void plD_esc_psttf( PLStream *, PLINT, void * );
 
 #endif // __PS_H__

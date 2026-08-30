@@ -224,10 +224,8 @@ void plD_dispatch_init_xw( PLDispatchTable *pdt )
 {
   currDispatchTab=pdt;
   Status3D=0;
-#ifndef ENABLE_DYNDRIVERS
     pdt->pl_MenuStr = "X-Window (Xlib)";
     pdt->pl_DevName = "xwin";
-#endif
     pdt->pl_type     = plDevType_Interactive;
     pdt->pl_seq      = 5;
     pdt->pl_init     = (plD_init_fp) plD_init_xw;
@@ -263,7 +261,7 @@ plD_init_xw( PLStream *pls )
     pls->termin      = 1;       // Is an interactive terminal
     pls->dev_flush   = 1;       // Handle our own flushes
     pls->dev_fill0   = 1;       // Handle solid fills
-    pls->plbuf_write = 1;       // Activate plot buffer
+    pls->plbuf_write = 0;       // Activate plot buffer
     pls->dev_fastimg = 1;       // is a fast image device
     pls->dev_xor     = 1;       // device support xor mode
 
@@ -1198,8 +1196,8 @@ Init( PLStream *pls )
         XSetFillRule( xwd->display, dev->gc, WindingRule );
 
 // If main window, need to map it and wait for exposure
-// Ugly Patch: use pls->arrow_npts=999 to make window hiden and no MapMain
-    int hide=(pls->arrow_npts==999);
+// Ugly Patch: use pls->makeHidden=999 to make window hidden and no MapMain
+    int hide=(pls->makeHidden==999);
     if ( dev->is_main && !hide)
         MapMain( pls );
 }
