@@ -1,3 +1,8 @@
+; re-create (if lost) the compacted hershey font file used by GDL,
+; aptly named "hersh1.chr" (for full compatibility with IDL), that must lie
+; in GDLDATADIR
+; provides a file named "newhersh1.chr" that can be put in resources/fonts and/or in $GDLDATADIR
+
 PRO getvects, in, x, y, pen_up 
 x = ishft(in, -7) and 127
 y = in and 127
@@ -10,14 +15,7 @@ end
 
 pro gdl_create_font_table, plot=plot
   if n_elements(plot) eq 0 then plot=0
-  ;; table=file_expand_path(!GDL_MAPS_DIR+"/../hersh1.chr")
-  ;; if file_test(table) then return ; already present
-  ;; hershey_longlines=file_expand_path(!GDL_MAPS_DIR+"/../hershey.txt")
-  ;; if ~file_test(hershey_longlines) then begin
-  ;;    Message,/informational,"Unable to find file "+hershey_longlines+", exiting."
-  ;;    exit,status=1
-  ;; end
-  table="test1.chr"
+  table="newhersh1.chr"
   hershey_longlines="hershey_longlines.txt"
   hershey_supplement="non_hershey.txt"
   r=82b  & rvals=replicate(r,256) ; "R"
