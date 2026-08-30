@@ -272,7 +272,7 @@ namespace lib {
           // from lastTextPos. We must thus remember lastTextPos.
         {
           //we want normed size:
-          stringWidth = returnedStringCharLength * actStream->nCharLength();
+          stringWidth = returnedStringCharLength;
           //save position - compute must be in DEVICE coords, or in normed*aspect!
           lastTextPosX=x + (1.0 - align) * stringWidth*cosOriD;
           lastTextPosY=y + (1.0 - align) * stringWidth * sinOriD / aspectd;
