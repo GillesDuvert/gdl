@@ -189,11 +189,11 @@ protected:
   PLFLT theCurrentSymSize;
   PLFLT theLineSpacing_in_mm;
   bool usedAsPixmap; //for WINDOW,/PIXMAP retains the fact that this is a pixmap (invisible) window.
-  int activeFontCodeNum; //simplex Roman by default.
+//  int activeFontCodeNum; //simplex Roman by default.
 public:
 
    GDLGStream( int nx, int ny, const char *driver, const char *file=NULL)
-    : plstream( nx, ny, driver, file), valid( true), thickFactor(1.0), usedAsPixmap(false), activeFontCodeNum(3)
+    : plstream( nx, ny, driver, file), valid( true), thickFactor(1.0), usedAsPixmap(false)//, activeFontCodeNum(3)
   {
     if (!checkPlplotDriver(driver))
       ThrowGDLException(std::string("PLplot installation lacks the requested driver: ") + driver);
@@ -205,6 +205,7 @@ public:
     thePage.plyoff=0;
     theBox.initialized=false;
     plgpls( &pls);
+	plsesc('!');
     //you can debug plplot things with
 //     pls->debug=1;
 
@@ -240,9 +241,9 @@ public:
     free(devnames);
     return found;
  }
-   std::string getActiveFontCode(){
-   return internalFontCodes[activeFontCodeNum];
-  }
+//   std::string getActiveFontCode(){
+//   return internalFontCodes[activeFontCodeNum];
+//  }
   
   static void SetErrorHandlers();
 
@@ -286,7 +287,8 @@ public:
   bool IsPixmapWindow() {return usedAsPixmap;}
   virtual bool IsPlot() {return true;} //except some wxWidgets
   virtual BaseGDL* GetBitmapData(int xoff, int yoff, int nx, int ny){return NULL;}
-  virtual void SetCurrentFont(std::string fontname){}//do nothing
+  virtual void LoadCurrentFont(std::string &fontname){}//do nothing
+  virtual void SetCurrentFont(int n){}//do nothing
   int GetRegion(DLong& xs, DLong& ys, DLong& nx, DLong& ny);//{return false;}
   bool SetRegion(DLong& xd, DLong& yd, DLong& nx, DLong& ny);//{return false;}
 
@@ -440,11 +442,14 @@ public:
 //  //subpage to physical
 
   //use simple internal function
-  PLFLT gdlGetStringLength(const std::string &s)
+  PLFLT gdlGetStringLengthInMillimetres(const std::string &s)
   {
     return plstrl(s.c_str());
   }
-
+  PLFLT gdlGetStringLengthInMillimetres(const char* charstr)
+  {
+    return plstrl(charstr);
+  }
 //  void  currentPhysicalPos(PLFLT &x, PLFLT &y)
 //  {
 //    x=pls->currx; //Physical x-coordinate of current point
@@ -607,9 +612,6 @@ public:
   void UpdateCurrentCharWorldSize(); 
   void GetPlplotDefaultCharSize();
 
-  // SA: overloading plplot methods in order to handle IDL-plplot extended
-  // text formating syntax conversion
-  std::string TranslateFormatCodes(const char *text, double *stringLength);
   void setSymbolSize( PLFLT scale );
   void setLineSpacing( PLFLT spacing );
   PLFLT getSymbolSize();
