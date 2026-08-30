@@ -1999,7 +1999,7 @@ RetCode DInterpreter::InterpreterLoop(const string& startup,
 
   historyIntialized = true;
 
-#endif
+#endif //HAVE_LIBREADLINE
   }
   else { 
 		  gdl_ipc_ClientSignalsOperationsOK();
