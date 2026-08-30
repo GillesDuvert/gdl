@@ -153,8 +153,7 @@ if(hide) {
   tfSizer->Add(plot, DONOTALLOWSTRETCH, wxALL, 0);
 
   //create stream
-  GDLWXStream* me = new GDLWXStream(xSize, ySize);
-  me->SetCurrentFont(fontname);
+  GDLWXStream* me = new GDLWXStream(xSize, ySize, fontname);
   winList[ wIx] = me;
   oList[ wIx] = oIx++;
   // sets actWin and updates !D
@@ -304,9 +303,23 @@ if(hide) {
 
  DLong GetFontnum() {
   return GetWxFontnum(fontname);
- }
+	}
 
-    
+ bool LoadFont(DString &f) {
+	 fontname=f;
+//	    this->GetStream(); //mandatory open a window if none opened.
+        for (int i = 0; i < winList.size(); i++) {
+            if (winList[i] != NULL) winList[i]->LoadCurrentFont(fontname);
+        }
+		return true;
+ }
+ bool SetFont(int n) {
+//	    this->GetStream(); //mandatory open a window if none opened.
+        for (int i = 0; i < winList.size(); i++) {
+            if (winList[i] != NULL) winList[i]->SetCurrentFont(n);
+        }
+		return true;
+ }   
   bool CursorStandard(int cursorNumber) {
       cursorId = cursorNumber;
       this->GetStream(); //to open a window if none opened.
@@ -364,8 +377,8 @@ if(hide) {
     if( wIx >= winList.size() || wIx < 0) return NULL;
 
     if( winList[ wIx] != NULL) winList[ wIx]->SetValid(false); TidyWindowsList();
-    GDLWXStream* me=new GDLWXStream( xSize, ySize);
-    me->SetCurrentFont(fontname);
+    GDLWXStream* me=new GDLWXStream( xSize, ySize, fontname);
+//    me->LoadCurrentFont(fontname);
     me->SetGdlwxGraphicsPanel( static_cast<gdlwxGraphicsPanel*>(draw), false );
     winList[ wIx] = me;
     oList[ wIx]   = oIx++;
