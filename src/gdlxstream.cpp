@@ -342,7 +342,7 @@ void GDLXStream::UnSetDoubleBuffering() {
 }
 
 void GDLXStream::UglyPatchMakeHidden() {
-  pls->arrow_npts=999;
+  pls->makeHidden=999;
 }
 //modified version. Will not tell double buffering is available if current graphic function is not pure "copy".
 bool GDLXStream::HasSafeDoubleBuffering() {

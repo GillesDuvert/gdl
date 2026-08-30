@@ -43,9 +43,6 @@ public:
     // no pause on win destruction
     plstream::spause(false);
 
-    // extended fonts
-    plstream::fontld(1);
-
     // we want color
     plstream::scolor(1);
 
@@ -70,8 +67,6 @@ public:
     // need to be called initially. permit to fix things
     plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
     plstream::adv(0); //-->this one is the 1st and only pladv
-    // load font
-    plstream::font(1);
     plstream::vpor(0, 1, 0, 1);
     plstream::wind(0, 1, 0, 1);
 
