@@ -14,6 +14,7 @@
 #cmakedefine HAVE_LIBGSL 1
 #cmakedefine HAVE_LIBGSLCBLAS 1
 #cmakedefine HAVE_LIBNCURSES 1
+#cmakedefine HAVE_FONTCONFIG 1
 #cmakedefine HAVE_LIBREADLINE 1
 #cmakedefine HAVE_LIBWXWIDGETS 1
 #cmakedefine HAVE_LIBZ 1
