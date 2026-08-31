@@ -65,7 +65,6 @@ PLDLLIMPEXP void * plbuf_save( PLStream *, void * );
 PLDLLIMPEXP void * plbuf_switch( PLStream *, void * );
 PLDLLIMPEXP void plbuf_restore( PLStream *, void * );
 
-PLDLLIMPEXP void plRemakePlot( PLStream * );
 void plFlushBuffer( PLStream *pls, PLBOOL restart, size_t amount );
 
 #ifdef __cplusplus

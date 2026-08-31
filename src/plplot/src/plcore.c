@@ -135,8 +135,6 @@ plP_init( void )
     ( *plsc->dispatch_table->pl_init )( (struct PLStream_struct *) plsc );
     plrestore_locale( save_locale );
 
-    if ( plsc->plbuf_write )
-        plbuf_init( plsc );
 }
 
 // End of page
@@ -152,9 +150,6 @@ plP_eop( void )
         return;
 
     plsc->page_status = AT_EOP;
-
-    if ( plsc->plbuf_write )
-        plbuf_eop( plsc );
 
 // Call user eop handler if present.
 
@@ -204,8 +199,6 @@ plP_bop( void )
         plrestore_locale( save_locale );
     }
 
-    if ( plsc->plbuf_write )
-        plbuf_bop( plsc );
 }
 
 // Tidy up device (flush buffers, close file, etc).
@@ -225,11 +218,6 @@ plP_tidy( void )
     ( *plsc->dispatch_table->pl_tidy )( (struct PLStream_struct *) plsc );
     plrestore_locale( save_locale );
 
-    if ( plsc->plbuf_write )
-    {
-        plbuf_tidy( plsc );
-    }
-
     plsc->OutFile = NULL;
 }
 
@@ -239,9 +227,6 @@ void
 plP_state( PLINT op )
 {
     char * save_locale;
-    if ( plsc->plbuf_write )
-        plbuf_state( plsc, op );
-
     save_locale = plsave_set_locale();
     if ( !plsc->stream_closed )
     {
@@ -256,12 +241,6 @@ void
 plP_esc( PLINT op, void *ptr )
 {
     char   * save_locale;
-    PLINT  clpxmi, clpxma, clpymi, clpyma;
-
-    // The plot buffer must be called first
-    if ( plsc->plbuf_write )
-        plbuf_esc( plsc, op, ptr );
-
     save_locale = plsave_set_locale();
     if ( !plsc->stream_closed )
     {
@@ -279,11 +258,6 @@ plP_swin( PLWindow *plwin )
 {
     PLWindow *w;
     PLINT    clpxmi, clpxma, clpymi, clpyma;
-
-// Provide plot buffer with unfiltered window data
-
-    if ( plsc->plbuf_write )
-        plbuf_esc( plsc, PLESC_SWIN, (void *) plwin );
 
     w = &plsc->plwin[plsc->nplwin++ % PL_MAXWINDOWS];
 
@@ -361,9 +335,6 @@ plP_line( short *x, short *y )
 
     plsc->page_status = DRAWING;
 
-    if ( plsc->plbuf_write )
-        plbuf_line( plsc, x[0], y[0], x[1], y[1] );
-
     if ( plsc->difilt )
     {
         for ( i = 0; i < npts; i++ )
@@ -389,9 +360,6 @@ plP_polyline( short *x, short *y, PLINT npts )
     PLINT i, clpxmi, clpxma, clpymi, clpyma;
 
     plsc->page_status = DRAWING;
-
-    if ( plsc->plbuf_write )
-        plbuf_polyline( plsc, x, y, npts );
 
     if ( plsc->difilt )
     {
@@ -424,14 +392,6 @@ plP_fill( short *x, short *y, PLINT npts )
     PLINT i, clpxmi, clpxma, clpymi, clpyma;
 
     plsc->page_status = DRAWING;
-
-    if ( plsc->plbuf_write )
-    {
-        plsc->dev_npts = npts;
-        plsc->dev_x    = x;
-        plsc->dev_y    = y;
-        plbuf_esc( plsc, PLESC_FILL, NULL );
-    }
 
 // Account for driver ability to do fills
 
@@ -483,15 +443,6 @@ void
 plP_polyfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly  )
 {
     plsc->page_status = DRAWING;
-
-    if ( plsc->plbuf_write )
-    {
-	plsc->dev_npath = npoly;
-	plsc->dev_pathx = x;
-	plsc->dev_pathy = y;
-	plsc->dev_pathnxy=npts;
-        plbuf_esc( plsc, PLESC_FILL_MULTIPATH, NULL );
-    }
 	grpolyfill( x, y, npts, npoly );
 }
 
@@ -836,8 +787,6 @@ pldi_ini( void )
 {
     if ( plsc->level >= 1 )
     {
-        if ( plsc->plbuf_write )
-            plbuf_di( plsc );
         if ( plsc->difilt & PLDI_MAP )  // Coordinate mapping
             calc_dimap();
 
@@ -1702,7 +1651,6 @@ c_plend1( void )
     free_mem( plsc->geometry );
     free_mem( plsc->dev );
     free_mem( plsc->BaseName );
-    free_mem( plsc->plbuf_buffer );
 
     if ( plsc->program )
         free_mem( plsc->program );
@@ -1905,16 +1853,6 @@ c_plcpstrm( PLINT iplsr, PLINT flags )
 // May be debugging
 
     plsc->debug = plsr->debug;
-
-// Plot buffer -- need to copy buffer pointer so that plreplot() works
-// This also prevents inadvertent writes into the plot buffer
-    plsc->plbuf_buffer_grow = plsr->plbuf_buffer_grow;
-    plsc->plbuf_buffer_size = plsr->plbuf_buffer_size;
-    plsc->plbuf_top         = plsr->plbuf_top;
-    plsc->plbuf_readpos     = plsr->plbuf_readpos;
-    if ( ( plsc->plbuf_buffer = malloc( plsc->plbuf_buffer_size ) ) == NULL )
-        plexit( "plcpstrm: Error allocating plot buffer." );
-    memcpy( plsc->plbuf_buffer, plsr->plbuf_buffer, plsr->plbuf_top );
 
 // Driver interface
 // Transformation must be recalculated in current driver coordinates
@@ -2272,25 +2210,6 @@ plSelectDev()
 }
 
 //--------------------------------------------------------------------------
-// void plreplot()
-//
-// Replays contents of plot buffer to current device/file.
-//--------------------------------------------------------------------------
-
-void
-c_plreplot( void )
-{
-    if ( plsc->plbuf_buffer != NULL )
-    {
-        plRemakePlot( plsc );
-    }
-    else
-    {
-        plwarn( "plreplot: plot buffer not available" );
-    }
-}
-
-//--------------------------------------------------------------------------
 // void plgFileDevs()
 //
 // Returns a list of file-oriented device names and their menu strings,
@@ -2404,9 +2323,6 @@ c_plssub( PLINT nx, PLINT ny )
 //AWI	plP_eop();
 //      plP_bop();
     }
-    //write the sub pages to the buffer if required
-    if ( plsc->plbuf_write )
-        plbuf_ssub( plsc );
 }
 
 // Set the device (keyword) name
@@ -2910,8 +2826,6 @@ plP_sclp( PLINT ixmin, PLINT ixmax, PLINT iymin, PLINT iymax )
     plsc->clpxma = ixmax;
     plsc->clpymi = iymin;
     plsc->clpyma = iymax;
-    if ( plsc->plbuf_write )
-        plbuf_clip( plsc );
 }
 
 // Get physical device limits in physical coordinates

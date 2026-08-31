@@ -273,7 +273,6 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_SET_LPB                   3  // obsolete
 #define PLESC_EXPOSE                    4  // handle window expose
 #define PLESC_RESIZE                    5  // handle window resize
-#define PLESC_REDRAW                    6  // handle window redraw
 #define PLESC_TEXT                      7  // switch to text screen
 #define PLESC_GRAPH                     8  // switch to graphics screen
 #define PLESC_FILL                      9  // fill polygon
@@ -732,7 +731,6 @@ typedef struct
 #define    plpsty                   c_plpsty
 #define    plptex                   c_plptex
 #define    plrandd                  c_plrandd
-#define    plreplot                 c_plreplot
 #define    plrgbhls                 c_plrgbhls
 #define    plschr                   c_plschr
 #define    plscmap0                 c_plscmap0
@@ -1304,11 +1302,6 @@ c_plpsty( PLINT patt );
 
 PLDLLIMPEXP void
 c_plptex( PLFLT x, PLFLT y, PLFLT dx, PLFLT dy, PLFLT just, PLCHAR_VECTOR text );
-
-// Replays contents of plot buffer to current device/file.
-
-PLDLLIMPEXP void
-c_plreplot( void );
 
 // Functions for converting between HLS and RGB color space
 

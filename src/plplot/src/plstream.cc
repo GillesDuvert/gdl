@@ -881,15 +881,6 @@ PLINT plstream::translatecursor( PLGraphicsIn *gin )
     return plTranslateCursor( gin );
 }
 
-// Replays contents of plot buffer to current device/file.
-
-void plstream::replot()
-{
-    set_stream();
-
-    plreplot();
-}
-
 // Set character height.
 
 void plstream::schr( PLFLT def, PLFLT scale )

@@ -347,7 +347,6 @@ void plD_init_wxwidgets( PLStream* pls )
     wxPLDevBase* dev;
     dev = common_init( pls );
 
-    pls->plbuf_write = 0;             // wxwidgets do not use the plot buffer as it does not implement plRemakePlot
     pls->termin      = 1;             // interactive device
     pls->graphx      = GRAPHICS_MODE; //  No text mode for this driver (at least for now, might add a console window if I ever figure it out and have the inclination)
 

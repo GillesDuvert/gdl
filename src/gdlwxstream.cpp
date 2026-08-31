@@ -163,13 +163,6 @@ void GDLWXStream::Init()
 // test :  gdlFrame->Show();
 }
 
-
-void GDLWXStream::RenewPlot()
-{
-  plstream::cmd( PLESC_CLEAR, NULL );
-  replot();
-}
-
 void GDLWXStream::GetGeometry( long& xSize, long& ySize)
 {
   // plplot does not return the real size

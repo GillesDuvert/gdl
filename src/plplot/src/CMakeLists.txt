@@ -39,7 +39,6 @@ set(plplot_LIB_SRCS
   pltick.c
   plvpor.c
   plwind.c
-  plbuf.c
 # added
   plstream.cc
   )

@@ -154,7 +154,6 @@ typedef struct
 // color	PLINT	Set if color is available
 // colorset	PLINT	Set if "color" was set prior to calling plinit
 // plbuf_read	PLINT	Set during a plot buffer redraw
-// plbuf_write	PLINT	Set if driver needs to use the plot buffer
 // dev_fill0	PLINT	Set if driver can do solid area fills
 // dev_gradient	PLINT	Set if driver can do (linear) gradients
 // dev_text	PLINT	Set if driver want to do it's only text drawing
@@ -261,7 +260,6 @@ typedef struct
 //
 // geometry	char*	Window geometry (malloc'ed)
 // window_id	long	X-window window ID
-// nopixmap	int	Set if you want to forbid allocation of pixmaps
 // db		int	Set if you want to double buffer output
 //			(only pixmap is drawn to directly; it is blitted
 //			to output window on EOP or an Expose)
@@ -282,19 +280,6 @@ typedef struct
 // bufmax	int	Number of bytes sent before output buffer is flushed
 // dp		int	Use Tcl-DP for communication, if set
 // server_nokill int	Don't kill plserver on a ^C if set
-//
-//--------------------------------------------------------------------------
-//
-// Variables for use by the plot buffer
-//
-// For Memory Buffer (default)
-// plbuf_buffer_grow  size_t  Memory buffer growth step
-// plbuf_buffer_size  size_t  Current size of memory buffer
-// plbuf_buffer	      void *  Pointer to memory buffer
-// plbuf_top	      size_t  Offset to the top of used area/start of free area
-// plbuf_readpos      size_t  Offset to current position being read
-//
-// plbufOwner	int	Typically set; only zero if current stream is cloned.
 //
 //--------------------------------------------------------------------------
 //
@@ -608,15 +593,6 @@ typedef struct
     char *auto_path;
     char *tk_file;  // plserver -file option
     int  bufmax, dp, server_nokill;
-
-// Plot buffer settings
-
-    size_t plbuf_buffer_grow;
-    size_t plbuf_buffer_size;
-    void   *plbuf_buffer;
-    size_t plbuf_top;
-    size_t plbuf_readpos;
-    int    plbufOwner;
 
 // Driver interface (DI)
 

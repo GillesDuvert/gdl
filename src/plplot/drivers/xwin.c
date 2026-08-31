@@ -261,7 +261,6 @@ plD_init_xw( PLStream *pls )
     pls->termin      = 1;       // Is an interactive terminal
     pls->dev_flush   = 1;       // Handle our own flushes
     pls->dev_fill0   = 1;       // Handle solid fills
-    pls->plbuf_write = 0;       // Activate plot buffer
     pls->dev_fastimg = 1;       // is a fast image device
     pls->dev_xor     = 1;       // device support xor mode
 
@@ -275,9 +274,6 @@ plD_init_xw( PLStream *pls )
     if ( usepthreads )
         plwarn( "You said you want pthreads, but they are not available." );
 #endif
-
-    if ( nobuffered )
-        pls->plbuf_write = 0;   // deactivate plot buffer
 
 // The real meat of the initialization done here
 
@@ -600,9 +596,6 @@ plD_tidy_xw( PLStream *pls )
         free_mem( xwd->cmap1 );
         free_mem( xwDisplay[ixwd] );
     }
-    // ANR: if we set this here the tmp file will not be closed
-    // See also comment in tkwin.c
-    //pls->plbuf_write = 0;
 }
 
 //--------------------------------------------------------------------------
@@ -799,10 +792,6 @@ plD_esc_xw( PLStream *pls, PLINT op, void *ptr )
     }
     case PLESC_GETC:
         GetCursorCmd( pls, (PLGraphicsIn *) ptr );
-        break;
-
-    case PLESC_REDRAW:
-        RedrawCmd( pls );
         break;
 
     case PLESC_RESIZE:
@@ -1163,18 +1152,7 @@ Init( PLStream *pls )
     dev->init_width  = (long) dev->width;
     dev->init_height = (long) dev->height;
 
-// Set up flags that determine what we are writing to
-// If nopixmap is set, ignore db
-
-    if ( pls->nopixmap )
-    {
-        dev->write_to_pixmap = 0;
-        pls->db = 0;
-    }
-    else
-    {
-        dev->write_to_pixmap = 1;
-    }
+    dev->write_to_pixmap = 1;
     dev->write_to_window = !pls->db;
 
 // Create pixmap for holding plot image (for expose events).
@@ -2357,7 +2335,7 @@ ExposeCmd( PLStream *pls, PLDisplay *pldis )
     }
     else
     {
-        plRemakePlot( pls );
+//        plRemakePlot( pls );
         XFlush( xwd->display );
     }
 }
@@ -2444,7 +2422,7 @@ ResizeCmd( PLStream *pls, PLDisplay *pldis )
     {
         XClearWindow( xwd->display, dev->window );
     }
-    plRemakePlot( pls );
+//    plRemakePlot( pls );
     XSync( xwd->display, 0 );
 
 // If pixmap available, fake an expose
@@ -2488,59 +2466,6 @@ static void ConfigBufferingCmd( PLStream *pls, PLBufferingCB *ptr )
     default:
         printf( "Unrecognized buffering request ignored.\n" );
         break;
-    }
-}
-
-//--------------------------------------------------------------------------
-// RedrawCmd()
-//
-// Handles page redraw without resize (pixmap does not get reallocated).
-// Calling this makes sure all necessary housekeeping gets done.
-//--------------------------------------------------------------------------
-
-static void
-RedrawCmd( PLStream *pls )
-{
-    XwDev     *dev            = (XwDev *) pls->dev;
-    XwDisplay *xwd            = (XwDisplay *) dev->xwd;
-    int       write_to_window = dev->write_to_window;
-
-    dbug_enter( "RedrawCmd" );
-
-// Return if plD_init_xw hasn't been called yet
-
-    if ( dev == NULL )
-    {
-        plwarn( "RedrawCmd: Illegal call -- driver uninitialized" );
-        return;
-    }
-
-// Initialize & redraw (to pixmap, if available).
-
-    if ( dev->write_to_pixmap )
-    {
-        dev->write_to_window = 0;
-        XSetForeground( xwd->display, dev->gc, dev->bgcolor.pixel );
-        XFillRectangle( xwd->display, dev->pixmap, dev->gc, 0, 0,
-            dev->width, dev->height );
-        XSetForeground( xwd->display, dev->gc, dev->curcolor.pixel );
-    }
-    if ( dev->write_to_window )
-    {
-        XClearWindow( xwd->display, dev->window );
-    }
-    plRemakePlot( pls );
-    XSync( xwd->display, 0 );
-
-    dev->write_to_window = write_to_window;
-
-// If pixmap available, fake an expose
-
-    if ( dev->write_to_pixmap )
-    {
-        XCopyArea( xwd->display, dev->pixmap, dev->window, dev->gc, 0, 0,
-            dev->width, dev->height, 0, 0 );
-        XSync( xwd->display, 0 );
     }
 }
 

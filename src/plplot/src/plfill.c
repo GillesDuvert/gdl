@@ -215,8 +215,7 @@ plfill_soft( short *x, short *y, PLINT n )
 
     //do not write the hatching lines to the buffer as we have already
     //written the fill to the buffer
-    plbuf_write       = plsc->plbuf_write;
-    plsc->plbuf_write = FALSE;
+
 // Loop over sets of lines in pattern
 
     for ( k = 0; k < plsc->nps; k++ )
@@ -299,7 +298,6 @@ plfill_soft( short *x, short *y, PLINT n )
         }
     }
     //reinstate the buffer writing parameter and free memory
-    plsc->plbuf_write = plbuf_write;
     free( (void *) buffer );
 }
 
