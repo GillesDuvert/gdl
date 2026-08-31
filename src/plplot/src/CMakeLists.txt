@@ -35,7 +35,6 @@ set(plplot_LIB_SRCS
   plsdef.c
   plshade.c
   plstdio.c
-  plstripc.c
   plsym.c
   pltick.c
   plvpor.c

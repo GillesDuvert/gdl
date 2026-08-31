@@ -44,44 +44,6 @@ enum PLcolor { Black = 0, Red, Yellow, Green,
                DarkRed, DeepBlue, Purple, LightCyan,
                LightBlue, Orchid, Mauve, White };
 
-// A class for assisting in generalizing the data prescription
-// interface to the contouring routines.
-
-class Contourable_Data {
-    int _nx, _ny;
-public:
-    Contourable_Data( int nx, int ny ) : _nx( nx ), _ny( ny ) {}
-    virtual void elements( int& nx, int& ny ) const { nx = _nx; ny = _ny; }
-    virtual PLFLT operator()( int i, int j ) const = 0;
-    virtual ~Contourable_Data() {};
-};
-
-PLDLLIMPEXP_CXX PLFLT Contourable_Data_evaluator( PLINT i, PLINT j, PLPointer p );
-
-class PLDLLIMPEXP_CXX Coord_Xformer {
-public:
-    virtual void xform( PLFLT ox, PLFLT oy, PLFLT& nx, PLFLT& ny ) const = 0;
-    virtual ~Coord_Xformer() {};
-};
-
-PLDLLIMPEXP_CXX void Coord_Xform_evaluator( PLFLT, PLFLT, PLFLT *, PLFLT *, PLPointer );
-
-class Coord_2d {
-public:
-    virtual PLFLT operator()( int ix, int iy ) const = 0;
-    virtual void elements( int& _nx, int& _ny )      = 0;
-    virtual void min_max( PLFLT& _min, PLFLT& _max ) = 0;
-    virtual ~Coord_2d() {};
-};
-
-class PLDLLIMPEXP_CXX cxx_pltr2 : public Coord_Xformer {
-    Coord_2d& xg;
-    Coord_2d& yg;
-public:
-    cxx_pltr2( Coord_2d & cx, Coord_2d & cy );
-    void xform( PLFLT x, PLFLT y, PLFLT& tx, PLFLT& ty ) const;
-};
-
 //--------------------------------------------------------------------------
 //Callback functions for passing into various API methods. We provide these
 //wrappers to avoid a requirement for linking to the C shared library.
@@ -766,40 +728,6 @@ public:
                  PLFILL_callback fill, bool rectangular,
                  PLTRANSFORM_callback pltr, PLPointer pltr_data );
 
-// Would be nice to fix this even more, say by stuffing xmin, xmax,
-// ymin, ymax, rectangular, and pcxf all into the contourable data
-// class.  Have to think more on that.  Or maybe the coordinate info.
-
-    void shade( Contourable_Data& d, PLFLT xmin, PLFLT xmax,
-                PLFLT ymin, PLFLT ymax, PLFLT shade_min, PLFLT shade_max,
-                PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                PLINT min_color, PLFLT min_width,
-                PLINT max_color, PLFLT max_width,
-                bool rectangular,
-                Coord_Xformer *pcxf );
-
-#ifdef PL_DEPRECATED
-    void shade1( const PLFLT * a, PLINT nx, PLINT ny,
-                 PLDEFINED_callback defined,
-                 PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                 PLFLT shade_min, PLFLT shade_max,
-                 PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                 PLINT min_color, PLFLT min_width,
-                 PLINT max_color, PLFLT max_width,
-                 PLFILL_callback fill, bool rectangular,
-                 PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-    void shade1( const PLFLT * a, PLINT nx, PLINT ny,
-                 PLDEFINED_callback defined,
-                 PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                 PLFLT shade_min, PLFLT shade_max,
-                 PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                 PLINT min_color, PLFLT min_width,
-                 PLINT max_color, PLFLT max_width,
-                 PLFILL_callback fill, PLINT rectangular,
-                 PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-#endif //PL_DEPRECATED
     void fshade( PLFLT ( *f2eval )( PLINT, PLINT, PLPointer ),
                  PLPointer f2eval_data,
                  PLFLT ( *c2eval )( PLINT, PLINT, PLPointer ),
@@ -1033,41 +961,6 @@ public:
 // Sets an optional user exit handler.
 
     void sexit( int ( *handler )( const char * ) );
-
-    // Transformation routines
-
-// Identity transformation.
-
-    //static void tr0( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-// Does linear interpolation from singly dimensioned coord arrays.
-
-    //static void tr1( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-// Does linear interpolation from doubly dimensioned coord arrays
-// (column dominant, as per normal C 2d arrays).
-
-    //static void tr2( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-// Just like pltr2() but uses pointer arithmetic to get coordinates from
-// 2d grid tables.
-
-    //static void tr2p( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-// We obviously won't be using this object from Fortran...
-
-// Identity transformation for plots from Fortran.
-
-//     void tr0f( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, void *pltr_data );
-
-// Does linear interpolation from doubly dimensioned coord arrays
-// (row dominant, i.e. Fortran ordering).
-
-//     void tr2f( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, void *pltr_data );
-
-// Example linear transformation function for contour plotter.
-// This is not actually part of the core library any more
-    //void  xform( PLFLT x, PLFLT y, PLFLT * tx, PLFLT * ty );
 
     // Function evaluators
 

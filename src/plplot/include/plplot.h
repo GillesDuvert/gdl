@@ -708,13 +708,11 @@ typedef struct
 #define    plhlsrgb                 c_plhlsrgb
 #define    plinit                   c_plinit
 #define    pljoin                   c_pljoin
-#define    pllab                    c_pllab
 #define    pllightsource            c_pllightsource
 #define    plline                   c_plline
 #define    plpath                   c_plpath
 #define    plline3                  c_plline3
 #define    pllsty                   c_pllsty
-#define    plmap                    c_plmap
 #define    plmapline                c_plmapline
 #define    plmapstring              c_plmapstring
 #define    plmaptex                 c_plmaptex
@@ -758,7 +756,6 @@ typedef struct
 #define    plsdiori                 c_plsdiori
 #define    plsdiplt                 c_plsdiplt
 #define    plsdiplz                 c_plsdiplz
-#define    plsdrawmode              c_plsdrawmode
 #define    plseed                   c_plseed
 #define    plsesc                   c_plsesc
 #define    plsetopt                 c_plsetopt
@@ -803,7 +800,6 @@ typedef struct
 #define    plw3d                    c_plw3d
 #define    plwidth                  c_plwidth
 #define    plwind                   c_plwind
-#define    plxormod                 c_plxormod
 
 #endif  // __PLSTUBS_H__
 
@@ -1050,11 +1046,6 @@ c_plgdiori( PLFLT_NC_SCALAR p_rot );
 PLDLLIMPEXP void
 c_plgdiplt( PLFLT_NC_SCALAR p_xmin, PLFLT_NC_SCALAR p_ymin, PLFLT_NC_SCALAR p_xmax, PLFLT_NC_SCALAR p_ymax );
 
-// Get the drawing mode
-
-PLDLLIMPEXP PLINT
-c_plgdrawmode( void );
-
 // Get family file parameters
 
 PLDLLIMPEXP void
@@ -1159,17 +1150,6 @@ c_plinit( void );
 PLDLLIMPEXP void
 c_pljoin( PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 );
 
-// Simple routine for labelling graphs.
-
-PLDLLIMPEXP void
-c_pllab( PLCHAR_VECTOR xlabel, PLCHAR_VECTOR ylabel, PLCHAR_VECTOR tlabel );
-
-// Flags for drawing mode
-#define PL_DRAWMODE_UNKNOWN          0x0
-#define PL_DRAWMODE_DEFAULT          0x1
-#define PL_DRAWMODE_REPLACE          0x2
-#define PL_DRAWMODE_XOR              0x4
-
 // Sets position of the light source
 PLDLLIMPEXP void
 c_pllightsource( PLFLT x, PLFLT y, PLFLT z );
@@ -1188,49 +1168,6 @@ c_plline3( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR z );
 
 PLDLLIMPEXP void
 c_pllsty( PLINT lin );
-
-// Plot continental outline in world coordinates
-
-PLDLLIMPEXP void
-c_plmap( PLMAPFORM_callback mapform, PLCHAR_VECTOR name,
-         PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy );
-
-// Plot map outlines
-
-PLDLLIMPEXP void
-c_plmapline( PLMAPFORM_callback mapform, PLCHAR_VECTOR name,
-             PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy,
-             PLINT_VECTOR plotentries, PLINT nplotentries );
-
-// Plot map points
-
-PLDLLIMPEXP void
-c_plmapstring( PLMAPFORM_callback mapform,
-               PLCHAR_VECTOR name, PLCHAR_VECTOR string,
-               PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy,
-               PLINT_VECTOR plotentries, PLINT nplotentries );
-
-// Plot map text
-
-PLDLLIMPEXP void
-c_plmaptex( PLMAPFORM_callback mapform,
-            PLCHAR_VECTOR name, PLFLT dx, PLFLT dy, PLFLT just, PLCHAR_VECTOR text,
-            PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy,
-            PLINT plotentry );
-
-// Plot map fills
-
-PLDLLIMPEXP void
-c_plmapfill( PLMAPFORM_callback mapform,
-             PLCHAR_VECTOR name, PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy,
-             PLINT_VECTOR plotentries, PLINT nplotentries );
-
-// Plot the latitudes and longitudes on the background.
-
-PLDLLIMPEXP void
-c_plmeridians( PLMAPFORM_callback mapform,
-               PLFLT dlong, PLFLT dlat,
-               PLFLT minlong, PLFLT maxlong, PLFLT minlat, PLFLT maxlat );
 
 // Plots a mesh representation of the function z[x][y].
 
@@ -1494,10 +1431,6 @@ c_plsdiplt( PLFLT xmin, PLFLT ymin, PLFLT xmax, PLFLT ymax );
 
 PLDLLIMPEXP void
 c_plsdiplz( PLFLT xmin, PLFLT ymin, PLFLT xmax, PLFLT ymax );
-
-// Set the drawing mode
-PLDLLIMPEXP void
-c_plsdrawmode( PLINT mode );
 
 // Set seed for internal random number generator
 

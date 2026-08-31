@@ -40,205 +40,6 @@
 using namespace std;
 #endif
 
-PLFLT Contourable_Data_evaluator( PLINT i, PLINT j, PLPointer p )
-{
-    const Contourable_Data& d = *(Contourable_Data *) p;
-
-    return d( i, j );
-}
-
-void Coord_Xform_evaluator( PLFLT ox, PLFLT oy,
-                            PLFLT *nx, PLFLT *ny, PLPointer p )
-{
-    const Coord_Xformer& xf = *(Coord_Xformer *) p;
-
-    xf.xform( ox, oy, *nx, *ny );
-}
-
-// A specific case for handling transformation defined by 2-d grid vertex
-// specification matrices.
-
-cxx_pltr2::cxx_pltr2( Coord_2d& cx, Coord_2d& cy )
-    : xg( cx ), yg( cy )
-{
-}
-
-// Next routine copied and modified for C++ from PLPLOT 4.99d.
-
-//--------------------------------------------------------------------------
-// pltr2()
-//
-// Does linear interpolation from doubly dimensioned coord arrays
-// (column dominant, as per normal C 2d arrays).
-//
-// This routine includes lots of checks for out of bounds.  This would
-// occur occasionally due to some bugs in the contour plotter (now fixed).
-// If an out of bounds coordinate is obtained, the boundary value is provided
-// along with a warning.  These checks should stay since no harm is done if
-// if everything works correctly.
-//--------------------------------------------------------------------------
-
-void cxx_pltr2::xform( PLFLT x, PLFLT y, PLFLT& tx, PLFLT& ty ) const
-{
-    int nx, ny;
-    xg.elements( nx, ny );
-
-    int   ul, ur, vl, vr;
-    PLFLT du, dv;
-
-    PLFLT xll, xlr, xrl, xrr;
-    PLFLT yll, ylr, yrl, yrr;
-    PLFLT xmin, xmax, ymin, ymax;
-
-    ul = (int) x;
-    ur = ul + 1;
-    du = x - ul;
-
-    vl = (int) y;
-    vr = vl + 1;
-    dv = y - vl;
-
-    xmin = 0;
-    xmax = nx - 1;
-    ymin = 0;
-    ymax = ny - 1;
-
-    if ( x < xmin || x > xmax || y < ymin || y > ymax )
-    {
-        cerr << "cxx_pltr2::xform, Invalid coordinates\n";
-
-        if ( x < xmin )
-        {
-            if ( y < ymin )
-            {
-                tx = xg( 0, 0 );
-                ty = yg( 0, 0 );
-            }
-            else if ( y > ymax )
-            {
-                tx = xg( 0, ny - 1 );
-                ty = yg( 0, ny - 1 );
-            }
-            else
-            {
-                xll = xg( 0, vl );
-                yll = yg( 0, vl );
-                xlr = xg( 0, vr );
-                ylr = yg( 0, vr );
-
-                tx = xll * ( 1 - dv ) + xlr * ( dv );
-                ty = yll * ( 1 - dv ) + ylr * ( dv );
-            }
-        }
-        else if ( x > xmax )
-        {
-            if ( y < ymin )
-            {
-                tx = xg( nx - 1, 0 );
-                ty = yg( nx - 1, 0 );
-            }
-            else if ( y > ymax )
-            {
-                tx = xg( nx - 1, ny - 1 );
-                ty = yg( nx - 1, ny - 1 );
-            }
-            else
-            {
-                xll = xg( nx - 1, vl );
-                yll = yg( nx - 1, vl );
-                xlr = xg( nx - 1, vr );
-                ylr = yg( nx - 1, vr );
-
-                tx = xll * ( 1 - dv ) + xlr * ( dv );
-                ty = yll * ( 1 - dv ) + ylr * ( dv );
-            }
-        }
-        else
-        {
-            if ( y < ymin )
-            {
-                xll = xg( ul, 0 );
-                xrl = xg( ur, 0 );
-                yll = yg( ul, 0 );
-                yrl = yg( ur, 0 );
-
-                tx = xll * ( 1 - du ) + xrl * ( du );
-                ty = yll * ( 1 - du ) + yrl * ( du );
-            }
-            else if ( y > ymax )
-            {
-                xlr = xg( ul, ny - 1 );
-                xrr = xg( ur, ny - 1 );
-                ylr = yg( ul, ny - 1 );
-                yrr = yg( ur, ny - 1 );
-
-                tx = xlr * ( 1 - du ) + xrr * ( du );
-                ty = ylr * ( 1 - du ) + yrr * ( du );
-            }
-        }
-    }
-
-// Normal case.
-// Look up coordinates in row-dominant array.
-// Have to handle right boundary specially -- if at the edge, we'd
-// better not reference the out of bounds point.
-
-    else
-    {
-        xll = xg( ul, vl );
-        yll = yg( ul, vl );
-
-// ur is out of bounds
-
-        if ( ur == nx && vr < ny )
-        {
-            xlr = xg( ul, vr );
-            ylr = yg( ul, vr );
-
-            tx = xll * ( 1 - dv ) + xlr * ( dv );
-            ty = yll * ( 1 - dv ) + ylr * ( dv );
-        }
-
-// vr is out of bounds
-
-        else if ( ur < nx && vr == ny )
-        {
-            xrl = xg( ur, vl );
-            yrl = yg( ur, vl );
-
-            tx = xll * ( 1 - du ) + xrl * ( du );
-            ty = yll * ( 1 - du ) + yrl * ( du );
-        }
-
-// both ur and vr are out of bounds
-
-        else if ( ur == nx && vr == ny )
-        {
-            tx = xll;
-            ty = yll;
-        }
-
-// everything in bounds
-
-        else
-        {
-            xrl = xg( ur, vl );
-            xlr = xg( ul, vr );
-            xrr = xg( ur, vr );
-
-            yrl = yg( ur, vl );
-            ylr = yg( ul, vr );
-            yrr = yg( ur, vr );
-
-            tx = xll * ( 1 - du ) * ( 1 - dv ) + xlr * ( 1 - du ) * ( dv ) +
-                 xrl * ( du ) * ( 1 - dv ) + xrr * ( du ) * ( dv );
-
-            ty = yll * ( 1 - du ) * ( 1 - dv ) + ylr * ( 1 - du ) * ( dv ) +
-                 yrl * ( du ) * ( 1 - dv ) + yrr * ( du ) * ( dv );
-        }
-    }
-}
-
 //Callbacks
 
 // Callback for plfill. This will just call the C plfill function
@@ -880,17 +681,6 @@ void plstream::join( PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 )
     pljoin( x1, y1, x2, y2 );
 }
 
-// Simple routine for labelling graphs.
-
-void plstream::lab( const char *xlabel, const char *ylabel,
-                    const char *tlabel )
-{
-    set_stream();
-
-    pllab( xlabel, ylabel, tlabel );
-}
-
-
 // Sets position of the light source
 
 void plstream::lightsource( PLFLT x, PLFLT y, PLFLT z )
@@ -927,76 +717,6 @@ void plstream::lsty( PLINT lin )
     pllsty( lin );
 }
 
-//// Plot continental outline in world coordinates
-//
-//void plstream::map( PLMAPFORM_callback mapform,
-//                    const char *name, PLFLT minx, PLFLT maxx,
-//                    PLFLT miny, PLFLT maxy )
-//{
-//    set_stream();
-//
-//    plmap( mapform, name, minx, maxx, miny, maxy );
-//}
-//
-//// Plot map lines
-//
-//void plstream::mapline( PLMAPFORM_callback mapform, const char *name,
-//                        PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy,
-//                        const PLINT *plotentries, PLINT nplotentries )
-//{
-//    set_stream();
-//
-//    plmapline( mapform, name, minx, maxx, miny, maxy, plotentries, nplotentries );
-//}
-//
-//// Plot map points
-//
-//void plstream::mapstring( PLMAPFORM_callback mapform,
-//                          const char *name, const char *string,
-//                          PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy,
-//                          const PLINT *plotentries, PLINT nplotentries )
-//{
-//    set_stream();
-//
-//    plmapstring( mapform, name, string, minx, maxx, miny, maxy, plotentries, nplotentries );
-//}
-//
-//// Plot map text
-//
-//void plstream::maptex( PLMAPFORM_callback mapform,
-//                       const char *name, PLFLT dx, PLFLT dy, PLFLT just, const char *text,
-//                       PLFLT minx, PLFLT maxx, PLFLT miny, PLFLT maxy,
-//                       PLINT plotentry )
-//{
-//    set_stream();
-//
-//    plmaptex( mapform, name, dx, dy, just, text, minx, maxx, miny, maxy, plotentry );
-//}
-//
-//// Plot map fills
-//
-//void plstream::mapfill( PLMAPFORM_callback mapform,
-//                        const char *name, PLFLT minx, PLFLT maxx, PLFLT miny,
-//                        PLFLT maxy, const PLINT *plotentries, PLINT nplotentries )
-//{
-//    set_stream();
-//
-//    plmapfill( mapform, name, minx, maxx, miny, maxy, plotentries, nplotentries );
-//}
-//
-//// Plot the latitudes and longitudes on the background.
-//
-//void plstream::meridians( PLMAPFORM_callback mapform,
-//                          PLFLT dlong, PLFLT dlat,
-//                          PLFLT minlong, PLFLT maxlong,
-//                          PLFLT minlat, PLFLT maxlat )
-//{
-//    set_stream();
-//
-//    plmeridians( mapform, dlong, dlat, minlong, maxlong, minlat,
-//        maxlat );
-//}
-
 // Plots a mesh representation of the function z[x][y].
 
 void plstream::mesh( const PLFLT *x, const PLFLT *y, const PLFLT * const *z, PLINT nx, PLINT ny,
@@ -1016,15 +736,6 @@ void plstream::meshc( const PLFLT *x, const PLFLT *y, const PLFLT * const *z, PL
 
     plmeshc( x, y, z, nx, ny, opt, clevel, nlevel );
 }
-
-//  Creates a new stream and makes it the default.
-
-// void plstream::mkstrm( PLINT *p_strm )
-// {
-//     set_stream();
-
-//     plmkstrm(p_strm);
-// }
 
 // Prints out "text" at specified position relative to viewport
 
@@ -1518,85 +1229,6 @@ plstream::shades( const PLFLT * const *a, PLINT nx, PLINT ny,
 }
 
 void
-plstream::shade( Contourable_Data & d, PLFLT xmin, PLFLT xmax,
-                 PLFLT ymin, PLFLT ymax, PLFLT shade_min, PLFLT shade_max,
-                 PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                 PLINT min_color, PLFLT min_width,
-                 PLINT max_color, PLFLT max_width,
-                 bool rectangular,
-                 Coord_Xformer *pcxf )
-{
-    set_stream();
-
-    int nx, ny;
-    d.elements( nx, ny );
-
-    if ( pcxf != NULL )
-        ::plfshade( Contourable_Data_evaluator, &d,
-            NULL, NULL,
-            nx, ny,
-            xmin, xmax, ymin, ymax, shade_min, shade_max,
-            sh_cmap, sh_color, sh_width,
-            min_color, min_width, max_color, max_width,
-            plcallback::fill, rectangular,
-            Coord_Xform_evaluator, pcxf );
-    else
-        ::plfshade( Contourable_Data_evaluator, &d,
-            NULL, NULL,
-            nx, ny,
-            xmin, xmax, ymin, ymax, shade_min, shade_max,
-            sh_cmap, sh_color, sh_width,
-            min_color, min_width, max_color, max_width,
-            plcallback::fill, rectangular,
-            NULL, NULL );
-}
-
-#ifdef PL_DEPRECATED
-void
-plstream::shade1( const PLFLT *a, PLINT nx, PLINT ny,
-                  PLDEFINED_callback defined,
-                  PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                  PLFLT shade_min, PLFLT shade_max,
-                  PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                  PLINT min_color, PLFLT min_width,
-                  PLINT max_color, PLFLT max_width,
-                  PLFILL_callback fill, bool rectangular,
-                  PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plshade1( a, nx, ny, defined,
-        left, right, bottom, top,
-        shade_min, shade_max,
-        sh_cmap, sh_color, sh_width,
-        min_color, min_width, max_color, max_width,
-        fill, (PLBOOL) rectangular, pltr, pltr_data );
-}
-
-// Deprecated version using PLINT not bool
-void
-plstream::shade1( const PLFLT *a, PLINT nx, PLINT ny,
-                  PLDEFINED_callback defined,
-                  PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                  PLFLT shade_min, PLFLT shade_max,
-                  PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                  PLINT min_color, PLFLT min_width,
-                  PLINT max_color, PLFLT max_width,
-                  PLFILL_callback fill, PLINT rectangular,
-                  PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plshade1( a, nx, ny, defined,
-        left, right, bottom, top,
-        shade_min, shade_max,
-        sh_cmap, sh_color, sh_width,
-        min_color, min_width, max_color, max_width,
-        fill, (PLBOOL) rectangular, pltr, pltr_data );
-}
-#endif //PL_DEPRECATED
-
-void
 plstream::fshade( PLFLT ( *f2eval )( PLINT, PLINT, PLPointer ),
                   PLPointer f2eval_data,
                   PLFLT ( *c2eval )( PLINT, PLINT, PLPointer ),
@@ -1766,70 +1398,6 @@ void plstream::stransform( PLTRANSFORM_callback coordinate_transform, PLPointer 
     plstransform( coordinate_transform, coordinate_transform_data );
 }
 
-// Create 1d stripchart
-
-void plstream::stripc( PLINT *id, const char *xspec, const char *yspec,
-                       PLFLT xmin, PLFLT xmax, PLFLT xjump,
-                       PLFLT ymin, PLFLT ymax,
-                       PLFLT xlpos, PLFLT ylpos, bool y_ascl,
-                       bool acc, PLINT colbox, PLINT collab,
-                       const PLINT colline[], const PLINT styline[],
-                       const char *legline[], const char *labx,
-                       const char *laby, const char *labtop )
-{
-    set_stream();
-
-    plstripc( id, xspec, yspec, xmin, xmax, xjump, ymin, ymax, xlpos, ylpos,
-        (PLBOOL) y_ascl, (PLBOOL) acc, colbox, collab, colline, styline,
-        legline, labx, laby, labtop );
-}
-
-
-// Add a point to a stripchart.
-
-void plstream::stripa( PLINT id, PLINT pen, PLFLT x, PLFLT y )
-{
-    set_stream();
-
-    plstripa( id, pen, x, y );
-}
-
-// Deletes and releases memory used by a stripchart.
-
-void plstream::stripd( PLINT id )
-{
-    set_stream();
-
-    plstripd( id );
-}
-
-//// plots a 2d image (or a matrix too large for plshade() )  - colors
-//// automatically scaled
-//
-//void plstream::image( const PLFLT * const *data, PLINT nx, PLINT ny,
-//                      PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-//                      PLFLT zmin, PLFLT zmax,
-//                      PLFLT Dxmin, PLFLT Dxmax, PLFLT Dymin, PLFLT Dymax )
-//{
-//    set_stream();
-//
-//    plimage( data, nx, ny, xmin, xmax, ymin, ymax, zmin, zmax,
-//        Dxmin, Dxmax, Dymin, Dymax );
-//}
-//
-//// plots a 2d image (or a matrix too large for plshade() )
-//
-//void plstream::imagefr( const PLFLT * const *data, PLINT nx, PLINT ny, PLFLT xmin, PLFLT xmax,
-//                        PLFLT ymin, PLFLT ymax, PLFLT zmin, PLFLT zmax,
-//                        PLFLT valuemin, PLFLT valuemax,
-//                        PLTRANSFORM_callback pltr, PLPointer pltr_data )
-//{
-//    set_stream();
-//
-//    plimagefr( data, nx, ny, xmin, xmax, ymin, ymax, zmin, zmax,
-//        valuemin, valuemax, pltr, pltr_data );
-//}
-
 // Set up a new line style
 
 void plstream::styl( PLINT nms, const PLINT *mark, const PLINT *space )
@@ -1972,37 +1540,6 @@ void plstream::wind( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
     plwind( xmin, xmax, ymin, ymax );
 }
 
-//  Set xor mode; mode = 1-enter, 0-leave, status = 0 if not interactive device
-
-void plstream::xormod( bool mode, bool *status )
-{
-    PLBOOL loc_status;
-
-    set_stream();
-
-    plxormod( (PLBOOL) mode, &loc_status );
-
-    *status = ( loc_status != 0 );
-}
-
-// Set the seed for the random number generator included.
-//
-//void plstream::seed( unsigned int s )
-//{
-//    set_stream();
-//
-//    plseed( s );
-//}
-
-// Returns a random number on [0,1]-interval.
-//
-//PLFLT plstream::randd( void )
-//{
-//    set_stream();
-//
-//    return plrandd();
-//}
-
 // The rest for use from C / C++ only
 
 // Returns a list of file-oriented device names and their menu strings
@@ -2043,35 +1580,6 @@ void plstream::sexit( int ( *handler )( const char * ) )
     plsexit( handler );
 }
 
-// We obviously won't be using this object from Fortran...
-// // Identity transformation for plots from Fortran.
-
-// void plstream::tr0f(PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, void *pltr_data )
-// {
-//     set_stream();
-
-//     pltr0f(x,y,tx,ty,pltr_data);
-// }
-
-// // Does linear interpolation from doubly dimensioned coord arrays
-// // (row dominant, i.e. Fortran ordering).
-
-// void plstream::tr2f( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, void *pltr_data )
-// {
-//     set_stream();
-
-//     pltr2f(x,y,tx,ty,pltr_data);
-// }
-
-// Example linear transformation function for contour plotter.
-// This is not actually a part of the core library any more
-//
-// void  plstream::xform( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty )
-// {
-//  set_stream();
-//
-//  xform(x,y,tx,ty);
-// }
 
 // Function evaluators
 

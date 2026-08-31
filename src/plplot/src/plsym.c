@@ -105,29 +105,7 @@ static void
 plttf( stbtt_vertex *vects, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width);
-static PLINT
-plcvec( PLINT ch, signed char **xygr );
 
-
-//--------------------------------------------------------------------------
-// void pllab()
-//
-// Simple routine for labelling graphs.
-//--------------------------------------------------------------------------
-
-void
-c_pllab( PLCHAR_VECTOR xlabel, PLCHAR_VECTOR ylabel, PLCHAR_VECTOR tlabel )
-{
-    if ( plsc->level < 2 )
-    {
-        plabort( "pllab: Please set up viewport first" );
-        return;
-    }
-
-    plmtex( "t", (PLFLT) 2.0, (PLFLT) 0.5, (PLFLT) 0.5, tlabel );
-    plmtex( "b", (PLFLT) 3.2, (PLFLT) 0.5, (PLFLT) 0.5, xlabel );
-    plmtex( "l", (PLFLT) 5.0, (PLFLT) 0.5, (PLFLT) 0.5, ylabel );
-}
 
 //--------------------------------------------------------------------------
 // void plmtex()
