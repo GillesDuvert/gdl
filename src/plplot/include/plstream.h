@@ -72,6 +72,8 @@ PLDLLIMPEXP_CXX void tr2( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr
 // 2d grid tables.
 
 PLDLLIMPEXP_CXX void tr2p( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
+PLDLLIMPEXP_CXX void tr2f( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
+
 }
 
 //--------------------------------------------------------------------------

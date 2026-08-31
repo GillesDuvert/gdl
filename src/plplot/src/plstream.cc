@@ -84,6 +84,14 @@ void plcallback::tr2p( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty,
 {
     pltr2p( x, y, tx, ty, pltr_data );
 }
+// Just like pltr2() but uses fortran pointer arithmetic to get coordinates from
+// 2d grid tables.
+
+void plcallback::tr2f( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty,
+                       PLPointer pltr_data )
+{
+    pltr2f( x, y, tx, ty, pltr_data );
+}
 
 PLINT plstream::active_streams = 0;
 
