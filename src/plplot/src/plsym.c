@@ -98,7 +98,7 @@ int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 static void
 pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text);
 static void
-plchar( short *xygrid, int len, PLFLT *xform, 
+plhershey( short *xygrid, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width );
 static void
@@ -508,7 +508,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 					printf("glyph: %c, scale=%f, width=%f\n",ch,scale,width);
 */
 					charPoints = &(hersheyFontVectors[ifont][offset]);
-					plchar(charPoints, nvecs, xform, refx, refy, scale,
+					plhershey(charPoints, nvecs, xform, refx, refy, scale,
 							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
 				}
 		}
@@ -524,12 +524,12 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 }
 
 //--------------------------------------------------------------------------
-// plchar()
+// plhershey()
 //
 // Plots out Hershey fonts
 //--------------------------------------------------------------------------
 static void
-plchar( short *vects, int len, PLFLT *xform, 
+plhershey( short *vects, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
