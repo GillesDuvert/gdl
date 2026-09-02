@@ -462,11 +462,17 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 				xorg += ht;
 				break;
 			default:
-				if (plsc->dev_unicode && plsc->dev_text) {
+				
+redo:				if (plsc->dev_unicode && plsc->dev_text) {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
 						ifont = ch - PRIVATE_UNICODE_PLANE;
 						c_ttFontSet(ifont);
 						break;
+					}
+					if (ttfVectors[plsc->fontIndex] == NULL) {
+						printf("True Type Fonts not loaded, reverting to Hershey fonts.\n");
+						plsc->dev_unicode=0;
+						goto redo;
 					}
 					int glyph = stbtt_FindGlyphIndex(ttfVectors[plsc->fontIndex], ch);
 					int ax;
