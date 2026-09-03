@@ -386,7 +386,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 
 	pldeco(symbol, &length, string); // decode embedded commands, encode to unicode or hershey, depending.
 
-	PLUNICODE ifont = plsc->currentFont;
+	PLUNICODE ifont = plsc->fontIndex;
 	PLUNICODE oldifont = ifont;
 	int revert = 0;
 	PLINT oldglyph = -1; //for char-to-char advance
@@ -437,6 +437,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 			case M: // !M Switch to the !9 symbol font for one character, then switch back.
 				oldifont = ifont; oldglyph=-1;
 				ifont = 9;
+				c_ttFontSet(ifont);
 				revert = 1;
 			case N: // !N Shift back to the normal level and original character size.
 				scale = dscale;
@@ -457,6 +458,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 			case V: // !V Switch to the !20 symbol font for one character, then switch back.
 				oldifont = ifont; oldglyph=-1;
 				ifont = 20;
+				c_ttFontSet(ifont);
 				revert = 1;
 			case SP:// SPACE : Just add space size
 				xorg += ht;
@@ -489,7 +491,7 @@ redo:				if (plsc->dev_unicode && plsc->dev_text) {
 						break; // do not draw anything, just add to xorg
 					}
 /*
-					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,plsc->charHeightCorr,scale,width);
+					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,charHeightCorr[plsc->fontIndex],scale,width);
 */
 					stbtt_vertex *vertices;
 					int nvecs = stbtt_GetGlyphShape(ttfVectors[plsc->fontIndex], glyph, &vertices);
@@ -520,7 +522,7 @@ redo:				if (plsc->dev_unicode && plsc->dev_text) {
 		}
 		if (revert) {
 			revert = 0;
-			ifont = oldifont; oldglyph=-1;
+			ifont = oldifont; plsc->fontIndex=ifont; oldglyph=-1;
 		}
 	}
 	free(symbol);
@@ -600,7 +602,7 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
 	if (len == 0) return;
-	
+	int descent=charDescent[plsc->fontIndex];
 	PLINT lx, ly;
     PLFLT x, y;
     PLINT cx, cy;
@@ -645,7 +647,7 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
 	pathy[0]=&(lly[0]);
     for ( int i=0; i< len; ++i )
     {
-        cx = vects[i].x, cy = vects[i].y + plsc->charDescentValue;
+        cx = vects[i].x, cy = vects[i].y + descent;
 		x = *p_xorg + cx * scale;
 		y = *p_yorg + cy * scale;
 		lx = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
@@ -672,7 +674,7 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
                break;
             case STBTT_vcurve:
 				llx[l] = -2; l++; n++; //quadratic , 2 pair of coords follow
-				cx = vects[i].cx, cy = vects[i].cy + plsc->charDescentValue;
+				cx = vects[i].cx, cy = vects[i].cy +  descent;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
 				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
@@ -685,13 +687,13 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
                break;
             case STBTT_vcubic:
 				llx[l] = -3; l++; n++; //cubic , 3 pair of coords follow
-				cx = vects[i].cx, cy = vects[i].cy + plsc->charDescentValue;
+				cx = vects[i].cx, cy = vects[i].cy +  descent;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
 				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
 				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
 				l++; n++;
-				cx = vects[i].cx1, cy = vects[i].cy1 + plsc->charDescentValue ;
+				cx = vects[i].cx1, cy = vects[i].cy1 +  descent;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
 				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
@@ -761,7 +763,7 @@ plstrl( PLCHAR_VECTOR string) {
 static void
 pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 {
-    PLUNICODE     ch, ifont = plsc->currentFont;
+    PLUNICODE     ch, ifont = plsc->fontIndex;
 	PLINT ig, j = 0, lentxt = (PLINT) strlen( text );
     unsigned char      test, esc;
 
@@ -771,7 +773,7 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
     *length = 0;
 
     plgesc( &esc );
-    if ( ifont > numberfonts || ifont < 3 )  { plsc->currentFont=3; ifont = 3;}
+    if ( ifont > numberfonts || ifont < 3 )  { plsc->fontIndex=3; ifont = 3;}
 
 // Get next character; treat non-printing characters as spaces.
 
@@ -837,7 +839,7 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 					ifont=12;	sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE;				break;
 				case 'X':
 				case 'x':
-					ifont=plsc->currentFont; sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE; break;
+					ifont=plsc->fontIndex; sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE; break;
 				case 'A': case 'a':sym[( *length )++] = A; break;
 				case 'B': case 'b':sym[( *length )++] = B; break;
 				case 'C': case 'c':sym[( *length )++] = C; break;
@@ -1002,8 +1004,6 @@ extern int loadFontPath(const char *name);
 void c_ttFontSet(int n) {
 	if (getFontName(n) != NULL) {
 		plsc->fontIndex=n;
-		plsc->charHeightCorr = charHeightCorr[n];
-		plsc->charDescentValue = charDescent[n];
 	} else printf("loading of font #%d failed.\n",n);
 }
 void c_ttFontLoad(const char* fontName) {
@@ -1046,12 +1046,10 @@ void c_ttFontLoad(const char* fontName) {
 	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
 	float aspectratiooffont = averheight / (float) (x1 - x0);
 	charHeightCorr[n] = 20. / averheight; //value found experimentally (?)
-	plsc->charHeightCorr = charHeightCorr[n];
 	int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);
 	charDescent[n] = 2.5*descent; //value found experimentally (?)
-	plsc->charDescentValue= charDescent[n];	
-	//printf("averheight=%f, aspectratio=%f, ascent=%d, descent=%d, lineGap=%d, corr=%f\n",averheight,aspectratiooffont, ascent, descent,lineGap, plsc->charHeightCorr);
+	//printf("averheight=%f, aspectratio=%f, ascent=%d, descent=%d, lineGap=%d, corr=%f\n",averheight,aspectratiooffont, ascent, descent,lineGap, charHeightCorr[n]);
 }
 
 

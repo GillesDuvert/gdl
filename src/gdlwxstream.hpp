@@ -44,7 +44,7 @@ private:
 public:
     gdlwxGraphicsPanel* container; // for Update()
 
-    GDLWXStream( int width, int height , DString &defaultfontname);  
+    GDLWXStream( int width, int height);  
     ~GDLWXStream(); 
     virtual bool IsWxStream() final{return true;}
 

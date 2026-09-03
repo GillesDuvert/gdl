@@ -114,7 +114,7 @@ typedef std::vector< GraphicsDevice*> DeviceListT;
 class GraphicsDevice
 {
   static void InitCT();         // preset CT and actCT
-
+  static void InitTTFonts(); // loads addresses of basic true type fonts.
   static GraphicsDevice*    actDevice;
   static DeviceListT  deviceList;
   static GraphicsDevice*    actGUIDevice;

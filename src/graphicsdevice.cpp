@@ -37,6 +37,74 @@
 #include "devicenull.hpp"
 #include "initsysvar.hpp"
 #include "color.hpp"
+#include "findttfonts.h"
+
+//for truetype fonts: stores fontname and full font .ttf path
+std::map<std::string, std::pair<std::string,int>>KnownFontNames;
+static int numberFonts=3; //starts at 3!!
+
+extern "C" const char* getFontPath(const char* name) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  it = KnownFontNames.find(std::string(name));
+    if (it != KnownFontNames.end()) return (*it).second.first.c_str();
+  return NULL;
+}
+extern "C" int getFontIndex(const char* name) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  it = KnownFontNames.find(std::string(name));
+    if (it != KnownFontNames.end()) return (*it).second.second;
+  return -1;
+}
+extern "C" const char* getFontName(int n) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  for (it = KnownFontNames.begin(); it !=KnownFontNames.end(); ++it ) {
+    if ((*it).second.second == n) return (*it).second.first.c_str();
+  }
+  return NULL;
+}
+
+extern "C" int loadFontPath(const char *name) {
+  std::string fontPath = FindFontPath(name);
+  if (fontPath.length() > 0) { //Note: LINUX (Fontconfig) will ALWAYS return something.
+    // register it, even if specific device does not support it
+    KnownFontNames[name] = std::pair<std::string, int>(fontPath, numberFonts++);
+    return numberFonts-1;
+  }
+  return -1;
+}
+#define MAXTTFONTS 100
+// private structure
+typedef struct
+{
+   unsigned char *data;
+   int cursor;
+   int size;
+} stbtt__buf;
+// The following structure is defined publicly so you can declare one on
+// the stack or as a global or etc, but you should treat it as opaque.
+struct stbtt_fontinfo
+{
+   void           * userdata;
+   unsigned char  * data;              // pointer to .ttf file
+   int              fontstart;         // offset of start of font
+
+   int numGlyphs;                     // number of glyphs, needed for range checking
+
+   int loca,head,glyf,hhea,hmtx,kern,gpos; // table locations as offset from start of .ttf
+   int index_map;                     // a cmap mapping for our chosen character encoding
+   int indexToLocFormat;              // format needed to map from glyph index to glyph
+
+   stbtt__buf cff;                    // cff font data
+   stbtt__buf charstrings;            // the charstring index
+   stbtt__buf gsubrs;                 // global charstring subroutines index
+   stbtt__buf subrs;                  // private charstring subroutines index
+   stbtt__buf fontdicts;              // array of font dicts
+   stbtt__buf fdselect;               // map from glyph to fontdict
+};
+extern "C" stbtt_fontinfo** ttfVectors;
+extern "C" float *charHeightCorr;
+extern "C" int   *charDescent;
+extern "C" void c_ttFontLoad(const char* fontName);
 
 using namespace std;
 
@@ -182,10 +250,32 @@ DStructGDL* GraphicsDevice::GetDeviceStruct( const string& device)
     }
   return NULL;
 }
+void GraphicsDevice::InitTTFonts(){
+  c_ttFontLoad("Noto Sans"); //3
+  c_ttFontLoad("Noto Sans:weight=Bold"); //4
+  c_ttFontLoad("Noto Sans:slant=Italic"); //5
+  c_ttFontLoad("Noto Sans:weight=Bold:slant=Italic"); //6
+  c_ttFontLoad("DejaVu Serif"); //7
+  c_ttFontLoad("DejaVu Serif:slant=Italic"); //8
+  c_ttFontLoad("OpenSymbol"); //9
+  c_ttFontLoad("DejaVu Sans"); //10
+  c_ttFontLoad("Courier"); //11
+  c_ttFontLoad("Courier:slant=Italic"); //12
+  c_ttFontLoad("Courier:weight=Bold"); //13
+  c_ttFontLoad("Courier:weight=Bold:slant=Italic"); //14
+  c_ttFontLoad("DejaVu Serif:weight=Bold"); //15
+  c_ttFontLoad("DejaVu Serif:weight=Bold:slant=Italic"); //16
+  c_ttFontLoad("DejaVu Sans:weight=Bold"); //17
+  c_ttFontLoad("DejaVu Sans:slant=Italic"); //18
+  c_ttFontLoad("DejaVu Sans:weight=Bold:slant=Italic"); //19
+  c_ttFontLoad("DejaVu Math TeX Gyre"); //20
+  }
 void GraphicsDevice::Init()
 {
   InitCT();
-
+  
+  InitTTFonts();
+  
   DefineDStructDesc();
 
   GraphicsDevice* current_device=NULL;

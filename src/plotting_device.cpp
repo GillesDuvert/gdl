@@ -19,42 +19,11 @@
 
 #include <gsl/gsl_const_mksa.h> // GSL_CONST_MKSA_INCH
 
-#include "findttfonts.h"
+extern "C" const char* getFontPath(const char* name);
+extern "C" int getFontIndex(const char* name);
+extern "C" const char* getFontName(int n);
+extern "C" int loadFontPath(const char *name);
 
-//for truetype fonts: stores fontname and full font .ttf path
-std::map<std::string, std::pair<std::string,int>>KnownFontNames;
-#define NUMBERHERSHEYFONTS 40
-static int numberFonts=NUMBERHERSHEYFONTS; //provide room for the truetype equivalents of hershey fonts defined by drivers.
-
-extern "C" const char* getFontPath(const char* name) {
-  std::map<std::string, std::pair<std::string,int>>::iterator it;
-  it = KnownFontNames.find(std::string(name));
-    if (it != KnownFontNames.end()) return (*it).second.first.c_str();
-  return NULL;
-}
-extern "C" int getFontIndex(const char* name) {
-  std::map<std::string, std::pair<std::string,int>>::iterator it;
-  it = KnownFontNames.find(std::string(name));
-    if (it != KnownFontNames.end()) return (*it).second.second;
-  return -1;
-}
-extern "C" const char* getFontName(int n) {
-  std::map<std::string, std::pair<std::string,int>>::iterator it;
-  for (it = KnownFontNames.begin(); it !=KnownFontNames.end(); ++it ) {
-    if ((*it).second.second == n) return (*it).second.first.c_str();
-  }
-  return NULL;
-}
-
-extern "C" int loadFontPath(const char *name) {
-  std::string fontPath = FindFontPath(name);
-  if (fontPath.length() > 0) { //Note: LINUX (Fontconfig) will ALWAYS return something.
-    // register it, even if specific device does not support it
-    KnownFontNames[name] = std::pair<std::string, int>(fontPath, numberFonts++);
-    return numberFonts-1;
-  }
-  return -1;
-}
 namespace lib {
 
   using namespace std;

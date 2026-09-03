@@ -87,6 +87,8 @@ static int svg_family_check( PLStream * );
 // General
 
 static void poly_line( PLStream *, short *, short *, PLINT, short );
+static void fill_multiple_polygon(PLStream *);
+static void FillPolygons(PLStream *pls);
 static void write_hex( FILE *, unsigned char );
 
 // PLplot interface functions
@@ -370,7 +372,10 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
         }
         poly_line( pls, pls->dev_x, pls->dev_y, pls->dev_npts, 1 );
         break;
-  case PLESC_3D:
+    case PLESC_FILL_MULTIPATH:
+        fill_multiple_polygon( pls );
+        break;
+	case PLESC_3D:
     Set3D(ptr);
     break;
   case PLESC_2D:
@@ -442,6 +447,80 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
     fprintf( aStream->svgFile, "\"/>\n" );
     aStream->svgIndent -= 2;
 }
+
+//--------------------------------------------------------------------------
+//  static void fill_polygon( PLStream *pls )
+//
+//  Fill polygon described in points pls->dev_x[] and pls->dev_y[].
+//--------------------------------------------------------------------------
+static void fill_multiple_polygon( PLStream *pls) {
+
+  if (Status3D == 1) { //enable use everywhere.
+    //perform conversion on the fly
+    for (PLINT i = 0; i < pls->dev_npath; ++i) {
+      PLINT *x = pls->dev_pathx[i];
+      PLINT *y = pls->dev_pathy[i];
+      for (PLINT j = 0; j < pls->dev_pathnxy[i]; ++j) {
+        // 3D convert, must take into account that y is inverted.
+        int ix=x[j];
+        int iy=y[j];
+        if (ix >= 0) { //avoid transforming the negative codes...
+          SelfTransform3D(&ix, &iy);
+        x[j]=ix;
+        y[j]=iy;
+        }
+      }
+    }
+  }
+  FillPolygons(pls);
+}
+void FillPolygons(PLStream *pls) {
+    SVG *aStream;
+
+    aStream = pls->dev;
+
+    fprintf( aStream->svgFile, "<path d=\"");
+   for (int i = 0; i < pls->dev_npath; ++i) {
+    PLINT* x = pls->dev_pathx[i];
+    PLINT* y = pls->dev_pathy[i];
+	fprintf( aStream->svgFile, "M %.2f,%.2f ", (double) x[0] / aStream->scale, (double) y[0] / aStream->scale );
+    for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
+      switch (x[j]) {
+        case -1: //line
+          fprintf( aStream->svgFile, "L %.2f,%.2f ", (double) x[j+1] / aStream->scale, (double) y[j+1] / aStream->scale );
+          j++;
+          break;
+        case -2:
+         fprintf( aStream->svgFile, "Q %.2f,%.2f %.2f,%.2f ", (double) x[j+1] / aStream->scale, (double) y[j+1] / aStream->scale, (double) x[j+2] / aStream->scale, (double) y[j+2] / aStream->scale);
+          j+=2;
+          break;
+        case -3:
+         fprintf( aStream->svgFile, "C %.2f,%.2f %.2f,%.2f %.2f,%.2f ", (double) x[j+1] / aStream->scale, (double) y[j+1] / aStream->scale, (double) x[j+2] / aStream->scale, (double) y[j+2] / aStream->scale, (double) x[j+3] / aStream->scale, (double) y[j+3] / aStream->scale );
+          j+=3;
+          break;
+          break;
+        default:
+          printf("should not happen in FillPolygons(%d), please report!\n",x[j]);
+      }
+    }
+    fprintf( aStream->svgFile, "Z ");
+  }
+	fprintf( aStream->svgFile, "\"");
+	//this is a (multiple) FILL
+	if (pls->curcolor.a < 0.99) {
+		svg_attr_value(aStream, "stroke", "none");
+	} else {
+		svg_stroke_width(pls);
+		svg_stroke_color(pls);
+	}
+	svg_fill_color(pls);
+	if (pls->dev_eofill)
+		svg_attr_value(aStream, "fill-rule", "evenodd");
+	else
+		svg_attr_value(aStream, "fill-rule", "nonzero");
+
+	fprintf( aStream->svgFile, "/>"); //end of <path
+	}
 
 
 //--------------------------------------------------------------------------

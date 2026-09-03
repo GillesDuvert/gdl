@@ -23,7 +23,7 @@
 
 
 
-GDLWXStream::GDLWXStream( int width, int height, DString &defaultfontname )
+GDLWXStream::GDLWXStream( int width, int height)
 : GDLGStream( width, height,"wxwidgets")
   , streamDC(NULL)
   , streamBitmap(NULL)
@@ -55,8 +55,6 @@ GDLWXStream::GDLWXStream( int width, int height, DString &defaultfontname )
   // we can then set the font to hershey or truetype. (the plplot new driver was buggy with hershey anyway)
   PLINT doFont = ((PLINT) SysVar::GetPFont() > -1) ? 1 : 0;
   pls->dev_unicode=doFont;
-  this->LoadCurrentFont(defaultfontname);
-
   
   plstream::cmd(PLESC_DEVINIT, (void*)streamDC );
    // no pause on win destruction

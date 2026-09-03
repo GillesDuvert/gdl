@@ -126,7 +126,7 @@ pro gdl_read_compacted_hershey, fontnum
   openr,unit,table,/get_lun
   
   if n_elements(fontnum) eq 0 then suggested_list=[[3:9],[11:18],20] else suggested_list=fontnum
-  list=indgen(20)
+  list=indgen(41)
  
   foreach fontnum,list do begin
      ntouse=128-32

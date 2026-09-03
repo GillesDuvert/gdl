@@ -153,7 +153,7 @@ if(hide) {
   tfSizer->Add(plot, DONOTALLOWSTRETCH, wxALL, 0);
 
   //create stream
-  GDLWXStream* me = new GDLWXStream(xSize, ySize, fontname);
+  GDLWXStream* me = new GDLWXStream(xSize, ySize);
   winList[ wIx] = me;
   oList[ wIx] = oIx++;
   // sets actWin and updates !D
@@ -377,7 +377,7 @@ if(hide) {
     if( wIx >= winList.size() || wIx < 0) return NULL;
 
     if( winList[ wIx] != NULL) winList[ wIx]->SetValid(false); TidyWindowsList();
-    GDLWXStream* me=new GDLWXStream( xSize, ySize, fontname);
+    GDLWXStream* me=new GDLWXStream( xSize, ySize);
 //    me->LoadCurrentFont(fontname);
     me->SetGdlwxGraphicsPanel( static_cast<gdlwxGraphicsPanel*>(draw), false );
     winList[ wIx] = me;
