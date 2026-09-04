@@ -1535,9 +1535,9 @@ c_plinit( void )
 
 // Load fonts
 
-    plsc->fontIndex = 3;
+    plsc->HersheyFontIndex = 3;
 	hersheyFontLoad(GDLDATADIR"/hersh1.chr");
-
+    plsc->ttFontIndex = 3;
 // Set up subpages
 
     plP_subpInit();

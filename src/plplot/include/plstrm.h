@@ -683,7 +683,8 @@ typedef struct
 
 // Unicode section
 
-    PLUNICODE fontIndex; // a font index, in UNICODE as it may be embbedded in a UNICODE string
+    PLUNICODE ttFontIndex; // a font index, in UNICODE as it may be embbedded in a UNICODE string
+    PLUNICODE HersheyFontIndex; // a font index, in UNICODE as it may be embbedded in a UNICODE string
     PLINT     dev_unicode;
 
     //

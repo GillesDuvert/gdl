@@ -307,14 +307,14 @@ if(hide) {
 
  bool LoadFont(DString &f) {
 	 fontname=f;
-//	    this->GetStream(); //mandatory open a window if none opened.
+	    this->GetStream(); //mandatory open a window if none opened.
         for (int i = 0; i < winList.size(); i++) {
             if (winList[i] != NULL) winList[i]->LoadCurrentFont(fontname);
         }
 		return true;
  }
  bool SetFont(int n) {
-//	    this->GetStream(); //mandatory open a window if none opened.
+	    this->GetStream(); //mandatory open a window if none opened.
         for (int i = 0; i < winList.size(); i++) {
             if (winList[i] != NULL) winList[i]->SetCurrentFont(n);
         }

@@ -43,7 +43,10 @@ void GDLZStream::Clear( DLong bColor)
 
 void GDLZStream::Init()
 {
-   this->plstream::init();
+   plstream::init();
+   //AFTER init, change back to selected
+   PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
+   pls->dev_unicode=doFont;
 }
 
 void GDLZStream::GetGeometry(long& xSize, long& ySize)

@@ -73,6 +73,7 @@ namespace lib {
         n=loadFontPath((*pattern)[0].c_str());
         if (n >= 0 ) { //Note: LINUX (Fontconfig) will ALWAYS return something.
           // register it, even if specific device does not support it
+          c_ttFontLoad((*pattern)[0].c_str());
           if (!actDevice->LoadFont((*pattern)[0])) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
         } else e->Throw("Unknown True Type font "+(*pattern)[0]);
       }

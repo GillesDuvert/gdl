@@ -58,7 +58,7 @@ extern "C" int getFontIndex(const char* name) {
 extern "C" const char* getFontName(int n) {
   std::map<std::string, std::pair<std::string,int>>::iterator it;
   for (it = KnownFontNames.begin(); it !=KnownFontNames.end(); ++it ) {
-    if ((*it).second.second == n) return (*it).second.first.c_str();
+    if ((*it).second.second == n) return (*it).first.c_str();
   }
   return NULL;
 }

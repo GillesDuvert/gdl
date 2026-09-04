@@ -62,7 +62,7 @@ extern const char* findFontPath(const char* name);
 #endif
 
 // Declarations
-#define NUMBERHERSHEYFONTS 40 
+#define NUMBERHERSHEYFONTS 20 
 #define MAXTTFONTS 100
 struct CTAB {
 	unsigned char nvecs;
@@ -102,7 +102,7 @@ plhershey( short *xygrid, int len, PLFLT *xform,
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width );
 static void
-plttf( stbtt_vertex *vects, int len, PLFLT *xform, 
+plttf( stbtt_vertex *vects, int descent, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width);
 
@@ -360,6 +360,10 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	static PLFLT saverestore[1000] = {};
 	int counter = -1;
 	short *charPoints = 0;
+	PLUNICODE ifont = plsc->ttFontIndex;
+	if (!plsc->dev_unicode) {ifont = plsc->HersheyFontIndex; ifont=MAX(3,ifont); ifont=MIN(numberfonts,ifont); }  
+	printf("at entry ifont=%d\n",ifont);
+	PLUNICODE oldifont = ifont;
 #define HEIGHTRATIO 1.6
 	PLINT ch, i, length, style;
 	PLFLT width = 0., xorg = 0., yorg = 0., yline = 0., yref = 0., def, ht, dscale, scale;
@@ -367,7 +371,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	// TrueType fonts need a special correction as their size is all different.
 	// The correction itself depends on the size of the hershey fonts, all this is quite relative
 	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
-	if (plsc->dev_unicode && plsc->dev_text) ht*=charHeightCorr[plsc->fontIndex];
+	if (plsc->dev_unicode && plsc->dev_text) ht*=charHeightCorr[ifont];
 	dscale = 0.05 * ht;
 	scale = dscale;
 	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
@@ -386,8 +390,6 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 
 	pldeco(symbol, &length, string); // decode embedded commands, encode to unicode or hershey, depending.
 
-	PLUNICODE ifont = plsc->fontIndex;
-	PLUNICODE oldifont = ifont;
 	int revert = 0;
 	PLINT oldglyph = -1; //for char-to-char advance
 	for (i = 0; i < length; i++) {
@@ -437,7 +439,6 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 			case M: // !M Switch to the !9 symbol font for one character, then switch back.
 				oldifont = ifont; oldglyph=-1;
 				ifont = 9;
-				c_ttFontSet(ifont);
 				revert = 1;
 			case N: // !N Shift back to the normal level and original character size.
 				scale = dscale;
@@ -458,7 +459,6 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 			case V: // !V Switch to the !20 symbol font for one character, then switch back.
 				oldifont = ifont; oldglyph=-1;
 				ifont = 20;
-				c_ttFontSet(ifont);
 				revert = 1;
 			case SP:// SPACE : Just add space size
 				xorg += ht;
@@ -468,20 +468,19 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 redo:				if (plsc->dev_unicode && plsc->dev_text) {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
 						ifont = ch - PRIVATE_UNICODE_PLANE;
-						c_ttFontSet(ifont);
 						break;
 					}
-					if (ttfVectors[plsc->fontIndex] == NULL) {
+					if (ttfVectors[ifont] == NULL) {
 						printf("True Type Fonts not loaded, reverting to Hershey fonts.\n");
 						plsc->dev_unicode=0;
 						goto redo;
 					}
-					int glyph = stbtt_FindGlyphIndex(ttfVectors[plsc->fontIndex], ch);
+					int glyph = stbtt_FindGlyphIndex(ttfVectors[ifont], ch);
 					int ax;
 					int lsb;
-					stbtt_GetGlyphHMetrics(ttfVectors[plsc->fontIndex], glyph, &ax, &lsb);
+					stbtt_GetGlyphHMetrics(ttfVectors[ifont], glyph, &ax, &lsb);
 					if (oldglyph != -1) {
-						ax += stbtt_GetGlyphKernAdvance(ttfVectors[plsc->fontIndex], oldglyph, glyph);
+						ax += stbtt_GetGlyphKernAdvance(ttfVectors[ifont], oldglyph, glyph);
 					}
 					oldglyph = glyph;
 					//ax is advance width, so corr*ax will be advance in pixels.
@@ -494,10 +493,10 @@ redo:				if (plsc->dev_unicode && plsc->dev_text) {
 					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,charHeightCorr[plsc->fontIndex],scale,width);
 */
 					stbtt_vertex *vertices;
-					int nvecs = stbtt_GetGlyphShape(ttfVectors[plsc->fontIndex], glyph, &vertices);
-					plttf(vertices, nvecs, xform, refx, refy, scale,
+					int nvecs = stbtt_GetGlyphShape(ttfVectors[ifont], glyph, &vertices);
+					plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale,
 							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
-					stbtt_FreeShape(ttfVectors[plsc->fontIndex], vertices);
+					stbtt_FreeShape(ttfVectors[ifont], vertices);
 				} else {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
 						ifont = ch - PRIVATE_UNICODE_PLANE;
@@ -522,12 +521,16 @@ redo:				if (plsc->dev_unicode && plsc->dev_text) {
 		}
 		if (revert) {
 			revert = 0;
-			ifont = oldifont; plsc->fontIndex=ifont; oldglyph=-1;
+			ifont = oldifont; 
+			oldglyph=-1;
 		}
 	}
 	free(symbol);
 	//reset line style
 	plsc->nms = style;
+	if (plsc->dev_unicode) plsc->ttFontIndex=ifont; 
+	else plsc->HersheyFontIndex=ifont; // hershey fonts history are managed entirely inside plsc.
+	printf("at exit ifont=%d\n",ifont);
 	return xorg; //length
 }
 
@@ -597,12 +600,11 @@ plhershey( short *vects, int len, PLFLT *xform,
 // Fills a given TTF character using device EOFILL capabilities.
 //--------------------------------------------------------------------------
 static void
-plttf( stbtt_vertex *vects, int len, PLFLT *xform, 
+plttf( stbtt_vertex *vects, int descent, int len, PLFLT *xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
 	if (len == 0) return;
-	int descent=charDescent[plsc->fontIndex];
 	PLINT lx, ly;
     PLFLT x, y;
     PLINT cx, cy;
@@ -728,7 +730,12 @@ plttf( stbtt_vertex *vects, int len, PLFLT *xform,
 
 PLFLT
 plstrl( PLCHAR_VECTOR string) {
-	return plstr(string, 1, 0,0, NULL,0,0,0,0);
+	// take into account that plstr can change the font! Restore it at end!
+	PLUNICODE ifont = (plsc->dev_unicode)?plsc->ttFontIndex:plsc->HersheyFontIndex;
+	printf("at entry ifont=%d\n",ifont);
+	PLFLT ret = plstr(string, 1, 0,0, NULL,0,0,0,0);
+	if (plsc->dev_unicode) plsc->ttFontIndex=ifont; else plsc->HersheyFontIndex=ifont;
+	return ret;
 }
 
 //--------------------------------------------------------------------------
@@ -763,7 +770,7 @@ plstrl( PLCHAR_VECTOR string) {
 static void
 pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 {
-    PLUNICODE     ch, ifont = plsc->fontIndex;
+    PLUNICODE     ch, ifont = plsc->ttFontIndex;
 	PLINT ig, j = 0, lentxt = (PLINT) strlen( text );
     unsigned char      test, esc;
 
@@ -773,7 +780,6 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
     *length = 0;
 
     plgesc( &esc );
-    if ( ifont > numberfonts || ifont < 3 )  { plsc->fontIndex=3; ifont = 3;}
 
 // Get next character; treat non-printing characters as spaces.
 
@@ -815,7 +821,6 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 						default:
 							j--;
 					}
-					if (ifont < 3) ifont = 3;
 					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
 					break;
 				case '2':
@@ -828,7 +833,6 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 						default:
 							j--;
 					}
-					if (ifont < 3) ifont = 3;
 					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
 					break;
 				case 'G':
@@ -839,7 +843,7 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 					ifont=12;	sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE;				break;
 				case 'X':
 				case 'x':
-					ifont=plsc->fontIndex; sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE; break;
+					sym[( *length )++]=ifont+PRIVATE_UNICODE_PLANE; break;
 				case 'A': case 'a':sym[( *length )++] = A; break;
 				case 'B': case 'b':sym[( *length )++] = B; break;
 				case 'C': case 'c':sym[( *length )++] = C; break;
@@ -877,8 +881,6 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 				default:
 					break;
 			}
-			if (ifont < 3) ifont=3;
-			if (ifont > numberfonts) ifont = 3;
 		} else {
 				if (ch == SPACE) sym[( *length )++] = SP; else sym[( *length )++] = ch;
 		}
@@ -1001,9 +1003,10 @@ extern char* getFontPath(const char* name);
 extern int getFontIndex(const char* name);
 extern const char* getFontName(int n);
 extern int loadFontPath(const char *name);
-void c_ttFontSet(int n) {
+void c_ttFontSet(int n) {	
+	printf("c_ttFontSet(%d) (%s)\n",n, getFontName(n));
 	if (getFontName(n) != NULL) {
-		plsc->fontIndex=n;
+		plsc->ttFontIndex=n;
 	} else printf("loading of font #%d failed.\n",n);
 }
 void c_ttFontLoad(const char* fontName) {
@@ -1012,8 +1015,8 @@ void c_ttFontLoad(const char* fontName) {
 	printf("c_ttFontLoad(%s) gives index n=%d.\n",fontName,n);
 */
 	if (n < 0) {
-		n=loadFontPath(fontName); //happens when stream is initialized
-	    if (n < 0) return; // too silent...
+	n=loadFontPath(fontName); //happens when stream is initialized
+	if (n < 0) return; // too silent...
 	}
     long size;
     unsigned char* fontBuffer;
@@ -1037,7 +1040,7 @@ void c_ttFontLoad(const char* fontName) {
         printf("loading of %s failed.\n",fontName);
     }
     ttfVectors[n]=info;
-	plsc->fontIndex=n;
+	plsc->ttFontIndex=n;
 	// to be optimized:
 	int x0, y0, x1, y1;
 	stbtt_GetFontBoundingBox(info, &x0, &y0, &x1, &y1);
@@ -1049,7 +1052,9 @@ void c_ttFontLoad(const char* fontName) {
 	int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);
 	charDescent[n] = 2.5*descent; //value found experimentally (?)
-	//printf("averheight=%f, aspectratio=%f, ascent=%d, descent=%d, lineGap=%d, corr=%f\n",averheight,aspectratiooffont, ascent, descent,lineGap, charHeightCorr[n]);
+/*
+	printf("averheight=%f, aspectratio=%f, ascent=%d, descent=%d, lineGap=%d, corr=%f\n",averheight,aspectratiooffont, ascent, descent,lineGap, charHeightCorr[n]);
+*/
 }
 
 

@@ -155,7 +155,9 @@ void GDLWXStream::WarpPointer(DLong x, DLong y) {
 
 void GDLWXStream::Init()
 {
-  this->plstream::init();
+  plstream::init();
+  PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
+  pls->dev_unicode=doFont;
 
 //  set_stream(); // private
 // test :  gdlFrame->Show();
