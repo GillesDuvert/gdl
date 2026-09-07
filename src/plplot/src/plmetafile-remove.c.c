@@ -624,7 +624,7 @@ enum _plm_status read_escape( PDFstrm *plm, PLmDev *dev, PLStream *pls )
 
     switch ( op )
     {
-    case PLESC_FILL:
+    case PLESC_FILL_POLYGON:
     {
         PLINT i, npts;
         PLFLT x, y;

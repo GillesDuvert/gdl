@@ -92,6 +92,8 @@ plD_init_mem( PLStream *pls )
     pls->dev_fill0 = 0;         // Handle solid fills
     pls->dev_fill1 = 0;         // Use PLplot core fallback for pattern fills
     pls->nopause   = 1;         // Don't pause between frames
+    pls->use_unicode  = 0;      // wants text as unicode
+    pls->dev_alt_unicode  = 1;      // use alternate filling for unicode fonts
 }
 
 #define sign( a )    ( ( a < 0 ) ? -1 : ( ( a == 0 ) ? 0 : 1 ) )

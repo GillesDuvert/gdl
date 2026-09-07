@@ -275,7 +275,7 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_RESIZE                    5  // handle window resize
 #define PLESC_TEXT                      7  // switch to text screen
 #define PLESC_GRAPH                     8  // switch to graphics screen
-#define PLESC_FILL                      9  // fill polygon
+#define PLESC_FILL_POLYGON                      9  // fill polygon
 #define PLESC_DI                        10 // handle DI command
 #define PLESC_FLUSH                     11 // flush output
 #define PLESC_EH                        12 // handle Window events
@@ -307,7 +307,7 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_IMPORT_BUFFER             39 // set the contents of the buffer to a specified byte string
 #define PLESC_APPEND_BUFFER             40 // append the given byte string to the buffer
 #define PLESC_FLUSH_REMAINING_BUFFER    41 // flush the remaining buffer e.g. after new data was appended
-#define PLESC_FILL_MULTIPATH            42 // fill multiple polygon
+#define PLESC_FILL_PATH            42 // fill multiple polygon
 
 // image operations
 #define ZEROW2B                         1

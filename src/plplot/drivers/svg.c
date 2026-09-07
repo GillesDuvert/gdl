@@ -87,8 +87,8 @@ static int svg_family_check( PLStream * );
 // General
 
 static void poly_line( PLStream *, short *, short *, PLINT, short );
-static void fill_multiple_polygon(PLStream *);
-static void FillPolygons(PLStream *pls);
+static void fill_path(PLStream *);
+static void FillPath(PLStream *pls);
 static void write_hex( FILE *, unsigned char );
 
 // PLplot interface functions
@@ -356,7 +356,7 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
 {
     switch ( op )
     {
-    case PLESC_FILL:      // fill polygon
+    case PLESC_FILL_POLYGON:      // fill polygon
         if (Status3D == 1) { //enable use everywhere.
           //perform conversion on the fly
           for (PLINT i = 0; i < pls->dev_npts; ++i) {
@@ -371,8 +371,8 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
         }
         poly_line( pls, pls->dev_x, pls->dev_y, pls->dev_npts, 1 );
         break;
-    case PLESC_FILL_MULTIPATH:
-        fill_multiple_polygon( pls );
+    case PLESC_FILL_PATH:
+        fill_path( pls );
         break;
 	case PLESC_3D:
     Set3D(ptr);
@@ -448,11 +448,11 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
 }
 
 //--------------------------------------------------------------------------
-//  static void fill_polygon( PLStream *pls )
+//  static void fill_path( PLStream *pls )
 //
-//  Fill polygon described in points pls->dev_x[] and pls->dev_y[].
+//  Fill special arrangement of values defining multiple path at once
 //--------------------------------------------------------------------------
-static void fill_multiple_polygon( PLStream *pls) {
+static void fill_path( PLStream *pls) {
 
   if (Status3D == 1) { //enable use everywhere.
     //perform conversion on the fly
@@ -471,9 +471,9 @@ static void fill_multiple_polygon( PLStream *pls) {
       }
     }
   }
-  FillPolygons(pls);
+  FillPath(pls);
 }
-void FillPolygons(PLStream *pls) {
+void FillPath(PLStream *pls) {
     SVG *aStream;
 
     aStream = pls->dev;

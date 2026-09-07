@@ -944,10 +944,11 @@ plP_polyline( short *x, short *y, PLINT npts );
 PLDLLIMPEXP void
 plP_fill( short *x, short *y, PLINT npts );
 
-// Fill polygon
+
+// Fill path
 
 PLDLLIMPEXP void
-plP_polyfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly );
+plP_pathfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly );
 
 // Render gradient
 

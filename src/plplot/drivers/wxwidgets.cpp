@@ -49,7 +49,7 @@
 //static void wxRunApp( PLStream *pls, bool runonce = false );
 //static void GetCursorCmd( PLStream *pls, PLGraphicsIn *ptr );
 static void fill_polygon( PLStream *pls );
-static void fill_multiple_polygon( PLStream *pls );
+static void fill_path( PLStream *pls );
 
 #ifdef __WXMAC__
         #include <Carbon/Carbon.h>
@@ -562,11 +562,11 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
 
     switch ( op )
     {
-    case PLESC_FILL:
+    case PLESC_FILL_POLYGON:
         fill_polygon( pls );
         break;
-    case PLESC_FILL_MULTIPATH:
-        fill_multiple_polygon( pls );
+    case PLESC_FILL_PATH:
+        fill_path( pls );
         break;
     case PLESC_XORMOD:
       printf("PLESC_XORMOD not implemented, FIXME\n");
@@ -653,11 +653,11 @@ static void fill_polygon( PLStream *pls )
 
 }
 //--------------------------------------------------------------------------
-//  static void fill_polygon( PLStream *pls )
+//  static void fill_path( PLStream *pls )
 //
-//  Fill polygon described in points pls->dev_x[] and pls->dev_y[].
+//  Fill path(s).
 //--------------------------------------------------------------------------
-static void fill_multiple_polygon( PLStream *pls) {
+static void fill_path( PLStream *pls) {
   // Log_Verbose( "fill_polygon(), npts=%d, x[0]=%d, y[0]=%d", pls->dev_npts, pls->dev_y[0], pls->dev_y[0] );
 
   wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
@@ -681,7 +681,7 @@ static void fill_multiple_polygon( PLStream *pls) {
       }
     }
   }
-  dev->FillPolygons(pls);
+  dev->FillPath(pls);
 }
 
 

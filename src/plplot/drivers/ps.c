@@ -65,7 +65,7 @@ void plD_dispatch_init_psc( PLDispatchTable *pdt );
 static char *ps_getdate( void );
 static void ps_init( PLStream * );
 static void fill_polygon( PLStream *pls );
-static void fill_multiple_polygon( PLStream *pls );
+static void fill_path( PLStream *pls );
 static void ps_dispatch_init_helper( PLDispatchTable *pdt,
                                      const char *menustr, const char *devnam,
                                      int type, int seq, plD_init_fp init );
@@ -765,7 +765,7 @@ plD_esc_ps(PLStream *pls, PLINT op, void *ptr)
 {
     switch ( op )
     {
-	case PLESC_FILL:
+	case PLESC_FILL_POLYGON:
         fill_polygon(pls);
         break;
       case PLESC_3D:
@@ -774,8 +774,8 @@ plD_esc_ps(PLStream *pls, PLINT op, void *ptr)
       case PLESC_2D:
         UnSet3D();
         break;
-    case PLESC_FILL_MULTIPATH:
-        fill_multiple_polygon( pls );
+    case PLESC_FILL_PATH:
+        fill_path( pls );
         break;
     }
 }
@@ -856,8 +856,13 @@ fill_polygon( PLStream *pls) {
 	dev->yold = PL_UNDEFINED;
 	fprintf(OF, " F ");
 }
+//--------------------------------------------------------------------------
+// FillPath()
+//
+// see fill_path
+//--------------------------------------------------------------------------
 
-void FillPolygons(PLStream *pls) {
+void FillPath(PLStream *pls) {
 	PSDev *dev = (PSDev *) pls->dev;
     fprintf( OF, " Z\n" ); //stroke newpath
 	PLINT x,y;
@@ -948,12 +953,12 @@ void FillPolygons(PLStream *pls) {
 	fprintf(OF, " F ");	
 }
 //--------------------------------------------------------------------------
-//  static void fill_polygon( PLStream *pls )
+// fill_path()
 //
-//  Fill polygon described in points pls->dev_x[] and pls->dev_y[].
+// Fill multiple path (special structure designed mostly for fonts)
 //--------------------------------------------------------------------------
 
-static void fill_multiple_polygon(PLStream *pls) {
+static void fill_path(PLStream *pls) {
 	PLINT clpxmi, clpxma, clpymi, clpyma; 
 	PSDev *dev = (PSDev *) pls->dev;
 
@@ -982,7 +987,7 @@ static void fill_multiple_polygon(PLStream *pls) {
 			}
 		}
 	}
-	FillPolygons(pls);
+	FillPath(pls);
 }
 //--------------------------------------------------------------------------
 // ps_getdate()

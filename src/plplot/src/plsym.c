@@ -106,6 +106,10 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width);
 
+static void
+plttf2( stbtt_vertex *vects, int descent, int len, PLFLT * const xform, 
+        PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
+        PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width, void* userdata);
 
 //--------------------------------------------------------------------------
 // void plmtex()
@@ -493,8 +497,14 @@ redo:				if (plsc->use_unicode) {
 */
 					stbtt_vertex *vertices;
 					int nvecs = stbtt_GetGlyphShape(ttfVectors[ifont], glyph, &vertices);
+					if (plsc->dev_alt_unicode) {
+					plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale,
+							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width, ttfVectors[ifont]->userdata);
+					} else {
 					plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale,
 							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+					}
+
 					stbtt_FreeShape(ttfVectors[ifont], vertices);
 				} else {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
@@ -708,7 +718,7 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
 	}
 	if (l > 2) { //3 for filling
 	    pathnxy[nPath-1]=n;
-		plP_polyfill( pathx, pathy, pathnxy, nPath);
+		plP_pathfill( pathx, pathy, pathnxy, nPath);
 		l = 0;
 	} else l=0;
 	free(llx);
@@ -718,6 +728,47 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
 	free(pathy);
     *p_xorg = *p_xorg + width * scale;
 }
+//--------------------------------------------------------------------------
+// plttf()
+//
+// Fills a given TTF character using device EOFILL capabilities.
+//--------------------------------------------------------------------------
+
+static void
+plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
+		PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
+		PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width, void* userdata) {
+	PLINT cx,cy;
+	float x,y;
+	if (len == 0) return;
+	int winding_count = 0;
+	int *winding_lengths = NULL;
+	stbtt__point *windings = stbtt_FlattenCurves(vects, len, 0.35f / scale, &winding_lengths, &winding_count, userdata);
+	int n = 0;
+	for (int i = 0; i < winding_count; ++i) {
+		printf("%i %i\n", i, winding_lengths[i]);
+		n += winding_lengths[i];
+	}
+	if (windings) {
+		short *llx = (short*) malloc(n * sizeof (short));
+		short *lly = (short*) malloc(n * sizeof (short));
+		for (int i = 0; i < n; ++i) {
+			cx = windings[i].x;
+			cy = windings[i].y +  descent;
+			x = *p_xorg + cx * scale;
+			y = *p_yorg + cy * scale;
+			llx[i] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
+			lly[i] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+		}
+		plP_fill(llx, lly, n);
+		free(llx);
+		free(lly);
+		STBTT_free(winding_lengths, userdata);
+		STBTT_free(windings, userdata);
+	}
+	*p_xorg = *p_xorg + width * scale;
+}
+
 
 
 //--------------------------------------------------------------------------

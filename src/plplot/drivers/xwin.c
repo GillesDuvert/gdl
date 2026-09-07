@@ -192,6 +192,7 @@ static void  ResizeCmd( PLStream *pls, PLDisplay *ptr );
 static void  ConfigBufferingCmd( PLStream *pls, PLBufferingCB *ptr );
 static void  GetCursorCmd( PLStream *pls, PLGraphicsIn *ptr );
 static void  FillPolygonCmd( PLStream *pls );
+static void  FillPathCmd( PLStream *pls );
 static void  XorMod( PLStream *pls, PLINT *mod );
 static void  AnyMod( PLStream *pls, PLINT *mod );
 static void  DrawImage( PLStream *pls );
@@ -261,9 +262,11 @@ plD_init_xw( PLStream *pls )
     pls->termin      = 1;       // Is an interactive terminal
     pls->dev_flush   = 1;       // Handle our own flushes
     pls->dev_fill0   = 1;       // Handle solid fills
+    pls->dev_fill1   = 0;       // Can't handle pattern fills
     pls->dev_fastimg = 1;       // is a fast image device
     pls->dev_xor     = 1;       // device support xor mode
-
+    pls->use_unicode  = 1;      // wants text as unicode
+    pls->dev_alt_unicode  = 1;      // use alternate filling for unicode fonts
 #ifndef PL_USE_PTHREADS_XWIN
     usepthreads = 0;
 #endif
@@ -767,7 +770,7 @@ plD_esc_xw( PLStream *pls, PLINT op, void *ptr )
         ExposeCmd( pls, (PLDisplay *) ptr );
         break;
 
-    case PLESC_FILL:
+    case PLESC_FILL_POLYGON:
         if (Status3D == 1) { //enable use everywhere.
           //perform conversion on the fly
           for (PLINT i = 0; i < pls->dev_npts; ++i) {
@@ -782,7 +785,9 @@ plD_esc_xw( PLStream *pls, PLINT op, void *ptr )
         }
         FillPolygonCmd( pls );
         break;
-
+    case PLESC_FILL_PATH:
+        FillPathCmd( pls );
+        break;
     case PLESC_FLUSH: {
         XwDev     *dev = (XwDev *) pls->dev;
         XwDisplay *xwd = (XwDisplay *) dev->xwd;
@@ -948,6 +953,92 @@ FillPolygonCmd( PLStream *pls )
     }
 }
 
+static void
+DoFillPath(PLStream *pls) {
+	XwDev *dev = (XwDev *) pls->dev;
+	XwDisplay *xwd = (XwDisplay *) dev->xwd;
+	XPoint _pts[PL_MAXPOLY];
+	XPoint *pts;
+	int i;
+
+	if (pls->dev_npts > PL_MAXPOLY) {
+		pts = (XPoint *) malloc(sizeof ( XPoint) * (size_t) (pls->dev_npts));
+	} else {
+		pts = _pts;
+	}
+	int k = 0;
+	for (int i = 0; i < pls->dev_npath; ++i) {
+		PLINT* x = pls->dev_pathx[i];
+		PLINT* y = pls->dev_pathy[i];
+		for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
+			switch (x[j]) {
+				case -1: //line
+					pts[k].x = (short) (dev->xscale * x[j + 1]);
+					pts[k].y = (short) (dev->yscale * (dev->ylen - y[j + 1]));
+					j++;
+					k++;
+					break;
+				case -2:
+					pts[k].x = (short) (dev->xscale * x[j + 1]);
+					pts[k].y = (short) (dev->yscale * (dev->ylen - y[j + 1]));
+					j += 2;
+					k++;
+					break;
+				case -3:
+					pts[k].x = (short) (dev->xscale * x[j + 1]);
+					pts[k].y = (short) (dev->yscale * (dev->ylen - y[j + 1]));
+					j += 3;
+					k++;
+					break;
+					break;
+				default:
+					printf("should not happen in FillPolygons(%d), please report!\n", x[j]);
+			}
+		}
+	}
+
+	// Fill polygons
+	if (dev->write_to_window)
+		XFillPolygon(xwd->display, dev->window, dev->gc,
+			pts, k, Complex, CoordModeOrigin);
+
+	if (dev->write_to_pixmap)
+		XFillPolygon(xwd->display, dev->pixmap, dev->gc,
+			pts, k, Complex, CoordModeOrigin);
+
+	if (pls->dev_npts > PL_MAXPOLY) {
+		free(pts);
+	}
+}
+
+//--------------------------------------------------------------------------
+// FillPathCmd()
+//
+// Fill path(s)
+//--------------------------------------------------------------------------
+
+static void
+FillPathCmd(PLStream *pls) {
+  CheckForEvents(pls);
+  if (Status3D == 1) { //enable use everywhere.
+    //perform conversion on the fly
+    for (PLINT i = 0; i < pls->dev_npath; ++i) {
+      PLINT *x = pls->dev_pathx[i];
+      PLINT *y = pls->dev_pathy[i];
+      for (PLINT j = 0; j < pls->dev_pathnxy[i]; ++j) {
+        // 3D convert, must take into account that y is inverted.
+        int ix=x[j];
+        int iy=y[j];
+        if (ix >= 0) { //avoid transforming the negative codes...
+          SelfTransform3D(&ix, &iy);
+        x[j]=ix;
+        y[j]=iy;
+        }
+      }
+    }
+  }
+  DoFillPath(pls);
+}
 //--------------------------------------------------------------------------
 // OpenXwin()
 //

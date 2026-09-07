@@ -440,10 +440,10 @@ plP_fill( short *x, short *y, PLINT npts )
 }
 
 void
-plP_polyfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly  )
+plP_pathfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly  )
 {
     plsc->page_status = DRAWING;
-	grpolyfill( x, y, npts, npoly );
+	grpathfill( x, y, npts, npoly );
 }
 
 
@@ -644,13 +644,13 @@ grfill(short *x, short *y, PLINT npts) {
 	save_locale = plsave_set_locale();
 	if (!plsc->stream_closed) {
 		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
-				PLESC_FILL, NULL);
+				PLESC_FILL_POLYGON, NULL);
 	}
 	plrestore_locale(save_locale);
 }
 
 static void
-grpolyfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath) {
+grpathfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath) {
 	char * save_locale;
 	plsc->dev_npath = npath;
 	plsc->dev_pathx = x;
@@ -660,7 +660,7 @@ grpolyfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath) {
 	save_locale = plsave_set_locale();
 	if (!plsc->stream_closed) {
 		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
-				PLESC_FILL_MULTIPATH, NULL);
+				PLESC_FILL_PATH, NULL);
 	}
 	plrestore_locale(save_locale);
 }

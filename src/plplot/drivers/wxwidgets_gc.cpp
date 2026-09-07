@@ -202,7 +202,7 @@ void wxPLDevGC::FillPolygon(PLStream *pls) {
 }
 
 // paths need to be in ints, not shorts, as shorts may overflow in this case. 
-void wxPLDevGC::FillPolygons(PLStream *pls) {
+void wxPLDevGC::FillPath(PLStream *pls) {
   // Log_Verbose( "%s", __FUNCTION__ );
 
   wxGraphicsPath path = m_context->CreatePath();
