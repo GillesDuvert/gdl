@@ -37,6 +37,7 @@ std::string FindFontPath(const std::string& fontName) {
     return foundPath;
 
 #elif defined(__APPLE__)
+	return "/Library/Fonts/Arial Unicode.ttf";
     // macOS: Use CoreText to query available fonts
     CFStringRef cfName = CFStringCreateWithCString(NULL, fontName.c_str(), kCFStringEncodingUTF8);
     CTFontRef ctFont = CTFontCreateWithName(cfName, 0.0, NULL);
