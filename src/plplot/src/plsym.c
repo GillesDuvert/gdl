@@ -826,7 +826,8 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 {
     PLUNICODE     ch, ifont = plsc->ttFontIndex;
 	PLINT ig, j = 0, lentxt = (PLINT) strlen( text );
-    unsigned char      test, esc;
+    unsigned char      test;
+	char esc;
 
 #define SPACE 32
 	// Initialize parameters.
@@ -1077,7 +1078,7 @@ void c_ttFontLoad(const char* fontName) {
     long size;
     unsigned char* fontBuffer;
     char* fontPath=getFontPath(fontName);
-	if (fontPath==NULL) { printf("invalid Font Path!!!\n",n); return;} 
+	if (fontPath==NULL) { printf("invalid Font Path!!!\n"); return;} 
     FILE* fontFile = fopen(fontPath, "rb");
 	
     fseek(fontFile, 0, SEEK_END);

@@ -876,7 +876,7 @@ pdf_rd_4nbytes( PDFstrm *pdfs, U_LONG *s, PLINT n )
 int
 pdf_rd_4nbytes_network(PDFstrm *pdfs, long *s, int n) {
 	int i;
-	char x[4];
+	unsigned char x[4];
 	long l;
 	for (i = 0; i < n; i++) {
 
