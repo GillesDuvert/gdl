@@ -235,9 +235,6 @@ public:
   {
     return decomposed;  
   }
-    
-    virtual bool LoadFont(DString &f) final {fontname=f; return true;}
-    virtual bool SetFont(int n) final {return false;}
 
 };
 

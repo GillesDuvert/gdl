@@ -54,7 +54,7 @@ GDLWXStream::GDLWXStream( int width, int height)
   // in our copy of the state of plplot trimmed for our useage, we used their old but fast driver.
   // we can then set the font to hershey or truetype. (the plplot new driver was buggy with hershey anyway)
   PLINT doFont = ((PLINT) SysVar::GetPFont() > -1) ? 1 : 0;
-  pls->dev_unicode=doFont;
+  pls->use_unicode=doFont;
   
   plstream::cmd(PLESC_DEVINIT, (void*)streamDC );
    // no pause on win destruction
@@ -157,7 +157,7 @@ void GDLWXStream::Init()
 {
   plstream::init();
   PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
-  pls->dev_unicode=doFont;
+  pls->use_unicode=doFont;
 
 //  set_stream(); // private
 // test :  gdlFrame->Show();
@@ -482,12 +482,7 @@ DLong GDLWXStream::GetVisualDepth() {
 return 24;
 }
 
- void GDLWXStream::SetCurrentFont(int n) {this->settt(n);}
- void GDLWXStream::LoadCurrentFont(std::string &f){
-  if (f.size() > 0) {
-   this->loadtt(f.c_str());
-  }
-}
+
 DString GDLWXStream::GetVisualName() {
 static const char* visual="TrueColor";
 return visual;

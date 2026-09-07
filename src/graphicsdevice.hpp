@@ -225,8 +225,16 @@ public:
   DString GetCurrentFontName(){return fontname;}
   virtual BaseGDL* GetFontnames()                     { ThrowGDLException("DEVICE: Keyword GET_FONTNAMES not allowed for call to: DEVICE" ); return NULL;}
   virtual DLong GetFontnum()                          { ThrowGDLException("DEVICE: Keyword GET_FONTNUM not allowed for call to: DEVICE" ); return 0;}
-  virtual bool SetFont(int n)                 {static int warning_sent=1; if (warning_sent) {Warning("SET_FONT not active for this device (FIXME)."); warning_sent=0;} return false;}
-  virtual bool LoadFont(DString &f)                 {static int warning_sent=1; if (warning_sent) {Warning("SET_FONT not active for this device (FIXME)."); warning_sent=0;} return false;}
+
+	virtual bool SetFont(int n) {
+		this->GetStream()->SetCurrentFont(n);
+		return true;
+	}
+  virtual bool LoadFont(DString &f) {
+	  fontname=f;
+		this->GetStream()->LoadCurrentFont(fontname);
+		return true;
+	}
   virtual DString GetCurrentFont()                 {return "__$";}
   virtual DLong GetGraphicsFunction()                 { return -1;}
   virtual DIntGDL* GetPageSize()                      { return NULL;}
@@ -368,8 +376,22 @@ public:
   DLong GetDecomposed();
   BaseGDL* GetFontnames(){ ThrowGDLException("DEVICE: Keyword GET_FONTNAMES not allowed for call to: DEVICE" );return NULL;}
   DLong GetFontnum(){ ThrowGDLException("DEVICE: Keyword GET_FONTNUM not allowed for call to: DEVICE" );return 0;}
-  virtual bool LoadFont(DString &f) {return false;}
-  virtual bool SetFont(int n) {return false;}
+  virtual bool LoadFont(DString &f) final {
+		fontname = f;
+		this->GetStream(); //mandatory open a window if none opened.
+		for (int i = 0; i < winList.size(); i++) {
+			if (winList[i] != NULL) winList[i]->LoadCurrentFont(fontname);
+		}
+		return true;
+	}
+
+	  virtual bool SetFont(int n) final {
+		this->GetStream(); //mandatory open a window if none opened.
+		for (int i = 0; i < winList.size(); i++) {
+			if (winList[i] != NULL) winList[i]->SetCurrentFont(n);
+		}
+		return true;
+	}
   DString GetCurrentFont() {return fontname;}
   bool SetBackingStore(int value);
   bool Hide(); 

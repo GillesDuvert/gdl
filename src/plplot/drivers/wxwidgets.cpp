@@ -257,8 +257,7 @@ wxPLDevBase* common_init( PLStream *pls) {
   pls->dev_dash = 0;
   pls->dev_clear = 1; // driver supports clear
 
-    pls->dev_text = 1; // want to draw text
-    pls->dev_unicode = 1; // want unicode
+    pls->use_unicode = 1; // want unicode
 
   // initialize frame size and position
   if (pls->xlength <= 0 || pls->ylength <= 0)

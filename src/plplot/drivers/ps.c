@@ -184,8 +184,7 @@ ps_init( PLStream *pls )
     pxlx = YPSSIZE / LPAGE_X;
     pxly = XPSSIZE / LPAGE_Y;
 
-	pls->dev_text    = 1;                // want to draw text
-	pls->dev_unicode = 1;                // want unicode
+	pls->use_unicode = 1;                // want unicode
 
     pls->dev_fill0 = 1;         // Can do solid fills
 
@@ -359,9 +358,9 @@ ps_init( PLStream *pls )
     // anti-aliasing
     //fprintf(OF, "/F {fill} def\n");
     if ( pls->dev_eofill )
-        fprintf( OF, "/F {closepath gsave eofill grestore stroke} def \n" );
+        fprintf( OF, "/F {closepath gsave eofill grestore 0.1 setlinewidth stroke} def \n" );
     else
-        fprintf( OF, "/F {closepath gsave fill grestore stroke} def \n" );
+        fprintf( OF, "/F {closepath gsave fill grestore 0.1 setlinewidth stroke} def \n" );
 	fprintf( OF, "/N {newpath} def\n" );
     fprintf( OF, "/C {setrgbcolor} def\n" );
     fprintf( OF, "/CU {curveto} def\n" );
@@ -791,27 +790,38 @@ plD_esc_ps(PLStream *pls, PLINT op, void *ptr)
 static void
 fill_polygon( PLStream *pls) {
 	PSDev *dev = (PSDev *) pls->dev;
-	PLINT n, ix = 0, iy = 0;
+	PLINT n, ix, iy;
 	PLINT x, y;
 
 	fprintf(OF, " Z\n");//newpath
 
-	for (n = 0; n < pls->dev_npts; n++) {
-		x = pls->dev_x[ix++];
-		y = pls->dev_y[iy++];
+    if (!pls->portrait) {
+		for (n = 0, ix = 0, iy = 0; n < pls->dev_npts; n++) {
+			x = pls->dev_x[ix];
+			y = pls->dev_y[iy];
 
-		if (Status3D == 1 && !pls->portrait) { // 3D convert on normalized values
-			SelfTransform3DPSL(&x, &y);
+			if (Status3D == 1 ) SelfTransform3DPSL(&x, &y); // 3D convert on normalized values
+			// Rotate by 90 degrees
+			plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x, &y);
+			pls->dev_x[ix++]=x;
+			pls->dev_y[iy++]=y;
+			
 		}
-		// Rotate by 90 degrees
-
-		plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x, &y);
-
-		if (Status3D == 1 && pls->portrait) { // 3D convert on normalized values
-			SelfTransform3DPSP(&x, &y);
+	} else {
+		for (n = 0, ix = 0, iy = 0; n < pls->dev_npts; n++) {
+			x = pls->dev_x[ix];
+			y = pls->dev_y[iy];
+			// Rotate by 90 degrees
+			plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x, &y);
+			if (Status3D == 1) SelfTransform3DPSP(&x, &y); // 3D convert on normalized values
+			pls->dev_x[ix++]=x;
+			pls->dev_y[iy++]=y;
 		}
-
+	}
+	for (n = 0, ix = 0, iy = 0; n < pls->dev_npts; n++) {
 		// First time through start with a x y moveto
+			x = pls->dev_x[ix++];
+			y = pls->dev_y[iy++];
 
 		if (n == 0) {
 			snprintf(outbuf, OUTBUF_LEN, "N %d %d M", x, y);
@@ -944,6 +954,7 @@ void FillPolygons(PLStream *pls) {
 //--------------------------------------------------------------------------
 
 static void fill_multiple_polygon(PLStream *pls) {
+	PLINT clpxmi, clpxma, clpymi, clpyma; 
 	PSDev *dev = (PSDev *) pls->dev;
 
 	if (!pls->portrait) {
@@ -951,13 +962,10 @@ static void fill_multiple_polygon(PLStream *pls) {
 			PLINT *x = pls->dev_pathx[i];
 			PLINT *y = pls->dev_pathy[i];
 			for (PLINT j = 0; j < pls->dev_pathnxy[i]; ++j) {
-				int ix = x[j];
-				int iy = y[j];
-				if (ix >= 0) { //avoid transforming the negative codes...
-					if (Status3D == 1) SelfTransform3DPSL(&ix, &iy);
-					plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &ix, &iy);
-					x[j] = ix;
-					y[j] = iy;
+				if (x[j] >= 0) { //avoid transforming the negative codes...
+                    if ( plsc->difilt )  difilt( &x[j], &y[j], 1, &clpxmi, &clpxma, &clpymi, &clpyma );
+ 					if (Status3D == 1) SelfTransform3DPSL(&x[j], &y[j]);
+					plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x[j], &y[j]);
 				}
 			}
 		}
@@ -966,13 +974,10 @@ static void fill_multiple_polygon(PLStream *pls) {
 			PLINT *x = pls->dev_pathx[i];
 			PLINT *y = pls->dev_pathy[i];
 			for (PLINT j = 0; j < pls->dev_pathnxy[i]; ++j) {
-				int ix = x[j];
-				int iy = y[j];
-				if (ix >= 0) { //avoid transforming the negative codes...
-					plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &ix, &iy);
-					if (Status3D == 1) SelfTransform3DPSP(&ix, &iy);
-					x[j] = ix;
-					y[j] = iy;
+				if (x[j] >= 0) { //avoid transforming the negative codes...
+                    if ( plsc->difilt )  difilt( &x[j], &y[j], 1, &clpxmi, &clpxma, &clpymi, &clpyma );
+					plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x[j], &y[j]);
+					if (Status3D == 1) SelfTransform3DPSP(&x[j], &y[j]);
 				}
 			}
 		}

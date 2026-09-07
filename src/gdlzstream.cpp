@@ -46,7 +46,7 @@ void GDLZStream::Init()
    plstream::init();
    //AFTER init, change back to selected
    PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
-   pls->dev_unicode=doFont;
+   pls->use_unicode=doFont;
 }
 
 void GDLZStream::GetGeometry(long& xSize, long& ySize)

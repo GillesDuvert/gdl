@@ -156,8 +156,7 @@ typedef struct
 // plbuf_read	PLINT	Set during a plot buffer redraw
 // dev_fill0	PLINT	Set if driver can do solid area fills
 // dev_gradient	PLINT	Set if driver can do (linear) gradients
-// dev_text	PLINT	Set if driver want to do it's only text drawing
-// dev_unicode	PLINT	Set if driver wants unicode
+// use_unicode	    PLINT	Set if driver must do unicode
 // dev_fill1	PLINT	Set if driver can do pattern area fills
 // dev_dash     PLINT   Set if driver can do dashed lines
 // dev_di	PLINT	Set if driver wants to handle DI commands
@@ -616,7 +615,7 @@ typedef struct
     PLINT currx, curry;
     //CONSTANT SOVERSION FIX
     //PLINT line_style;
-    PLINT mark[10], space[10], nms;
+    PLINT mark[10], space[10], lineStyleNumberOfElements;
     PLINT timecnt, alarm, pendn, curel;
 
 // Variables governing character strings
@@ -683,9 +682,10 @@ typedef struct
 
 // Unicode section
 
+    const char* ttFontName; //last loaded TTF name, used to setup private plsc
     PLUNICODE ttFontIndex; // a font index, in UNICODE as it may be embbedded in a UNICODE string
     PLUNICODE HersheyFontIndex; // a font index, in UNICODE as it may be embbedded in a UNICODE string
-    PLINT     dev_unicode;
+    PLINT     use_unicode;
 
     //
     // Pointer to postscript document class used by psttf

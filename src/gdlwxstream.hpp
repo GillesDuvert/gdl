@@ -92,15 +92,13 @@ public:
     bool CursorStandard(int cursorNumber);
     bool CursorImage(char* v, int x, int y, char* m);
     DLong GetVisualDepth();
-    void LoadCurrentFont(std::string &fontname);
-    void SetCurrentFont(int n);
     DString GetVisualName();
     bool GetScreenResolution(double& resx, double& resy);
     virtual DByteGDL* GetBitmapData(int xoff, int yoff, int nx, int ny) final;
     static void DefineSomeWxCursors(); //global initialisation of 77 X11-like cursors.
     virtual void fontChanged() final {
       PLINT doFont = ((PLINT) SysVar::GetPFont() > -1) ? 1 : 0;
-      pls->dev_unicode = doFont;
+      pls->use_unicode = doFont;
     }
 };
 

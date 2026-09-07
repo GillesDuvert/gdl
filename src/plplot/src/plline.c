@@ -278,7 +278,7 @@ c_plstyl( PLINT nms, PLINT_VECTOR mark, PLINT_VECTOR space )
         return;
     }
 
-    plsc->nms = nms;
+    plsc->lineStyleNumberOfElements = nms;
     for ( i = 0; i < nms; i++ )
     {
         plsc->mark[i]  = mark[i];
@@ -649,7 +649,7 @@ genlin( short *x, short *y, PLINT npts )
 {
 // Check for solid line
 
-    if ( plsc->nms == 0 )
+    if ( plsc->lineStyleNumberOfElements == 0 )
     {
         if ( npts == 2 )
             plP_line( x, y );
@@ -794,7 +794,7 @@ grdashline( short *x, short *y )
                 plsc->pendn    = 1;
                 plsc->timecnt -= plsc->alarm;
                 plsc->curel++;
-                if ( plsc->curel >= plsc->nms )
+                if ( plsc->curel >= plsc->lineStyleNumberOfElements )
                     plsc->curel = 0;
                 plsc->alarm = plsc->mark[plsc->curel];
             }

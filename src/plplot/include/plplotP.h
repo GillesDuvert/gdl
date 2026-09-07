@@ -556,7 +556,7 @@ plstik( PLFLT mx, PLFLT my, PLFLT dx, PLFLT dy );
 // Prints out a "string" at reference position with physical coordinates
 // (refx,refy). Return length if needed.
 PLFLT
-plstr( PLCHAR_VECTOR string , PLINT length_only, PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y, PLINT refx, PLINT refy);
+plstr( PLCHAR_VECTOR string , PLINT length_only, PLINT base, PLFLT just, PLFLT * const xform, PLINT x, PLINT y, PLINT refx, PLINT refy);
 
 // Draws a tick parallel to x.
 

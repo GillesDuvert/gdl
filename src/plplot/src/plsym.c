@@ -98,11 +98,11 @@ int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 static void
 pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text);
 static void
-plhershey( short *xygrid, int len, PLFLT *xform, 
+plhershey( short *xygrid, int len, PLFLT * const xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width );
 static void
-plttf( stbtt_vertex *vects, int descent, int len, PLFLT *xform, 
+plttf( stbtt_vertex *vects, int descent, int len, PLFLT * const xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width);
 
@@ -356,14 +356,13 @@ c_plptex( PLFLT wx, PLFLT wy, PLFLT dx, PLFLT dy, PLFLT just, PLCHAR_VECTOR text
 //--------------------------------------------------------------------------
 
 PLFLT
-plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y, PLINT refx, PLINT refy) {
+plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT * const xform, PLINT x, PLINT y, PLINT refx, PLINT refy) {
 	static PLFLT saverestore[1000] = {};
 	int counter = -1;
 	short *charPoints = 0;
 	PLUNICODE ifont = plsc->ttFontIndex;
-	if (!plsc->dev_unicode) {ifont = plsc->HersheyFontIndex; ifont=MAX(3,ifont); ifont=MIN(numberfonts,ifont); }  
-	printf("at entry ifont=%d\n",ifont);
-	PLUNICODE oldifont = ifont;
+	if (!plsc->use_unicode) {ifont = plsc->HersheyFontIndex; ifont=MAX(3,ifont); ifont=MIN(numberfonts,ifont); }  
+PLUNICODE oldifont = ifont;
 #define HEIGHTRATIO 1.6
 	PLINT ch, i, length, style;
 	PLFLT width = 0., xorg = 0., yorg = 0., yline = 0., yref = 0., def, ht, dscale, scale;
@@ -371,7 +370,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	// TrueType fonts need a special correction as their size is all different.
 	// The correction itself depends on the size of the hershey fonts, all this is quite relative
 	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
-	if (plsc->dev_unicode && plsc->dev_text) ht*=charHeightCorr[ifont];
+	if (plsc->use_unicode) ht*=charHeightCorr[ifont];
 	dscale = 0.05 * ht;
 	scale = dscale;
 	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
@@ -383,8 +382,8 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 	int ilev = 0;
 
 	// Line style must be continuous
-	style = plsc->nms;
-	plsc->nms = 0;
+	style = plsc->lineStyleNumberOfElements;
+	plsc->lineStyleNumberOfElements = 0;
 
 	PLUNICODE *symbol = (PLUNICODE*) calloc(strlen(string), sizeof (PLUNICODE));
 
@@ -465,14 +464,14 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT *xf
 				break;
 			default:
 				
-redo:				if (plsc->dev_unicode && plsc->dev_text) {
+redo:				if (plsc->use_unicode) {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
 						ifont = ch - PRIVATE_UNICODE_PLANE;
 						break;
 					}
 					if (ttfVectors[ifont] == NULL) {
 						printf("True Type Fonts not loaded, reverting to Hershey fonts.\n");
-						plsc->dev_unicode=0;
+						plsc->use_unicode=0;
 						goto redo;
 					}
 					int glyph = stbtt_FindGlyphIndex(ttfVectors[ifont], ch);
@@ -527,10 +526,9 @@ redo:				if (plsc->dev_unicode && plsc->dev_text) {
 	}
 	free(symbol);
 	//reset line style
-	plsc->nms = style;
-	if (plsc->dev_unicode) plsc->ttFontIndex=ifont; 
+	plsc->lineStyleNumberOfElements = style;
+	if (plsc->use_unicode) plsc->ttFontIndex=ifont; 
 	else plsc->HersheyFontIndex=ifont; // hershey fonts history are managed entirely inside plsc.
-	printf("at exit ifont=%d\n",ifont);
 	return xorg; //length
 }
 
@@ -540,7 +538,7 @@ redo:				if (plsc->dev_unicode && plsc->dev_text) {
 // Plots out Hershey fonts
 //--------------------------------------------------------------------------
 static void
-plhershey( short *vects, int len, PLFLT *xform, 
+plhershey( short *vects, int len, PLFLT * const xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
@@ -600,7 +598,7 @@ plhershey( short *vects, int len, PLFLT *xform,
 // Fills a given TTF character using device EOFILL capabilities.
 //--------------------------------------------------------------------------
 static void
-plttf( stbtt_vertex *vects, int descent, int len, PLFLT *xform, 
+plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
@@ -729,12 +727,18 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT *xform,
 //--------------------------------------------------------------------------
 
 PLFLT
-plstrl( PLCHAR_VECTOR string) {
+plstrl( PLCHAR_VECTOR string) {	
+/*
+	PLFLT def, ht;
+	plgchr(&def, &ht);
+	PLFLT ret =strlen(string)*ht;
+    printf("strlen=%f\n",ret);
+  	return ret;
+*/
 	// take into account that plstr can change the font! Restore it at end!
-	PLUNICODE ifont = (plsc->dev_unicode)?plsc->ttFontIndex:plsc->HersheyFontIndex;
-	printf("at entry ifont=%d\n",ifont);
+	PLUNICODE ifont = (plsc->use_unicode)?plsc->ttFontIndex:plsc->HersheyFontIndex;
 	PLFLT ret = plstr(string, 1, 0,0, NULL,0,0,0,0);
-	if (plsc->dev_unicode) plsc->ttFontIndex=ifont; else plsc->HersheyFontIndex=ifont;
+	if (plsc->use_unicode) plsc->ttFontIndex=ifont; else plsc->HersheyFontIndex=ifont;
 	return ret;
 }
 
@@ -1041,6 +1045,7 @@ void c_ttFontLoad(const char* fontName) {
     }
     ttfVectors[n]=info;
 	plsc->ttFontIndex=n;
+	plsc->ttFontName=fontName;
 	// to be optimized:
 	int x0, y0, x1, y1;
 	stbtt_GetFontBoundingBox(info, &x0, &y0, &x1, &y1);

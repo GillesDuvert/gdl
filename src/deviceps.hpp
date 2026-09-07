@@ -342,7 +342,6 @@ public:
     (*res)[1]= actStream->yPageSize(); //YPageSize;
     return res;
   }
-  virtual bool LoadFont(DString &f) final {fontname=f; return true;}
 };
 
 #endif
