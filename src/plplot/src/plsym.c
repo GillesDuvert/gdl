@@ -1058,7 +1058,9 @@ extern int getFontIndex(const char* name);
 extern const char* getFontName(int n);
 extern int loadFontPath(const char *name);
 void c_ttFontSet(int n) {	
+/*
 	printf("c_ttFontSet(%d) (%s)\n",n, getFontName(n));
+*/
 	if (getFontName(n) != NULL) {
 		plsc->ttFontIndex=n;
 	} else printf("loading of font #%d failed.\n",n);
