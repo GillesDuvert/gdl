@@ -1078,7 +1078,7 @@ void c_ttFontLoad(const char* fontName) {
     long size;
     unsigned char* fontBuffer;
     char* fontPath=getFontPath(fontName);
-	if (fontPath==NULL) { printf("invalid Font Path!!!\n"); return;} 
+	if (fontPath==NULL || strlen(fontPath)==0) { printf("invalid Font Path!!!\n"); return;} 
     FILE* fontFile = fopen(fontPath, "rb");
 	
     fseek(fontFile, 0, SEEK_END);
