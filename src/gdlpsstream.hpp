@@ -51,10 +51,7 @@ public:
   void Refresh(){plstream::cmd(PLESC_EXPOSE, NULL);pls->stream_closed=1;fprintf(pls->OutFile," S\neop\n");fseek(pls->OutFile,-7, SEEK_END);pls->stream_closed=0;}
 //  void Update(){}
 
-  virtual void fontChanged() final {
-    PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
-    pls->use_unicode = doFont;
-  }
+
   
 };
 

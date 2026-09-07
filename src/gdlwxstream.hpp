@@ -96,10 +96,6 @@ public:
     bool GetScreenResolution(double& resx, double& resy);
     virtual DByteGDL* GetBitmapData(int xoff, int yoff, int nx, int ny) final;
     static void DefineSomeWxCursors(); //global initialisation of 77 X11-like cursors.
-    virtual void fontChanged() final {
-      PLINT doFont = ((PLINT) SysVar::GetPFont() > -1) ? 1 : 0;
-      pls->use_unicode = doFont;
-    }
 };
 
 

@@ -596,7 +596,7 @@ public:
                          const char *text, double *stringCharLength=NULL );
   void setVariableCharacterSize( PLFLT charwidthpixel, PLFLT scale, PLFLT lineSpacingpixel, PLFLT xpxcm, PLFLT ypxcm);
   void setFixedCharacterSize( PLFLT charwidthpixel, PLFLT scale, PLFLT lineSpacingpixel);
-  virtual void fontChanged(){}; //nothing here
+  void fontChanged();
   void sizeChar(PLFLT scale);
   bool vpor( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax );
   bool isovpor( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax, PLFLT aspect );

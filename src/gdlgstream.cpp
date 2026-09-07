@@ -582,7 +582,10 @@ void GDLGStream::sizeChar( PLFLT scale )
   plstream::schr(theDefaultChar.mmsx, scale*psCharFudge); //must FORCE a new size.
   CurrentCharSize(scale*psCharFudge);
 }
-
+  void GDLGStream::fontChanged() {
+    PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
+    pls->use_unicode = doFont;
+  }
 bool GDLGStream::vpor(PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
 {
   //make vpor units really min max, otherwise som problems appear spuriously

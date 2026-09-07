@@ -62,6 +62,8 @@ public:
     FindTerminalWindow(); //to pro
     //all the options must be passed BEFORE INIT=plinit.
     init(); //creates the X11 window.
+	PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
+	pls->use_unicode=doFont;
     PostInit(); //finish setting different things, including giving back focus to terminal
     
     // need to be called initially. permit to fix things

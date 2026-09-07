@@ -265,7 +265,6 @@ plD_init_xw( PLStream *pls )
     pls->dev_fill1   = 0;       // Can't handle pattern fills
     pls->dev_fastimg = 1;       // is a fast image device
     pls->dev_xor     = 1;       // device support xor mode
-    pls->use_unicode  = 1;      // wants text as unicode
     pls->dev_alt_unicode  = 1;      // use alternate filling for unicode fonts
 #ifndef PL_USE_PTHREADS_XWIN
     usepthreads = 0;
