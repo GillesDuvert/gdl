@@ -746,7 +746,6 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 	stbtt__point *windings = stbtt_FlattenCurves(vects, len, 0.35f / scale, &winding_lengths, &winding_count, userdata);
 	int n = 0;
 	for (int i = 0; i < winding_count; ++i) {
-		printf("%i %i\n", i, winding_lengths[i]);
 		n += winding_lengths[i];
 	}
 	if (windings) {
