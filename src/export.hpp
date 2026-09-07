@@ -355,14 +355,14 @@ std::string Backtrace(int skip = 1)
 			char *demangled = NULL;
 			int status;
 			demangled = abi::__cxa_demangle(info.dli_sname, NULL, 0, &status);
-			snprintf(buf, sizeof(buf), "%-3d %0*x %s + %zd\n",
-					 i, 2 + (int)(sizeof(void*)) * 2, callstack[i],
+			snprintf(buf, sizeof(buf), "%-3d %0*llx %s + %zd\n",
+					 i, 2 + sizeof(void*) * 2, callstack[i],
 					 status == 0 ? demangled : info.dli_sname,
 					 (char *)callstack[i] - (char *)info.dli_saddr);
 			free(demangled);
 		} else {
-			snprintf(buf, sizeof(buf), "%-3d %0*x\n",
-					 i, 2 + (int)(sizeof(void*)) * 2, callstack[i]);
+			snprintf(buf, sizeof(buf), "%-3d %0*llx\n",
+					 i, 2 + sizeof(void*) * 2, callstack[i]);
 		}
 		trace_buf << buf;
 
