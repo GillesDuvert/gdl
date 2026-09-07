@@ -47,38 +47,6 @@ const double INCHToCM = 2.54 ;
 const double CM_IN_MM = 10.00000000 ; 
 const double DEFAULT_FONT_ASPECT_RATIO = 1.3; // Height / Width
 using namespace std;
-static std::string internalFontCodes[] = {
-    "#fn",      // !0  : unused
-    "#fn",      // !1  : unused
-    "#fn",      // !2  : unused
-    "#fn",      // !3  : simplex Roman (default)
-    "#fn",      // !4  : simplex Greek
-    "#fn",      // !5  : duplex Roman
-    "#fr",      // !6  : complex Roman
-    "#fr",      // !7  : complex Greek
-    "#fi",      // !8  : complex italic 
-    "#fn",      // !9  : math/special characters
-    "#fn",      // !10 : special characters
-    "#fn",      // !11 : Gothic English 
-    "#fs",      // !12 : simplex script
-    "#fs",      // !13 : complex script
-    "#fn",      // !14 : Gothic Italian
-    "#fn",      // !15 : Gothic German
-    "#fn",      // !16 : Cyrillic
-    "#fr",      // !17 : triplex Roman
-    "#fi",      // !18 : triplex Italic
-    "#fn",      // !19 : 
-    "#fn",      // !20 : miscellaneous
-    "#fn",      // !21 :
-    "#fn",      // !22 :
-    "#fn",      // !23 :
-    "#fn",      // !24 :
-    "#fn",      // !25 :
-    "#fn",      // !26 :
-    "#fn",      // !27 :
-    "#fn",      // !28 :
-    "#fn",      // !29 :
-  };
   
 // Graphic Structures:
 //  typedef struct _P_GRAPHICS {
@@ -241,9 +209,6 @@ public:
     free(devnames);
     return found;
  }
-//   std::string getActiveFontCode(){
-//   return internalFontCodes[activeFontCodeNum];
-//  }
   
   static void SetErrorHandlers();
 
