@@ -53,7 +53,7 @@
 #include "stb_truetype.h"
 
 extern const char* findFontPath(const char* name);
-
+extern int insertFontPath(const char *fontPath, const char* name); 
 //for ntohl etc
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #include <winsock2.h>
@@ -374,7 +374,10 @@ PLUNICODE oldifont = ifont;
 	// TrueType fonts need a special correction as their size is all different.
 	// The correction itself depends on the size of the hershey fonts, all this is quite relative
 	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
-	if (plsc->use_unicode) ht*=charHeightCorr[ifont];
+/*
+ * seems to be ok.
+	if (plsc->use_unicode) ht*=0.2 ; //charHeightCorr[ifont];
+*/
 	dscale = 0.05 * ht;
 	scale = dscale;
 	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
@@ -493,7 +496,7 @@ redo:				if (plsc->use_unicode) {
 						break; // do not draw anything, just add to xorg
 					}
 /*
-					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,charHeightCorr[plsc->fontIndex],scale,width);
+					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,charHeightCorr[ifont],scale,width);
 */
 					stbtt_vertex *vertices;
 					int nvecs = stbtt_GetGlyphShape(ttfVectors[ifont], glyph, &vertices);
@@ -1091,10 +1094,13 @@ void c_ttFontLoad(const char* fontName) {
     fclose(fontFile);
 
     /* prepare font */
+	int offset = stbtt_FindMatchingFont(fontBuffer, fontName , STBTT_MACSTYLE_NONE);
+	if (offset < 0 ) offset=0;
     stbtt_fontinfo* info=(stbtt_fontinfo*) malloc(sizeof(stbtt_fontinfo));
-    if (!stbtt_InitFont(info, fontBuffer, 0))
+    if (!stbtt_InitFont(info, fontBuffer, offset))
     {
         printf("loading of %s failed.\n",fontName);
+		return;
     }
     ttfVectors[n]=info;
 	plsc->ttFontIndex=n;
@@ -1106,7 +1112,7 @@ void c_ttFontLoad(const char* fontName) {
 	float averheight = (float) (y1 - y0);
 	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
 	float aspectratiooffont = averheight / (float) (x1 - x0);
-	charHeightCorr[n] = 20. / averheight; //value found experimentally (?)
+	charHeightCorr[n] = 4. / averheight; //value found experimentally (?)
 	int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);
 	charDescent[n] = 2.5*descent; //value found experimentally (?)
@@ -1114,7 +1120,47 @@ void c_ttFontLoad(const char* fontName) {
 	printf("averheight=%f, aspectratio=%f, ascent=%d, descent=%d, lineGap=%d, corr=%f\n",averheight,aspectratiooffont, ascent, descent,lineGap, charHeightCorr[n]);
 */
 }
+void c_ttFontLoadFromPath(const char* fontPath, const char* fontName) {
+    int n=insertFontPath(fontPath, fontName);
+	long size;
+    unsigned char* fontBuffer;
+    FILE* fontFile = fopen(fontPath, "rb");
+	
+    fseek(fontFile, 0, SEEK_END);
+    size = ftell(fontFile); /* how long is the file ? */
+    fseek(fontFile, 0, SEEK_SET); /* reset */
+    
+    fontBuffer = malloc(size);
+    
+    fread(fontBuffer, size, 1, fontFile);
+    fclose(fontFile);
 
+    /* prepare font */
+    int offset=0;
+    stbtt_fontinfo* info=(stbtt_fontinfo*) malloc(sizeof(stbtt_fontinfo));
+    if (!stbtt_InitFont(info, fontBuffer, offset))
+    {
+        printf("loading of %s failed.\n",fontName);
+		return;
+    }
+    ttfVectors[n]=info;
+	plsc->ttFontIndex=n;
+	plsc->ttFontName=fontName;
+	// to be optimized:
+	int x0, y0, x1, y1;
+	stbtt_GetFontBoundingBox(info, &x0, &y0, &x1, &y1);
+	//the height of the “average” character (for IDL it is determined by the width of the rectangle?)
+	float averheight = (float) (y1 - y0);
+	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
+	float aspectratiooffont = averheight / (float) (x1 - x0);
+	charHeightCorr[n] = 4. / averheight; //value found experimentally (?)
+	int ascent, descent, lineGap;
+    stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);
+	charDescent[n] = 2.5*descent; //value found experimentally (?)
+/*
+	printf("averheight=%f, aspectratio=%f, ascent=%d, descent=%d, lineGap=%d, corr=%f\n",averheight,aspectratiooffont, ascent, descent,lineGap, charHeightCorr[n]);
+*/
+}
 
 
 

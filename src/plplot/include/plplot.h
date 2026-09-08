@@ -1057,6 +1057,9 @@ c_plgfnam( PLCHAR_NC_VECTOR fnam );
 // load a truetype font
 PLDLLIMPEXP void
 c_ttFontLoad(const char* name );
+// load a truetype font defined via existing fontPath
+PLDLLIMPEXP void
+c_ttFontLoadFromPath(const char* fontPath, const char* fontName);
 
 // set current truetype font
 PLDLLIMPEXP void

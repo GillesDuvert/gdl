@@ -322,7 +322,8 @@ install(CODE "message(\"-- Created symlink: ${CMAKE_INSTALL_PREFIX}/bin/gdl  -> 
 
 #install the new compacted hershey format file.
 install(FILES ${CMAKE_SOURCE_DIR}/resource/fonts/hersh1.chr DESTINATION ${CMAKE_INSTALL_PREFIX}/${GDL_DATA_DIR})
-
+#install some open-source TrueType fonts
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/resource/fonts/ttf DESTINATION ${CMAKE_INSTALL_PREFIX}/${GDL_DATA_DIR}/fonts)
 configure_file(
  	${CMAKE_SOURCE_DIR}/scripts/quick_start_GDL.sh.in
 	${CMAKE_BINARY_DIR}/quick_start_GDL.sh

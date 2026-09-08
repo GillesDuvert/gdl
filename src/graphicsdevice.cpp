@@ -72,6 +72,13 @@ extern "C" int loadFontPath(const char *name) {
   }
   return -1;
 }
+extern "C" int insertFontPath(const char *fontPath, const char* name) {
+  if (strlen(fontPath) > 0) { 
+    KnownFontNames[name] = std::pair<std::string, int>(fontPath, numberFonts++);
+    return numberFonts-1;
+  }
+  return -1;
+}
 #define MAXTTFONTS 100
 // private structure
 typedef struct
@@ -251,24 +258,38 @@ DStructGDL* GraphicsDevice::GetDeviceStruct( const string& device)
   return NULL;
 }
 void GraphicsDevice::InitTTFonts(){
-  c_ttFontLoad("Noto Sans"); //3
-  c_ttFontLoad("Noto Sans:weight=Bold"); //4
-  c_ttFontLoad("Noto Sans:slant=Italic"); //5
-  c_ttFontLoad("Noto Sans:weight=Bold:slant=Italic"); //6
-  c_ttFontLoad("DejaVu Serif"); //7
-  c_ttFontLoad("DejaVu Serif:slant=Italic"); //8
-  c_ttFontLoad("OpenSymbol"); //9
-  c_ttFontLoad("DejaVu Sans"); //10
-  c_ttFontLoad("Courier"); //11
-  c_ttFontLoad("Courier:slant=Italic"); //12
-  c_ttFontLoad("Courier:weight=Bold"); //13
-  c_ttFontLoad("Courier:weight=Bold:slant=Italic"); //14
-  c_ttFontLoad("DejaVu Serif:weight=Bold"); //15
-  c_ttFontLoad("DejaVu Serif:weight=Bold:slant=Italic"); //16
-  c_ttFontLoad("DejaVu Sans:weight=Bold"); //17
-  c_ttFontLoad("DejaVu Sans:slant=Italic"); //18
-  c_ttFontLoad("DejaVu Sans:weight=Bold:slant=Italic"); //19
-  c_ttFontLoad("DejaVu Math TeX Gyre"); //20
+  static const char* list[]={
+ "Roboto-Regular.ttf"//3
+,"Roboto-Bold.ttf"//4
+,"Roboto-Italic.ttf"//5
+,"Roboto-BoldItalic.ttf"//6
+,"NimbusRoman-Regular.ttf"//7
+,"NimbusRoman-Italic.ttf"//8
+,"Symbols Regular.ttf" //9
+,"itc-zapf-dingbats-regular-opentype-1_ufonts.com.otf" //10
+,"LiberationMono-Regular.ttf" //11
+,"LiberationMono-Italic.ttf" //12
+,"LiberationMono-Bold.ttf" //13
+,"LiberationMono-BoldItalic.ttf" //14
+,"NimbusRoman-Bold.ttf" //15
+,"NimbusRoman-BoldItalic.ttf" //16
+,"Roboto-Thin.ttf" //17
+,"Roboto-ThinItalic.ttf" //18
+,"RobotoCondensed-Light.ttf" //19
+,"RobotoCondensed-LightItalic.ttf" //20
+  };
+#ifdef _WIN32
+  std::string where(gdlDataDir+"\\resource\\fonts\\ttf\\");
+#else 
+   std::string where(gdlDataDir+"/resource/fonts/ttf/");
+#endif
+   char fakeName[128];
+   for (auto i=3; i<21; ++i) {
+   std::string s(where+list[i-3]);
+   sprintf(fakeName, "FONT_%d",i);
+   c_ttFontLoadFromPath((char*)s.c_str(), fakeName);
+   }
+//  c_ttFontLoad(where+"");
   }
 void GraphicsDevice::Init()
 {
