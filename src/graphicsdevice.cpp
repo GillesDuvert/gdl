@@ -265,7 +265,7 @@ void GraphicsDevice::InitTTFonts(){
 ,"Roboto-BoldItalic.ttf"//6
 ,"NimbusRoman-Regular.ttf"//7
 ,"NimbusRoman-Italic.ttf"//8
-,"Symbols Regular.ttf" //9
+,"Symbols 7 Normal.ttf" //9
 ,"itc-zapf-dingbats-regular-opentype-1_ufonts.com.otf" //10
 ,"LiberationMono-Regular.ttf" //11
 ,"LiberationMono-Italic.ttf" //12
