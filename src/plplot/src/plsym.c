@@ -49,7 +49,9 @@
 #include <float.h>
 #include <ctype.h>
 #include "hershey_mapping.h"
+// our rasterizer used: the stbtt one, version 1 (2 would be too much ?)
 #define STB_TRUETYPE_IMPLEMENTATION 
+#define STBTT_RASTERIZER_VERSION 1
 #include "stb_truetype.h"
 
 extern const char* findFontPath(const char* name);
@@ -770,6 +772,34 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 	}
 	*p_xorg = *p_xorg + width * scale;
 }
+//--------------------------------------------------------------------------
+// plttf()
+//
+// Fills a given TTF character using device EOFILL capabilities.
+//--------------------------------------------------------------------------
+
+void
+plSBTTFill(short *xa, short *ya, int len, char* where, int m, int n, int offx, int offy) {
+	if (len == 0) return;
+    int winding_count      = 1;
+    int *contour_lengths   = NULL;
+	stbtt__bitmap result;
+	result.h=n;
+	result.stride=m;
+	result.w=m;
+	result.pixels=where;
+	void *userdata;
+	contour_lengths = (int *) STBTT_malloc(sizeof(*contour_lengths) * 1, userdata);
+	contour_lengths[0]=len;
+	stbtt__point *windings = (stbtt__point *)malloc(len*sizeof(stbtt__point)) ;
+	for (int i = 0; i < len; ++i) {
+		windings[i].x=xa[i];
+		windings[i].y=ya[i];
+	}
+    stbtt__rasterize(&result, windings, contour_lengths, winding_count, 1,1,0,0,offx,offy,0, userdata);
+	STBTT_free(contour_lengths, userdata);
+	STBTT_free(windings, userdata);
+}
 
 
 
@@ -1121,10 +1151,15 @@ void c_ttFontLoad(const char* fontName) {
 */
 }
 void c_ttFontLoadFromPath(const char* fontPath, const char* fontName) {
-    int n=insertFontPath(fontPath, fontName);
+	
 	long size;
     unsigned char* fontBuffer;
     FILE* fontFile = fopen(fontPath, "rb");
+	if (fontFile==NULL)     {
+        printf("font %s not found at path %s.\n",fontName, fontPath);
+		return;
+    }
+    int n=insertFontPath(fontPath, fontName);
 	
     fseek(fontFile, 0, SEEK_END);
     size = ftell(fontFile); /* how long is the file ? */

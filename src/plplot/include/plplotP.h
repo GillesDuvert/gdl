@@ -558,6 +558,8 @@ plstik( PLFLT mx, PLFLT my, PLFLT dx, PLFLT dy );
 PLFLT
 plstr( PLCHAR_VECTOR string , PLINT length_only, PLINT base, PLFLT just, PLFLT * const xform, PLINT x, PLINT y, PLINT refx, PLINT refy);
 
+//
+void plSBTTFill(short *xa, short *ya, int len, char* where, int n, int m, int offx, int offy);
 // Draws a tick parallel to x.
 
 void

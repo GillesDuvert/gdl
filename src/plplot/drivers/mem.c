@@ -25,6 +25,7 @@ void plD_dispatch_init_mem( PLDispatchTable *pdt );
 void plD_init_mem( PLStream * );
 void plD_line_mem( PLStream *, short, short, short, short );
 void plD_polyline_mem( PLStream *, short *, short *, PLINT );
+void polyline_fill_mem( PLStream *, short *, short *, PLINT );
 void plD_eop_mem( PLStream * );
 void plD_bop_mem( PLStream * );
 void plD_tidy_mem( PLStream * );
@@ -89,7 +90,7 @@ plD_init_mem( PLStream *pls )
 
 
     pls->color     = 1;         // Is a color device
-    pls->dev_fill0 = 0;         // Handle solid fills
+    pls->dev_fill0 = 1;         // Handle solid fills
     pls->dev_fill1 = 0;         // Use PLplot core fallback for pattern fills
     pls->nopause   = 1;         // Don't pause between frames
     pls->use_unicode  = 0;      // wants text as unicode
@@ -152,6 +153,51 @@ plD_polyline_mem( PLStream *pls, short *xa, short *ya, PLINT npts )
     for ( i = 0; i < npts - 1; i++ )
         plD_line_mem( pls, xa[i], ya[i], xa[i + 1], ya[i + 1] );
 }
+void
+polyline_fill_mem(PLStream *pls, short *xa, short *ya, PLINT len) {
+	PLINT xamin = xa[0];
+	PLINT xamax = xa[0];
+	PLINT yamin = ya[0];
+	PLINT yamax = ya[0];
+	for (int i = 1; i < len; ++i) {
+		xamin = MIN(xamin, xa[i]);
+		xamax = MAX(xamax, xa[i]);
+		yamin = MIN(yamin, ya[i]);
+		yamax = MAX(yamax, ya[i]);
+	}
+	PLINT M = pls->phyxma;
+	PLINT N = pls->phyyma;
+	xamin = MAX(xamin, 0);
+	yamin = MAX(yamin, 0);
+	xamax = MIN(xamax, M);
+	yamax = MIN(yamax, N);
+	PLINT m = xamax - xamin + 1;
+	PLINT n = yamax - yamin + 1;
+	if (n <= 2 || m <= 2) return;
+	unsigned char *mem = (unsigned char *) pls->dev;
+	unsigned char *pixels = (char*) malloc(m * n);
+	memset(pixels, 0, m * n);
+	plSBTTFill(xa, ya, len, pixels, m, n, xamin, yamin );
+	//printf("\n");
+	unsigned char r = pls->curcolor.r;
+	unsigned char g = pls->curcolor.g;
+	unsigned char b = pls->curcolor.b;
+	for (int j = 0, jref=N-yamax; j < n; ++j, ++jref) {
+		int ref = 3 * M * jref; 
+		for (int i = 0; i < m; ++i) {
+			//printf("%2x", pixels[ (n-j-1) * m + i]);
+			if (pixels[(n-j-1) * m + i] > 127) {
+			int iref = xamin + i;
+			int ref2 = ref + 3 * iref;
+			mem[ref2++]=r;
+		    mem[ref2++]=g;
+		    mem[ref2]=b;
+			}
+		}
+		//printf("\n");
+	}
+	free(pixels);
+}
 
 void
 plD_eop_mem( PLStream *pls )
@@ -179,20 +225,32 @@ void
 plD_state_mem( PLStream * PL_UNUSED( pls ), PLINT PL_UNUSED( op ) )
 {
 // Nothing to do here
-}
+	}
 
-void
-plD_esc_mem( PLStream *pls, PLINT op, void *ptr  )
-{
-     switch ( op )
-    {
-   case PLESC_3D:
-       Set3D( ptr );
-       break;
-   case PLESC_2D:
-       UnSet3D();
-       break;
-     }
-}
+	void
+	plD_esc_mem(PLStream *pls, PLINT op, void *ptr) {
+		switch (op) {
+			case PLESC_FILL_POLYGON: // fill polygon
+				if (Status3D == 1) { //enable use everywhere.
+					//perform conversion on the fly
+					for (PLINT i = 0; i < pls->dev_npts; ++i) {
+						int x = pls->dev_x[i];
+						int y = pls->dev_y[i];
+						// 3D convert, must take into account that y is inverted.
+						SelfTransform3D(&x, &y);
 
+						pls->dev_x[i] = x;
+						pls->dev_y[i] = y;
+					}
+				}
+				polyline_fill_mem(pls, pls->dev_x, pls->dev_y, pls->dev_npts);
+				break;
+			case PLESC_3D:
+				Set3D(ptr);
+				break;
+			case PLESC_2D:
+				UnSet3D();
+				break;
+		}
+	}
 #endif                          // PLD_mem

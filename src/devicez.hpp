@@ -70,7 +70,7 @@ class DeviceZ: public GraphicsDevice
     // plplot frees this with 'free'
     //    memBuffer = new char[ actX * actY * 3];
     //    memBuffer = (char*) malloc( sizeof( char) * actX * actY * 3);
-    // plplot mem driver error, lines could be drawn upto actY (rather that
+    // plplot mem driver error, lines could be drawn up to actY (rather that
     // actY-1)
 
     memBuffer = (char*) calloc( sizeof( char), actX * (actY+1) * 3);
