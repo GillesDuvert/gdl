@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
   std::size_t pos=whereami_gdl.rfind("bin");
   if (pos == whereami_gdl.size()-3) { //we are the installed gdl!
     gdlDataDir.assign( whereami_gdl+ lib::PathSeparator() + ".." + lib::PathSeparator() + "share" + lib::PathSeparator() + "gnudatalanguage") ;
-//    std::cerr<<"installed at: "<<gdlDataDir<<std::endl;
+    std::cerr<<"I am installed at: "<<gdlDataDir<<std::endl;
   }
 
 //   GD: seems to confuse people --- too much information kills information
@@ -627,6 +627,8 @@ int main(int argc, char *argv[])
 // it is probably not worth it to compile all of them here.
 // In any case, it would be better to restore a .sav with all these procedures.
 // only the following two seem necessary at the moment:
+  
+#if !defined(_WIN32)
  SysVar::SetGDLPath( gdl_default_path);
  static const std::string procedures_at_start[2]={"GDL_IMPLIED_PRINT","DLM_REGISTER"};
   //be silent
@@ -646,7 +648,7 @@ int main(int argc, char *argv[])
     interpreter.ExecuteStringLine(dlmCommand);
   } catch (...) {} // be silent //std::cerr<<"Problem starting DLMs\n";}
   if (!setQuietSysvar) SysVar::Make_Loud();
-
+#endif
   // recreate the current PATH
   string gdlPath=GetEnvPathString("GDL_PATH");
   if( gdlPath == "") gdlPath=GetEnvPathString("IDL_PATH");

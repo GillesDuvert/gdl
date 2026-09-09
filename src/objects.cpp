@@ -996,7 +996,7 @@ void InitObjects()
   GraphicsMultiDevice::Init();
 
   //default Path is gdl_default_path, i.e.:
- gdl_default_path= "+" + gdlDataDir + lib::PathSeparator() + "lib";
+  gdl_default_path= "+" + gdlDataDir + lib::PathSeparator() + "lib";
   string gdlPath=GetEnvPathString("GDL_PATH");
   if( gdlPath == "") gdlPath=GetEnvPathString("IDL_PATH");
   if( gdlPath == "") gdlPath = gdl_default_path;
