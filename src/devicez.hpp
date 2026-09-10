@@ -76,7 +76,7 @@ class DeviceZ: public GraphicsDevice
     memBuffer = (char*) calloc( sizeof( char), actX * (actY+1) * 3);
 
     // make it known to plplot
-    plsmem( actX, actY, memBuffer);
+    plsmem( actX, actY, memBuffer, zBuffer);
 
     // no pause on destruction
     actStream->spause( false);
