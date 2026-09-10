@@ -43,7 +43,7 @@ void plD_esc_mem( PLStream *, PLINT, void * );
 #define ABS( a )       ( ( a < 0 ) ? -a : a )
 
 #define MAX_INTENSITY    255
-
+void pathFill(PLStream *pls);
 void plD_dispatch_init_mem( PLDispatchTable *pdt )
 {
   currDispatchTab = pdt;
@@ -94,7 +94,7 @@ plD_init_mem( PLStream *pls )
     pls->dev_fill1 = 0;         // Use PLplot core fallback for pattern fills
     pls->nopause   = 1;         // Don't pause between frames
     pls->use_unicode  = 0;      // wants text as unicode
-    pls->dev_alt_unicode  = 1;      // use alternate filling for unicode fonts
+    pls->dev_alt_unicode  = 0;      // use alternate filling for unicode fonts
 }
 
 #define sign( a )    ( ( a < 0 ) ? -1 : ( ( a == 0 ) ? 0 : 1 ) )
@@ -177,7 +177,9 @@ polyline_fill_mem(PLStream *pls, short *xa, short *ya, PLINT len) {
 	unsigned char *mem = (unsigned char *) pls->dev;
 	unsigned char *pixels = (char*) malloc(m * n);
 	memset(pixels, 0, m * n);
-	plSBTTFill(xa, ya, len, pixels, m, n, xamin, yamin );
+	int *subpath_lengths = (int *) malloc(sizeof(*subpath_lengths) * 1);
+	subpath_lengths[0]=len;
+	plSBTTFill(xa, ya, len, 1, subpath_lengths, pixels, m, n, xamin, yamin );
 	//printf("\n");
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
@@ -197,8 +199,87 @@ polyline_fill_mem(PLStream *pls, short *xa, short *ya, PLINT len) {
 		//printf("\n");
 	}
 	free(pixels);
+	free(subpath_lengths);
 }
+//--------------------------------------------------------------------------
+//  static void fill_path( PLStream *pls )
+//
+//  Fill special arrangement of values defining multiple path at once
+//--------------------------------------------------------------------------
+static void path_fill_mem( PLStream *pls) {
 
+  if (Status3D == 1) { //enable use everywhere.
+    //perform conversion on the fly
+    for (PLINT i = 0; i < pls->dev_npath; ++i) {
+      PLINT *x = pls->dev_pathx[i];
+      PLINT *y = pls->dev_pathy[i];
+      for (PLINT j = 0; j < pls->dev_pathnxy[i]; ++j) {
+        // 3D convert, must take into account that y is inverted.
+        int ix=x[j];
+        int iy=y[j];
+        if (ix >= 0) { //avoid transforming the negative codes...
+          SelfTransform3D(&ix, &iy);
+        x[j]=ix;
+        y[j]=iy;
+        }
+      }
+    }
+  }
+  pathFill(pls);
+}
+void pathFill(PLStream *pls) {
+	int len=0;
+	for (int i = 0; i < pls->dev_npath; ++i) len+= pls->dev_pathnxy[i];
+	PLINT xmin = 32768;
+	PLINT xmax = 0;
+	PLINT ymin = 32768;
+	PLINT ymax = 0;
+   for (int i = 0; i < pls->dev_npath; ++i) {
+    PLINT* x = pls->dev_pathx[i];
+    PLINT* y = pls->dev_pathy[i];
+	for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
+		if (x[i] >= 0) {
+			xmin = MIN(xmin, x[j + 1]);
+			xmax = MAX(xmax, x[j + 1]);
+			ymin = MIN(ymin, y[j + 1]);
+			ymax = MAX(ymax, y[j + 1]);
+		}
+	}
+   }
+	PLINT M = pls->phyxma;
+	PLINT N = pls->phyyma;
+	xmin = MAX(xmin, 0);
+	ymin = MAX(ymin, 0);
+	xmax = MIN(xmax, M);
+	ymax = MIN(ymax, N);
+	PLINT m = xmax - xmin + 1;
+	PLINT n = ymax - ymin + 1;
+	if (n <= 2 || m <= 2) return;
+	unsigned char *mem = (unsigned char *) pls->dev;
+	unsigned char *pixels = (char*) malloc(m * n);
+	memset(pixels, 0, m * n);
+	int *subpath_lengths = (int *) malloc(sizeof(*subpath_lengths) * pls->dev_npath);
+	plSBTTFill(pls->dev_pathx[0], pls->dev_pathy[0], len, pls->dev_npath , pls->dev_pathnxy, pixels, m, n, xmin, ymin );
+	//printf("\n");
+	unsigned char r = pls->curcolor.r;
+	unsigned char g = pls->curcolor.g;
+	unsigned char b = pls->curcolor.b;
+	for (int j = 0, jref=N-ymax; j < n; ++j, ++jref) {
+		int ref = 3 * M * jref; 
+		for (int i = 0; i < m; ++i) {
+			//printf("%2x", pixels[ (n-j-1) * m + i]);
+			if (pixels[(n-j-1) * m + i] > 127) {
+			int iref = xmin + i;
+			int ref2 = ref + 3 * iref;
+			mem[ref2++]=r;
+		    mem[ref2++]=g;
+		    mem[ref2]=b;
+			}
+		}
+		//printf("\n");
+	}
+	free(pixels);
+}
 void
 plD_eop_mem( PLStream *pls )
 {
@@ -245,6 +326,9 @@ plD_state_mem( PLStream * PL_UNUSED( pls ), PLINT PL_UNUSED( op ) )
 				}
 				polyline_fill_mem(pls, pls->dev_x, pls->dev_y, pls->dev_npts);
 				break;
+    case PLESC_FILL_PATH:
+        path_fill_mem( pls );
+        break;
 			case PLESC_3D:
 				Set3D(ptr);
 				break;

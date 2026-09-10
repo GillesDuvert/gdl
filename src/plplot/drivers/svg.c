@@ -497,7 +497,6 @@ void FillPath(PLStream *pls) {
          fprintf( aStream->svgFile, "C %.2f,%.2f %.2f,%.2f %.2f,%.2f ", (double) x[j+1] / aStream->scale, (double) y[j+1] / aStream->scale, (double) x[j+2] / aStream->scale, (double) y[j+2] / aStream->scale, (double) x[j+3] / aStream->scale, (double) y[j+3] / aStream->scale );
           j+=3;
           break;
-          break;
         default:
           printf("should not happen in FillPolygons(%d), please report!\n",x[j]);
       }

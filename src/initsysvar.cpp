@@ -47,7 +47,9 @@
 #define BUILD_DATE __DATE__
 #endif
 
+#ifndef _WIN32
 #define EXPAND_A_ROUTINE_WILDCARD "*.[ps][ra][ov]" //.pro and .sav, char by char. not perfect ( .pav would pass) but ExpandPath uses wildcards.
+#endif 
 
 namespace SysVar
 {

@@ -779,25 +779,20 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 //--------------------------------------------------------------------------
 
 void
-plSBTTFill(short *xa, short *ya, int len, char* where, int m, int n, int offx, int offy) {
+plSBTTFill(short *xa, short *ya, int len, int subpath_count, int *subpath_lengths, char* where, int m, int n, int offx, int offy) {
 	if (len == 0) return;
-    int winding_count      = 1;
-    int *contour_lengths   = NULL;
 	stbtt__bitmap result;
 	result.h=n;
 	result.stride=m;
 	result.w=m;
 	result.pixels=where;
 	void *userdata;
-	contour_lengths = (int *) STBTT_malloc(sizeof(*contour_lengths) * 1, userdata);
-	contour_lengths[0]=len;
 	stbtt__point *windings = (stbtt__point *)malloc(len*sizeof(stbtt__point)) ;
 	for (int i = 0; i < len; ++i) {
 		windings[i].x=xa[i];
 		windings[i].y=ya[i];
 	}
-    stbtt__rasterize(&result, windings, contour_lengths, winding_count, 1,1,0,0,offx,offy,0, userdata);
-	STBTT_free(contour_lengths, userdata);
+    stbtt__rasterize(&result, windings, subpath_lengths, subpath_count, 1,1,0,0,offx,offy,0, userdata);
 	STBTT_free(windings, userdata);
 }
 
