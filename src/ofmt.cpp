@@ -656,30 +656,17 @@ const int iFmtWidthBIN[] = { -1,  8, 16,  32,  32,  32,  32, 32,   -1,   64, -1,
 template<class Sp> SizeT Data_<Sp>::
 OFmtI( ostream* os, SizeT offs, SizeT r, int w, int d, int code, 
        BaseGDL::IOMode oMode) {
-    if ( this->Sizeof()==2 ) {
-      DIntGDL* cVal = static_cast<DIntGDL*>
-      (this->Convert2( GDL_INT, BaseGDL::COPY ));
+  //Must use max size (thus: long long) to provide correct case for this STRING-to-INT conversion.
+  Ty z=(*this)[offs];
+  BaseGDL* temp=new Data_<Sp>(z);  
+  DLong64GDL* cVal = static_cast<DLong64GDL*>(temp->Convert2( GDL_LONG64, BaseGDL::COPY ));
       if ( w < 0 ) w = (oMode == BaseGDL::BIN ? iFmtWidthBIN[ this->t] : iFmtWidth[ this->t]);
-      SizeT retVal = cVal->OFmtI( os, offs, r, w, d, code, oMode);
+      SizeT retVal = cVal->OFmtI( os, 0, r, w, d, code, oMode);
       delete cVal;
+      delete temp;
       return retVal;
-//FIXME THIS MAY DEPEND ON THE MACHINE NATURAL SIZE. ON 64 BITS it is promoted to 64 bits.
-//    } else if ( this->Sizeof()==4 ) {
-//      DLongGDL* cVal = static_cast<DLongGDL*>
-//      (this->Convert2( GDL_LONG, BaseGDL::COPY )); 
-//      if ( w < 0 ) w = (oMode == BaseGDL::BIN ? iFmtWidthBIN[ this->t] : iFmtWidth[ this->t]);
-//      SizeT retVal = cVal->OFmtI( os, offs, r, w, d, code, oMode);
-//      delete cVal;
-//      return retVal;
-    } else {
-      DLong64GDL* cVal = static_cast<DLong64GDL*>
-      (this->Convert2( GDL_LONG64, BaseGDL::COPY ));
-      if ( w < 0 ) w = (oMode == BaseGDL::BIN ? iFmtWidthBIN[ this->t] : iFmtWidth[ this->t]);
-      SizeT retVal = cVal->OFmtI( os, offs, r, w, d, code, oMode);
-      delete cVal;
-      return retVal;
-    }
 }
+
 template<> SizeT Data_<SpDByte>::
 OFmtI( ostream* os, SizeT offs, SizeT r, int w, int d, int code,
        BaseGDL::IOMode oMode) 
