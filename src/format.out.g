@@ -107,7 +107,7 @@ std::unique_ptr<std::ostream> osLocalGuard;
             format_reversion( reversionAnker);            
  
            if( (nextParIx == nextParIxComp) && (valIx == valIxComp))   
-                throw GDLException("Format syntax Error.");//"Infinite format loop detected.");
+                throw GDLException("Expression containing "+e->GetPar(valIx)->TypeStr()+" not allowed in this context: "+e->GetParString(valIx)+".");
          }
         
         os->seekp( 0, std::ios_base::end);
