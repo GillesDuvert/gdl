@@ -321,8 +321,7 @@ void GDLXStream::Flush() {
 //  XFlush(xwd->display);
 }
 void GDLXStream::Refresh() {
-  // the x11 server loops ok, no need to force a flush
-  //XFlush(static_cast<XwDisplay *>(static_cast<XwDev *>(pls->dev)->xwd)->display);
+  XFlush(static_cast<XwDisplay *>(static_cast<XwDev *>(pls->dev)->xwd)->display);
 }
 void GDLXStream::WarpPointer(DLong x, DLong y) {
   XwDev *dev = (XwDev *) pls->dev;
@@ -343,7 +342,7 @@ void GDLXStream::UnSetDoubleBuffering() {
 }
 
 void GDLXStream::UglyPatchMakeHidden() {
-  pls->arrow_npts=999;
+  pls->makeHidden=999;
 }
 //modified version. Will not tell double buffering is available if current graphic function is not pure "copy".
 bool GDLXStream::HasSafeDoubleBuffering() {

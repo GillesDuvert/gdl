@@ -36,8 +36,6 @@ class DeviceNULL : public GraphicsDevice
     // need to be called initially. permit to fix things
     actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
     actStream->plstream::adv(0); //-->this one is the 1st and only pladv
-    // load font
-    actStream->plstream::font(1);
     actStream->plstream::vpor(0, 1, 0, 1);
     actStream->plstream::wind(0, 1, 0, 1);
 
@@ -90,8 +88,46 @@ public:
   {
     DeleteStream();
   }
+  virtual DLong GetDecomposed()  final {return 1; }
+  virtual DString GetCurrentFont() final                 {return "__$";}
+  virtual DLong GetGraphicsFunction() final                 { return -1;}
+  virtual DIntGDL* GetPageSize() final                      { return NULL;}
+  virtual DInt GetPixelDepth() final                       { return -1;}
+  virtual bool SetPixelDepth(DInt depth) final               { return true;}
+  virtual bool Decomposed( bool value) final                { return true;}
+  virtual BaseGDL* GetFontnames() final                  { return NULL;}
+  virtual DLong GetFontnum() final                        { return 0;}
+  virtual DLong GetVisualDepth() final                      { return -1;}
+  virtual DString GetVisualName() final                     { return "";}
+  virtual DIntGDL* GetWindowPosition() final                { return NULL;}
+  virtual DLong GetWriteMask() final                        { return -1;}
+  virtual DByteGDL* WindowState() final                     { return NULL;}
+  virtual bool CloseFile() final                            { return true;}
+  virtual bool SetFileName( const std::string& f) final     { return true;}
+  virtual bool SetGraphicsFunction( DLong value) final      { return true;}
+  virtual bool CursorStandard( int value) final             { return true;}
+  virtual bool CursorCrosshair(bool standard=false) final   { return true;}
+  virtual bool CursorImage(char* v, int x=0, int y=0, char* mask=NULL) final   { return true;}
+  virtual int  getCursorId() final                             { return -1;}
+  virtual bool UnsetFocus() final                           { return true;}
+  virtual bool SetBackingStore(int value) final             { return true;}
+  virtual int  getBackingStore() final                      { return -1;}
+  virtual bool SetXPageSize( const float xs) final          { return true;}
+  virtual bool SetYPageSize( const float ys) final          { return true;}
+  virtual bool SetColor(const long color=0) final           { return true;}
+  virtual bool SetScale(const float) final                  { return true;}
+  virtual bool SetXOffset(const float) final                { return true;}
+  virtual bool SetYOffset(const float) final                { return true;}
+  virtual bool SetPortrait() final                          { return true;}
+  virtual bool SetLandscape() final                         { return true;}
+  virtual bool SetEncapsulated(bool val) final              { return true;}
+  virtual bool SetBPP(const int bpp) final                  { return true;}
+  virtual bool Hide() final                                 { return true;}
+  virtual bool CopyRegion(DLongGDL* me) final               { return true;}
 
- 
+  // Z buffer device
+  virtual bool ZBuffering( bool yes) final                  { return true;}
+  virtual bool SetResolution( DLong nx, DLong ny) final     { return true;}
 };
 
 #endif

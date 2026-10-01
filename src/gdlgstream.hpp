@@ -47,38 +47,6 @@ const double INCHToCM = 2.54 ;
 const double CM_IN_MM = 10.00000000 ; 
 const double DEFAULT_FONT_ASPECT_RATIO = 1.3; // Height / Width
 using namespace std;
-static std::string internalFontCodes[] = {
-    "#fn",      // !0  : unused
-    "#fn",      // !1  : unused
-    "#fn",      // !2  : unused
-    "#fn",      // !3  : simplex Roman (default)
-    "#fn",      // !4  : simplex Greek
-    "#fn",      // !5  : duplex Roman
-    "#fr",      // !6  : complex Roman
-    "#fr",      // !7  : complex Greek
-    "#fi",      // !8  : complex italic 
-    "#fn",      // !9  : math/special characters
-    "#fn",      // !10 : special characters
-    "#fn",      // !11 : Gothic English 
-    "#fs",      // !12 : simplex script
-    "#fs",      // !13 : complex script
-    "#fn",      // !14 : Gothic Italian
-    "#fn",      // !15 : Gothic German
-    "#fn",      // !16 : Cyrillic
-    "#fr",      // !17 : triplex Roman
-    "#fi",      // !18 : triplex Italic
-    "#fn",      // !19 : 
-    "#fn",      // !20 : miscellaneous
-    "#fn",      // !21 :
-    "#fn",      // !22 :
-    "#fn",      // !23 :
-    "#fn",      // !24 :
-    "#fn",      // !25 :
-    "#fn",      // !26 :
-    "#fn",      // !27 :
-    "#fn",      // !28 :
-    "#fn",      // !29 :
-  };
   
 // Graphic Structures:
 //  typedef struct _P_GRAPHICS {
@@ -189,11 +157,11 @@ protected:
   PLFLT theCurrentSymSize;
   PLFLT theLineSpacing_in_mm;
   bool usedAsPixmap; //for WINDOW,/PIXMAP retains the fact that this is a pixmap (invisible) window.
-  int activeFontCodeNum; //simplex Roman by default.
+//  int activeFontCodeNum; //simplex Roman by default.
 public:
 
    GDLGStream( int nx, int ny, const char *driver, const char *file=NULL)
-    : plstream( nx, ny, driver, file), valid( true), thickFactor(1.0), usedAsPixmap(false), activeFontCodeNum(3)
+    : plstream( nx, ny, driver, file), valid( true), thickFactor(1.0), usedAsPixmap(false)//, activeFontCodeNum(3)
   {
     if (!checkPlplotDriver(driver))
       ThrowGDLException(std::string("PLplot installation lacks the requested driver: ") + driver);
@@ -205,6 +173,7 @@ public:
     thePage.plyoff=0;
     theBox.initialized=false;
     plgpls( &pls);
+	plsesc('!');
     //you can debug plplot things with
 //     pls->debug=1;
 
@@ -240,9 +209,6 @@ public:
     free(devnames);
     return found;
  }
-   std::string getActiveFontCode(){
-   return internalFontCodes[activeFontCodeNum];
-  }
   
   static void SetErrorHandlers();
 
@@ -285,8 +251,19 @@ public:
   virtual void UnMapWindowAndSetPixmapProperty() {usedAsPixmap=true;} 
   bool IsPixmapWindow() {return usedAsPixmap;}
   virtual bool IsPlot() {return true;} //except some wxWidgets
-  virtual BaseGDL* GetBitmapData(int xoff, int yoff, int nx, int ny){return NULL;}
-  virtual void SetCurrentFont(std::string fontname){}//do nothing
+  virtual BaseGDL* GetBitmapData(int xoff, int yoff, int nx, int ny){return NULL;
+	}
+
+	void SetCurrentFont(int n) {
+		this->settt(n);
+	}
+
+	void LoadCurrentFont(std::string &f) {
+		if (f.size() > 0) {
+			this->loadtt(f.c_str());
+		}
+	}
+	
   int GetRegion(DLong& xs, DLong& ys, DLong& nx, DLong& ny);//{return false;}
   bool SetRegion(DLong& xd, DLong& yd, DLong& nx, DLong& ny);//{return false;}
 
@@ -440,11 +417,14 @@ public:
 //  //subpage to physical
 
   //use simple internal function
-  PLFLT gdlGetStringLength(const std::string &s)
+  PLFLT gdlGetStringLengthInMillimetres(const std::string &s)
   {
     return plstrl(s.c_str());
   }
-
+  PLFLT gdlGetStringLengthInMillimetres(const char* charstr)
+  {
+    return plstrl(charstr);
+  }
 //  void  currentPhysicalPos(PLFLT &x, PLFLT &y)
 //  {
 //    x=pls->currx; //Physical x-coordinate of current point
@@ -607,9 +587,6 @@ public:
   void UpdateCurrentCharWorldSize(); 
   void GetPlplotDefaultCharSize();
 
-  // SA: overloading plplot methods in order to handle IDL-plplot extended
-  // text formating syntax conversion
-  std::string TranslateFormatCodes(const char *text, double *stringLength);
   void setSymbolSize( PLFLT scale );
   void setLineSpacing( PLFLT spacing );
   PLFLT getSymbolSize();
@@ -619,7 +596,7 @@ public:
                          const char *text, double *stringCharLength=NULL );
   void setVariableCharacterSize( PLFLT charwidthpixel, PLFLT scale, PLFLT lineSpacingpixel, PLFLT xpxcm, PLFLT ypxcm);
   void setFixedCharacterSize( PLFLT charwidthpixel, PLFLT scale, PLFLT lineSpacingpixel);
-  virtual void fontChanged(){}; //nothing here
+  void fontChanged();
   void sizeChar(PLFLT scale);
   bool vpor( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax );
   bool isovpor( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax, PLFLT aspect );

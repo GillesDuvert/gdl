@@ -66,7 +66,7 @@ class DevicePS: public GraphicsDevice
 
     if( nx <= 0) nx = 1;
     if( ny <= 0) ny = 1;
-    actStream = new GDLPSStream( nx, ny, (int)SysVar::GetPFont(), encapsulated, color, bitsPerPix, orient_portrait);
+    actStream = new GDLPSStream( nx, ny, encapsulated, color, bitsPerPix, orient_portrait);
 
     actStream->sfnam( fileName.c_str());
 
@@ -87,17 +87,12 @@ class DevicePS: public GraphicsDevice
     // no pause on destruction
     actStream->spause( false);
 
-    // extended fonts
-    actStream->fontld( 1);
-    
     PLINT r[ctSize], g[ctSize], b[ctSize];
     actCT.Get( r, g, b);
     actStream->SetColorMap0( r, g, b, ctSize);
     actStream->SetColorMap1( r, g, b, ctSize);
     // default: black+white (IDL behaviour)
-    //? force TTF fonts as scaling of hershey fonts will not be good 
-    short text=(SysVar::GetPFont()>=0)?1:0;
-    string what="hrshsym=1,text="+i2s(text)+",color="+i2s(color)+",epsf="+i2s(encapsulated);
+    string what="color="+i2s(color)+",epsf="+i2s(encapsulated);
     actStream->setopt( "drvopt",what.c_str());
     actStream->scolbg(255,255,255); // start with a white background
 
@@ -132,8 +127,6 @@ class DevicePS: public GraphicsDevice
     // need to be called initially. permit to fix things
     actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
     actStream->plstream::adv(0); //-->this one is the 1st and only pladv
-    // load font
-    actStream->plstream::font(1);
     actStream->plstream::vpor(0, 1, 0, 1);
     actStream->plstream::wind(0, 1, 0, 1);
 

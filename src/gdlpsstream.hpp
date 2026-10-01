@@ -30,7 +30,7 @@ private:
   long bitsPerPix;
   bool firstTime; //to enable a PS hack on correspondence postscript pixels - plplot position. 
 public:
-  GDLPSStream( int nx, int ny, int pfont, bool encaps, int color, int bpp, bool orient_portrait):
+  GDLPSStream( int nx, int ny, bool encaps, int color, int bpp, bool orient_portrait):
   GDLGStream::GDLGStream( nx, ny, (color==0)?"ps":"psc")
   {
     encapsulated = encaps;
@@ -51,10 +51,7 @@ public:
   void Refresh(){plstream::cmd(PLESC_EXPOSE, NULL);pls->stream_closed=1;fprintf(pls->OutFile," S\neop\n");fseek(pls->OutFile,-7, SEEK_END);pls->stream_closed=0;}
 //  void Update(){}
 
-  virtual void fontChanged() final {
-    PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
-    pls->dev_text = doFont;
-  }
+
   
 };
 

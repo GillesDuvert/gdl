@@ -16,7 +16,13 @@
  ***************************************************************************/
 
 #include "plotting.hpp"
+
 #include <gsl/gsl_const_mksa.h> // GSL_CONST_MKSA_INCH
+
+extern "C" const char* getFontPath(const char* name);
+extern "C" int getFontIndex(const char* name);
+extern "C" const char* getFontName(int n);
+extern "C" int loadFontPath(const char *name);
 
 namespace lib {
 
@@ -53,17 +59,24 @@ namespace lib {
     // 
     {
       static int set_fontIx = e->KeywordIx("SET_FONT");
-      if (e->KeywordPresent(set_fontIx)) {
+      static int fontIx = e->KeywordIx("FONT");
+      static int userfontIx = e->KeywordIx("USER_FONT");
+      if (e->KeywordPresent(set_fontIx)||e->KeywordPresent(fontIx)||e->KeywordPresent(userfontIx)) {
         setfontpresent = true;
         DStringGDL* pattern = e->GetKWAs<DStringGDL>(set_fontIx);
-        if (!actDevice->SetFont((*pattern)[0])) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
+        // font exists?
+        int n=getFontIndex((*pattern)[0].c_str());
+        if (n >= 0) {
+          if (!actDevice->SetFont(n)) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
+          return;
+        }
+        n=loadFontPath((*pattern)[0].c_str());
+        if (n >= 0 ) { //Note: LINUX (Fontconfig) will ALWAYS return something.
+          // register it, even if specific device does not support it
+          c_ttFontLoad((*pattern)[0].c_str());
+          if (!actDevice->LoadFont((*pattern)[0])) e->Throw("Keyword SET_FONT not allowed for call to: DEVICE");
+        } else e->Throw("Unknown True Type font "+(*pattern)[0]);
       }
-    }
-    static int fontIx = e->KeywordIx("FONT"); //font is OLD keyword  for SET_FONT still accepted.
-    if (e->KeywordPresent(fontIx)) {
-      setfontpresent = true;
-      DStringGDL* pattern = e->GetKWAs<DStringGDL>(fontIx);
-      if (!actDevice->SetFont((*pattern)[0])) e->Throw("(Obsolete) Keyword FONT not allowed for call to: DEVICE");
     }
 
     //GET_FONTNAMES? 

@@ -368,43 +368,6 @@ void c_plshade( PLFLT_MATRIX a, PLINT nx, PLINT ny, PLDEFINED_callback defined,
         fill, rectangular, pltr, pltr_data );
 }
 
-#ifdef PL_DEPRECATED
-// plshade1 deprecated as of plplot-5.14.0
-
-//--------------------------------------------------------------------------
-// plshade1()
-//
-// Shade region.
-// This interface to plfshade() assumes the 2d function array is passed
-// via a (PLFLT *), and is column-dominant (normal C ordering).
-//--------------------------------------------------------------------------
-
-void c_plshade1( PLFLT_VECTOR a, PLINT nx, PLINT ny, PLDEFINED_callback defined,
-                 PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-                 PLFLT shade_min, PLFLT shade_max,
-                 PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                 PLINT min_color, PLFLT min_width,
-                 PLINT max_color, PLFLT max_width,
-                 PLFILL_callback fill, PLINT rectangular,
-                 PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    PLfGrid grid;
-
-    grid.f  = a;
-    grid.nx = nx;
-    grid.ny = ny;
-
-    plshade_int( plf2eval, ( PLPointer ) & grid,
-        NULL, NULL,
-//	     plc2eval, (PLPointer) &cgrid,
-        defined, nx, ny, xmin,
-        xmax, ymin, ymax, shade_min, shade_max,
-        sh_cmap, sh_color, sh_width,
-        min_color, min_width, max_color, max_width,
-        fill, rectangular, pltr, pltr_data );
-}
-#endif //PL_DEPRECATED
-
 //--------------------------------------------------------------------------
 // plfshade()
 //

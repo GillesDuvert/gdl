@@ -515,15 +515,6 @@ static PLOptionTable ploption_table[] = {
         "Family member number minimum field width"
     },
     {
-        "nopixmap",             // Do not use pixmaps
-        opt_nopixmap,
-        NULL,
-        NULL,
-        PL_OPT_FUNC,
-        "-nopixmap",
-        "Don't use pixmaps in X-based drivers"
-    },
-    {
         "db",                   // Double buffering on switch
         opt_db,
         NULL,
@@ -2465,27 +2456,6 @@ static int
 opt_np( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR PL_UNUSED( opt_arg ), void * PL_UNUSED( client_data ) )
 {
     plspause( 0 );
-    return 0;
-}
-
-//--------------------------------------------------------------------------
-// opt_nopixmap()
-//
-//! Performs appropriate action for option "nopixmap":
-//! Disables use of pixmaps in X drivers
-//!
-//! @param PL_UNUSED( opt ) Not used.
-//! @param PL_UNUSED( opt_arg ) Not used.
-//! @param PL_UNUSED( client_data ) Not used.
-//!
-//! returns 0.
-//!
-//--------------------------------------------------------------------------
-
-static int
-opt_nopixmap( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR PL_UNUSED( opt_arg ), void * PL_UNUSED( client_data ) )
-{
-    plsc->nopixmap = 1;
     return 0;
 }
 

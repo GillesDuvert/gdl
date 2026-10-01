@@ -30,7 +30,6 @@ class DeviceZ: public GraphicsDevice
   char*  memBuffer;
   DInt*  zBuffer;
   int    decomposed;
-  DString fontname;
     
   void SetZBuffer( DLong x, DLong y)
   {
@@ -71,19 +70,16 @@ class DeviceZ: public GraphicsDevice
     // plplot frees this with 'free'
     //    memBuffer = new char[ actX * actY * 3];
     //    memBuffer = (char*) malloc( sizeof( char) * actX * actY * 3);
-    // plplot mem driver error, lines could be drawn upto actY (rather that
+    // plplot mem driver error, lines could be drawn up to actY (rather that
     // actY-1)
 
     memBuffer = (char*) calloc( sizeof( char), actX * (actY+1) * 3);
 
     // make it known to plplot
-    plsmem( actX, actY, memBuffer);
+    plsmem( actX, actY, memBuffer, zBuffer);
 
     // no pause on destruction
     actStream->spause( false);
-
-    // extended fonts
-    actStream->fontld( 1);
 
     // we want color
     actStream->scolor( 1);
@@ -95,18 +91,12 @@ class DeviceZ: public GraphicsDevice
     actStream->SetColorMap0( r, g, b, ctSize); 
     actStream->SetColorMap1( r, g, b, ctSize); 
     
-  short myfont = ((int) SysVar::GetPFont()>-1) ? 1 : 0;
-  std::string what = "hrshsym=0,text=" + i2s(myfont);
-  actStream->setopt("drvopt", what.c_str());
-  
    actStream->spage(Z_DPI, Z_DPI, nx, ny, 0, 0 );
 
    actStream->Init();
     // need to be called initially. permit to fix things
     actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
     actStream->plstream::adv(0); //-->this one is the 1st and only pladv
-    // load font
-    actStream->plstream::font(1);
     actStream->plstream::vpor(0, 1, 0, 1);
     actStream->plstream::wind(0, 1, 0, 1);
 
@@ -245,8 +235,6 @@ public:
   {
     return decomposed;  
   }
-    
-    virtual bool SetFont(DString &f) final {fontname=f; return true;}
 
 };
 

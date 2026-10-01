@@ -104,9 +104,12 @@ PLDLLIMPEXP int pdf_wr_2bytes( PDFstrm * pdfs, U_SHORT s );
 PLDLLIMPEXP int pdf_rd_2bytes( PDFstrm * pdfs, U_SHORT * ps );
 PLDLLIMPEXP int pdf_wr_2nbytes( PDFstrm * pdfs, U_SHORT * s, PLINT n );
 PLDLLIMPEXP int pdf_rd_2nbytes( PDFstrm * pdfs, U_SHORT * s, PLINT n );
+PLDLLIMPEXP int pdf_rd_4nbytes( PDFstrm * pdfs, U_LONG * s, PLINT n );
 PLDLLIMPEXP int pdf_wr_4bytes( PDFstrm * pdfs, U_LONG s );
 PLDLLIMPEXP int pdf_rd_4bytes( PDFstrm * pdfs, U_LONG * ps );
 PLDLLIMPEXP int pdf_wr_ieeef( PDFstrm * pdfs, float f );
 PLDLLIMPEXP int pdf_rd_ieeef( PDFstrm * pdfs, float *pf );
+
+PLDLLIMPEXP int pdf_rd_4nbytes_network( PDFstrm * pdfs, long * s, PLINT n );
 
 #endif  // __PDF_H__

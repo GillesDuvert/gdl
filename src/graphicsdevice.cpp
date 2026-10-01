@@ -37,6 +37,81 @@
 #include "devicenull.hpp"
 #include "initsysvar.hpp"
 #include "color.hpp"
+#include "findttfonts.h"
+
+//for truetype fonts: stores fontname and full font .ttf path
+std::map<std::string, std::pair<std::string,int>>KnownFontNames;
+static int numberFonts=3; //starts at 3!!
+
+extern "C" const char* getFontPath(const char* name) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  it = KnownFontNames.find(std::string(name));
+    if (it != KnownFontNames.end()) return (*it).second.first.c_str();
+  return NULL;
+}
+extern "C" int getFontIndex(const char* name) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  it = KnownFontNames.find(std::string(name));
+    if (it != KnownFontNames.end()) return (*it).second.second;
+  return -1;
+}
+extern "C" const char* getFontName(int n) {
+  std::map<std::string, std::pair<std::string,int>>::iterator it;
+  for (it = KnownFontNames.begin(); it !=KnownFontNames.end(); ++it ) {
+    if ((*it).second.second == n) return (*it).first.c_str();
+  }
+  return NULL;
+}
+
+extern "C" int loadFontPath(const char *name) {
+  std::string fontPath = FindFontPath(name);
+  if (fontPath.length() > 0) { //Note: LINUX (Fontconfig) will ALWAYS return something.
+    // register it, even if specific device does not support it
+    KnownFontNames[name] = std::pair<std::string, int>(fontPath, numberFonts++);
+    return numberFonts-1;
+  }
+  return -1;
+}
+extern "C" int insertFontPath(const char *fontPath, const char* name) {
+  if (strlen(fontPath) > 0) { 
+    KnownFontNames[name] = std::pair<std::string, int>(fontPath, numberFonts++);
+    return numberFonts-1;
+  }
+  return -1;
+}
+#define MAXTTFONTS 100
+// private structure
+typedef struct
+{
+   unsigned char *data;
+   int cursor;
+   int size;
+} stbtt__buf;
+// The following structure is defined publicly so you can declare one on
+// the stack or as a global or etc, but you should treat it as opaque.
+struct stbtt_fontinfo
+{
+   void           * userdata;
+   unsigned char  * data;              // pointer to .ttf file
+   int              fontstart;         // offset of start of font
+
+   int numGlyphs;                     // number of glyphs, needed for range checking
+
+   int loca,head,glyf,hhea,hmtx,kern,gpos; // table locations as offset from start of .ttf
+   int index_map;                     // a cmap mapping for our chosen character encoding
+   int indexToLocFormat;              // format needed to map from glyph index to glyph
+
+   stbtt__buf cff;                    // cff font data
+   stbtt__buf charstrings;            // the charstring index
+   stbtt__buf gsubrs;                 // global charstring subroutines index
+   stbtt__buf subrs;                  // private charstring subroutines index
+   stbtt__buf fontdicts;              // array of font dicts
+   stbtt__buf fdselect;               // map from glyph to fontdict
+};
+extern "C" stbtt_fontinfo** ttfVectors;
+extern "C" float *charHeightCorr;
+extern "C" int   *charDescent;
+extern "C" void c_ttFontLoad(const char* fontName);
 
 using namespace std;
 
@@ -182,10 +257,46 @@ DStructGDL* GraphicsDevice::GetDeviceStruct( const string& device)
     }
   return NULL;
 }
+void GraphicsDevice::InitTTFonts(){
+  static const char* list[]={
+ "Roboto-Regular.ttf"//3
+,"Roboto-Bold.ttf"//4
+,"Roboto-Italic.ttf"//5
+,"Roboto-BoldItalic.ttf"//6
+,"NimbusRoman-Regular.ttf"//7
+,"NimbusRoman-Italic.ttf"//8
+,"Symbols 7 Normal.ttf" //9
+,"itc-zapf-dingbats-regular-opentype-1_ufonts.com.otf" //10
+,"LiberationMono-Regular.ttf" //11
+,"LiberationMono-Italic.ttf" //12
+,"LiberationMono-Bold.ttf" //13
+,"LiberationMono-BoldItalic.ttf" //14
+,"NimbusRoman-Bold.ttf" //15
+,"NimbusRoman-BoldItalic.ttf" //16
+,"Roboto-Thin.ttf" //17
+,"Roboto-ThinItalic.ttf" //18
+,"RobotoCondensed-Light.ttf" //19
+,"RobotoCondensed-LightItalic.ttf" //20
+  };
+#ifdef _WIN32
+  std::string where(gdlDataDir+"\\resource\\fonts\\ttf\\");
+#else 
+   std::string where(gdlDataDir+"/resource/fonts/ttf/");
+#endif
+   char fakeName[128];
+   for (auto i=3; i<21; ++i) {
+   std::string s(where+list[i-3]);
+   sprintf(fakeName, "FONT_%d",i);
+   c_ttFontLoadFromPath((char*)s.c_str(), fakeName);
+   }
+//  c_ttFontLoad(where+"");
+  }
 void GraphicsDevice::Init()
 {
   InitCT();
-
+  
+  InitTTFonts();
+  
   DefineDStructDesc();
 
   GraphicsDevice* current_device=NULL;

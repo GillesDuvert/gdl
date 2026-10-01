@@ -44,7 +44,7 @@ private:
 public:
     gdlwxGraphicsPanel* container; // for Update()
 
-    GDLWXStream( int width, int height );  
+    GDLWXStream( int width, int height);  
     ~GDLWXStream(); 
     virtual bool IsWxStream() final{return true;}
 
@@ -52,7 +52,6 @@ public:
 
 //     void set_stream();   //!< Calls some code before every PLplot command.
     void SetSize( const wxSize s );   //!< Set new size of plot area.
-    void RenewPlot();   //!< Redo plot.
     virtual void Refresh() final;
     void SetGdlwxGraphicsPanel(gdlwxGraphicsPanel* w, bool isPlot=true);
     gdlwxGraphicsPanel* GetMyContainer(){return container;}
@@ -93,15 +92,10 @@ public:
     bool CursorStandard(int cursorNumber);
     bool CursorImage(char* v, int x, int y, char* m);
     DLong GetVisualDepth();
-    void SetCurrentFont(std::string fontname);
     DString GetVisualName();
     bool GetScreenResolution(double& resx, double& resy);
     virtual DByteGDL* GetBitmapData(int xoff, int yoff, int nx, int ny) final;
     static void DefineSomeWxCursors(); //global initialisation of 77 X11-like cursors.
-    virtual void fontChanged() final {
-      PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
-      pls->dev_text = doFont;
-    }
 };
 
 

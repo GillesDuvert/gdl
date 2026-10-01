@@ -2008,89 +2008,6 @@ c_plgra( void )
         plP_esc( PLESC_GRAPH, NULL );
 }
 
-//--------------------------------------------------------------------------
-// void plxormod()
-//
-//! Set xor mode? FIXME: Not really sure what this function does.
-//!
-//! @param mode Boolean.
-//! @param status 1 if successful, 0 otherwise.
-
-void
-c_plxormod( PLINT mode, PLINT *status )   // xor mode
-{
-    static int ostate = 0;
-
-    if ( !plsc->dev_xor )
-    {
-        *status = 0;
-        return;
-    }
-
-    if ( plsc->level > 0 )
-    {
-        plP_esc( PLESC_XORMOD, &mode );
-        if ( mode )
-        {
-            ostate            = plsc->plbuf_write;
-            plsc->plbuf_write = 0;
-        }
-        else
-            plsc->plbuf_write = ostate;
-    }
-    *status = 1;
-}
-
-//--------------------------------------------------------------------------
-//! Set drawing mode (depends on device support!)
-//!
-//! @param mode This determines which drawing mode to use.
-//!
-void
-c_plsdrawmode( PLINT mode )
-{
-    if ( !plsc->dev_modeset )
-    {
-        plwarn( "plsdrawmode: Mode setting is not supported by this device" );
-    }
-    else if ( plsc->level > 0 )
-    {
-        plP_esc( PLESC_MODESET, &mode );
-    }
-    else
-    {
-        plwarn( "plsdrawmode: Initialize PLplot first" );
-    }
-    return;
-}
-
-//--------------------------------------------------------------------------
-//! Get drawing mode (depends on device support!)
-//!
-//! @returns Current drawing mode
-//!
-PLINT
-c_plgdrawmode( void )
-{
-    PLINT mode;
-
-    if ( !plsc->dev_modeset )
-    {
-        plwarn( "plgdrawmode: Mode getting is not supported by this device" );
-        mode = PL_DRAWMODE_UNKNOWN;
-    }
-    else if ( plsc->level > 0 )
-    {
-        plP_esc( PLESC_MODEGET, &mode );
-    }
-    else
-    {
-        plwarn( "plsdrawmode: Initialize PLplot first" );
-        mode = PL_DRAWMODE_UNKNOWN;
-    }
-
-    return ( mode );
-}
 
 //--------------------------------------------------------------------------
 // void pltext()
@@ -2124,95 +2041,6 @@ pl_cmd( PLINT op, void *ptr )
 }
 
 //--------------------------------------------------------------------------
-// char *plFindCommand
-//
-//! Looks for the specified executable file.  Search path:
-//!      if command invoked in the build tree:
-//!         build_tree/tk (plserver lies there - needed for the tk driver)
-//!         source_tree/scripts (plpr lies there - needed for the tk driver)
-//!      else
-//!	PLPLOT_BIN_ENV = $(PLPLOT_BIN)
-//!	current directory
-//!	PLPLOT_HOME_ENV/bin = $(PLPLOT_HOME)/bin
-//!	BIN_DIR
-//!
-//! The caller must free the returned pointer (points to malloc'ed memory)
-//! when finished with it.
-//!
-//! @param fn Name of the executable(?).
-//!
-//! @returns The location of the executable file.
-//--------------------------------------------------------------------------
-
-char *
-plFindCommand( PLCHAR_VECTOR fn )
-{
-    char *fs = NULL, *dn;
-
-    //*** see if in build tree **
-    // Note: this will never work, since GDL's copy of plplot does not ship those bindings
-    if ( plInBuildTree() == 1 )
-    {
-        plGetName( BUILD_DIR, "bindings/tk", fn, &fs );
-        if ( !plFindName( fs ) )
-            return fs;
-        else
-        {
-            plGetName( SOURCE_DIR, "scripts", fn, &fs );
-            if ( !plFindName( fs ) )
-                return fs;
-        }
-    }
-
-// PLPLOT_BIN_ENV = $(PLPLOT_BIN)
-
-#if defined ( PLPLOT_BIN_ENV )
-    if ( ( dn = getenv( PLPLOT_BIN_ENV ) ) != NULL )
-    {
-        plGetName( dn, "", fn, &fs );
-        if ( !plFindName( fs ) )
-            return fs;
-        fprintf( stderr, PLPLOT_BIN_ENV "=\"%s\"\n", dn ); // what IS set?
-    }
-#endif  // PLPLOT_BIN_ENV
-
-// Current directory
-
-    plGetName( ".", "", fn, &fs );
-    if ( !plFindName( fs ) )
-        return fs;
-
-// PLPLOT_HOME_ENV/bin = $(PLPLOT_HOME)/bin
-
-#if defined ( PLPLOT_HOME_ENV )
-    if ( ( dn = getenv( PLPLOT_HOME_ENV ) ) != NULL )
-    {
-        plGetName( dn, "bin", fn, &fs );
-        if ( !plFindName( fs ) )
-            return fs;
-        fprintf( stderr, PLPLOT_HOME_ENV "=\"%s\"\n", dn ); // what IS set?
-    }
-#endif  // PLPLOT_HOME_ENV
-
-// BIN_DIR
-
-#if defined ( BIN_DIR )
-    plGetName( BIN_DIR, "", fn, &fs );
-    if ( !plFindName( fs ) )
-        return fs;
-#endif
-
-// Crapped out
-
-    free_mem( fs );
-    fprintf( stderr, "plFindCommand: cannot locate command: %s\n", fn );
-#if defined ( BIN_DIR )
-    fprintf( stderr, "bin dir=\"" BIN_DIR "\"\n" );      // what WAS set?
-#endif  // BIN_DIR
-    return NULL;
-}
-
-//--------------------------------------------------------------------------
 // FILE *plLibOpen(fn)
 //
 //! Return file pointer to library file (such as a colormap palette).
@@ -2220,7 +2048,7 @@ plFindCommand( PLCHAR_VECTOR fn )
 //!	PLPLOT_LIB_ENV = $(PLPLOT_LIB)
 //!	current directory
 //!	PLPLOT_HOME_ENV/lib = $(PLPLOT_HOME)/lib
-//!	DATA_DIR
+//!	GDLDATADIR
 //!	PLLIBDEV
 //!
 //! @param fn Name of the file.
@@ -2255,7 +2083,7 @@ plLibOpen( PLCHAR_VECTOR fn )
 //!	PLPLOT_LIB_ENV = $(PLPLOT_LIB)
 //!	current directory
 //!	PLPLOT_HOME_ENV/lib = $(PLPLOT_HOME)/lib
-//!	DATA_DIR
+//!	GDLDATADIR
 //!	PLLIBDEV
 //!
 //! @param fn Name of the file.
@@ -2315,12 +2143,12 @@ plLibOpenPdfstrm( PLCHAR_VECTOR fn )
 
 //***   search installed location	***
 
-#if defined ( DATA_DIR )
-    plGetName( DATA_DIR, "", fn, &fs );
+#if defined ( GDLDATADIR )
+    plGetName( GDLDATADIR, "", fn, &fs );
 
     if ( ( file = pdf_fopen( fs, "rb" ) ) != NULL )
         goto done;
-#endif  // DATA_DIR
+#endif  // GDLDATADIR
 
 //***   search hardwired location	***
 

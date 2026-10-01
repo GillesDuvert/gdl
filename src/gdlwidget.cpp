@@ -184,7 +184,7 @@ class wxAppGDL:public wxApp
 wxGUIEventLoop loop;
 public:
     ~wxAppGDL(){}
-    bool OnInit();
+    bool OnInit() override;
  int MyLoop() {
     if (loop.IsOk()) {
       loop.SetActive(&loop);
