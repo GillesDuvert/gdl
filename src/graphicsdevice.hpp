@@ -114,7 +114,7 @@ typedef std::vector< GraphicsDevice*> DeviceListT;
 class GraphicsDevice
 {
   static void InitCT();         // preset CT and actCT
-
+  static void InitTTFonts(); // loads addresses of basic true type fonts.
   static GraphicsDevice*    actDevice;
   static DeviceListT  deviceList;
   static GraphicsDevice*    actGUIDevice;
@@ -125,6 +125,7 @@ class GraphicsDevice
   
 protected:
   static unsigned wTag, xSTag, ySTag, xVSTag, yVSTag, n_colorsTag; // !D tag indices
+  DString fontname="Courier";
 
   static std::vector<GDLCT> CT; // predefined colortables
   static GDLCT           actCT; // actual used colortable
@@ -221,9 +222,19 @@ public:
   virtual void MaxXYSize(DLong *xsize, DLong *ysize) {
 							*xsize=1200, *ysize=800; return;}
   virtual DLong GetDecomposed()                       { return -1;}
+  DString GetCurrentFontName(){return fontname;}
   virtual BaseGDL* GetFontnames()                     { ThrowGDLException("DEVICE: Keyword GET_FONTNAMES not allowed for call to: DEVICE" ); return NULL;}
   virtual DLong GetFontnum()                          { ThrowGDLException("DEVICE: Keyword GET_FONTNUM not allowed for call to: DEVICE" ); return 0;}
-  virtual bool SetFont(DString &f)                 {static int warning_sent=1; if (warning_sent) {Warning("SET_FONT not active for this device (FIXME)."); warning_sent=0;} return true;}
+
+	virtual bool SetFont(int n) {
+		this->GetStream()->SetCurrentFont(n);
+		return true;
+	}
+  virtual bool LoadFont(DString &f) {
+	  fontname=f;
+		this->GetStream()->LoadCurrentFont(fontname);
+		return true;
+	}
   virtual DString GetCurrentFont()                 {return "__$";}
   virtual DLong GetGraphicsFunction()                 { return -1;}
   virtual DIntGDL* GetPageSize()                      { return NULL;}
@@ -318,7 +329,6 @@ public:
     int cursorId; //should be 3 by default.
     long gcFunction;
     int backingStoreMode;
-    DString fontname;
     int staticDisplay;
 
   int getCursorId(){return cursorId;}
@@ -336,7 +346,6 @@ public:
   cursorId(_cursorId),
   gcFunction(_gcFunction),
   backingStoreMode(_backingStoreMode),
-  fontname(""),
   staticDisplay(1)
   {
       //pretty much nothing to do...
@@ -367,7 +376,22 @@ public:
   DLong GetDecomposed();
   BaseGDL* GetFontnames(){ ThrowGDLException("DEVICE: Keyword GET_FONTNAMES not allowed for call to: DEVICE" );return NULL;}
   DLong GetFontnum(){ ThrowGDLException("DEVICE: Keyword GET_FONTNUM not allowed for call to: DEVICE" );return 0;}
-  virtual bool SetFont(DString &f) {fontname=f; return true;}
+  virtual bool LoadFont(DString &f) final {
+		fontname = f;
+		this->GetStream(); //mandatory open a window if none opened.
+		for (int i = 0; i < winList.size(); i++) {
+			if (winList[i] != NULL) winList[i]->LoadCurrentFont(fontname);
+		}
+		return true;
+	}
+
+	  virtual bool SetFont(int n) final {
+		this->GetStream(); //mandatory open a window if none opened.
+		for (int i = 0; i < winList.size(); i++) {
+			if (winList[i] != NULL) winList[i]->SetCurrentFont(n);
+		}
+		return true;
+	}
   DString GetCurrentFont() {return fontname;}
   bool SetBackingStore(int value);
   bool Hide(); 
