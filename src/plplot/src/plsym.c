@@ -610,7 +610,7 @@ plhershey( short *vects, int len, PLFLT * const xform,
 //--------------------------------------------------------------------------
 // plttf()
 //
-// Fills a given TTF character using device EOFILL capabilities.
+// Fills a given TTF character using device PATHFILL capabilities.
 //--------------------------------------------------------------------------
 static void
 plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform, 
@@ -734,9 +734,9 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
     *p_xorg = *p_xorg + width * scale;
 }
 //--------------------------------------------------------------------------
-// plttf()
+// plttf2()
 //
-// Fills a given TTF character using device EOFILL capabilities.
+//  Fills a given character using device simple FILL capability (needs EOFILL)
 //--------------------------------------------------------------------------
 
 static void
@@ -772,10 +772,11 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 	}
 	*p_xorg = *p_xorg + width * scale;
 }
+
 //--------------------------------------------------------------------------
-// plttf()
+// plSTBTTFill_short() and plSTBTTFill_int()
 //
-// Fills a given TTF character using device EOFILL capabilities.
+// Fills a given TTF character using STBTT rastering (fills passed bitmap).
 //--------------------------------------------------------------------------
 
 void

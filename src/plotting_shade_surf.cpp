@@ -24,7 +24,8 @@ namespace lib
   using namespace std;
 
 // shared parameter
-  static PLFLT lightSourcePos[3]={1.0,0,1.0};
+  static PLFLT lightSourcePos[3]={0,0,1.0};
+  static PLFLT shadinglimits[2]={0,255.};
 
   class shade_surf_call: public plotting_routine_call
   {
@@ -432,12 +433,18 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         //position of light Source. Plplot does not use only the direction of the beam but the position of the illuminating
         //source. And its illumination looks strange. We try to make the ill. source a bit far in the good direction.
         PLFLT sun[3];
-        sun[0]=lightSourcePos[0]*1E10;
-        sun[1]=lightSourcePos[1]*1E10;
-        sun[2]=lightSourcePos[2]*1E10;if (below) sun[2]*=-1;
+        sun[0]=lightSourcePos[0];
+        sun[1]=lightSourcePos[1];
+        sun[2]=lightSourcePos[2];if (below) sun[2]*=-1;
+        static unsigned nameTag = SysVar::D()->Desc()->TagIndex("NAME");
+        // when !d.name == Z  we provide the driver transform
+        DString name = (*static_cast<DStringGDL*> (SysVar::D()->GetTag(nameTag, 0)))[0];
+        bool isZ=(name=="Z");
+        if (isZ) gdlStartT3DMatrixDriverTransform(actStream, zValue);
         actStream->lightsource(sun[0],sun[1],sun[2]);
+        actStream->shadinglimits(shadinglimits[0], shadinglimits[1]);
         actStream->surf3d(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0,shadevals);
-
+        if (isZ) gdlStop3DDriverTransform(actStream);
 //Clean allocated data struct
         delete[] xg1;
         delete[] yg1;
@@ -463,9 +470,11 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
 
  void set_shading(EnvT* e)
  {
-   lightSourcePos[0]=1;
+   lightSourcePos[0]=0;
    lightSourcePos[1]=0;
    lightSourcePos[2]=1;
+   shadinglimits[0]=0.;
+   shadinglimits[1]=255.;
     DDoubleGDL *light;
     static int lightIx=e->KeywordIx ( "LIGHT" );
     if ( e->GetKW ( lightIx )!=NULL )
@@ -473,6 +482,13 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
       light=e->GetKWAs<DDoubleGDL>( lightIx );
       if (light->N_Elements()>3) e->Throw("Keyword array parameter LIGHT must have from 1 to 3 elements.");
       for (SizeT i=0; i< light->N_Elements(); ++i) lightSourcePos[i]=(*light)[i];
+    }
+    static int valuesIx=e->KeywordIx ( "VALUES" );
+    if ( e->GetKW ( valuesIx )!=NULL )
+    {
+      light=e->GetKWAs<DDoubleGDL>( valuesIx );
+      if (light->N_Elements()>2) e->Throw("Keyword array parameter VALUES must have from 1 to 2 elements.");
+      for (SizeT i=0; i< light->N_Elements(); ++i) shadinglimits[i]=(*light)[i];
     }
  }
 } // namespace

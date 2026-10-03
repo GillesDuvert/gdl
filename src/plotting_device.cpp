@@ -233,8 +233,8 @@ namespace lib {
     // Z_BUFFERING 
     {
       static int z_bufferingIx = e->KeywordIx("Z_BUFFERING");
-      BaseGDL* z_buffering = e->GetKW(z_bufferingIx);
-      if (z_buffering != NULL) {
+      bool z_buffering = e->KeywordPresent(z_bufferingIx);
+      if (z_buffering) {
         bool success = actDevice->ZBuffering(e->KeywordSet(z_bufferingIx));
         if (!success)
           e->Throw("Current device does not support keyword Z_BUFFERING.");

@@ -307,7 +307,8 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_IMPORT_BUFFER             39 // set the contents of the buffer to a specified byte string
 #define PLESC_APPEND_BUFFER             40 // append the given byte string to the buffer
 #define PLESC_FLUSH_REMAINING_BUFFER    41 // flush the remaining buffer e.g. after new data was appended
-#define PLESC_FILL_PATH            42 // fill multiple polygon
+#define PLESC_FILL_PATH                 42 // fill multiple polygon
+#define PLESC_FILL_VERTEX               43 // z-buffer gouraud shade triangle pased as vertexes
 
 // image operations
 #define ZEROW2B                         1
@@ -708,6 +709,7 @@ typedef struct
 #define    plinit                   c_plinit
 #define    pljoin                   c_pljoin
 #define    pllightsource            c_pllightsource
+#define    plshadinglimits          c_plshadinglimits
 #define    plline                   c_plline
 #define    plpath                   c_plpath
 #define    plline3                  c_plline3
@@ -1154,7 +1156,8 @@ c_pljoin( PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 );
 // Sets position of the light source
 PLDLLIMPEXP void
 c_pllightsource( PLFLT x, PLFLT y, PLFLT z );
-
+PLDLLIMPEXP void
+c_plshadinglimits( PLFLT x, PLFLT y );
 // Draws line segments connecting a series of points.
 
 PLDLLIMPEXP void

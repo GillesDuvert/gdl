@@ -830,12 +830,12 @@ void LibInit()
 
   const string set_shadingKey[]=
   {
-    "LIGHT", KLISTEND
+    "LIGHT", "VALUES", KLISTEND
   };
   
   const string set_shadingWarnKey[]=
   {
-     "GOURAUD","REJECT","VALUES",KLISTEND
+     "GOURAUD","REJECT",KLISTEND
   };
   new DLibPro(lib::set_shading, string("SET_SHADING"), 0, set_shadingKey, set_shadingWarnKey);
 

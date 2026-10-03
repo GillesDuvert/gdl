@@ -427,6 +427,7 @@ public:
 // Sets position of the light source
 
     void lightsource( PLFLT x, PLFLT y, PLFLT z );
+    void shadinglimits( PLFLT x, PLFLT y);
 
 // Draws line segments connecting a series of points.
 

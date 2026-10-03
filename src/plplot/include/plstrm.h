@@ -50,6 +50,12 @@ typedef struct
     PLFLT xscale_dev, yscale_dev;
 } PLDev;
 
+// Structure for a 3D Vector / Vertex
+typedef struct {
+    PLFLT x, y, z;      // Screen/View coordinates
+	PLFLT col;
+} plVertex;
+
 //--------------------------------------------------------------------------
 // Define the PLStream data structure.
 //
@@ -515,6 +521,7 @@ typedef struct
     PLINT   color, colorset;
     PLINT   family, member, finc, fflen, bytemax, famadv;
     PLINT   dev_fill0, dev_fill1, dev_dash, dev_di, dev_flush, dev_swin;
+	PLINT   dev_zbuffering; //has a zbuffer
     PLINT   dev_alt_unicode, dev_xor, dev_clear, dev_fastimg, dev_arc;
 
     char    DevName[80];
@@ -526,6 +533,8 @@ typedef struct
 
     PLINT   dev_npts;
     short   *dev_x, *dev_y;
+    plVertex  dev_vertex1, dev_vertex2, dev_vertex3;
+	PLINT   dev_vertex_falsecolor;
 	
     PLINT   dev_npath;
     PLINT** dev_pathx;
@@ -536,7 +545,7 @@ typedef struct
 
     PLINT          dev_nptsX, dev_nptsY;
     short          *dev_ix, *dev_iy;
-    unsigned short *dev_z;
+    unsigned short *dev_zcolors;
     unsigned short dev_zmin, dev_zmax;
     PLINT          imclxmin, imclxmax, imclymin, imclymax;
 

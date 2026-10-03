@@ -145,6 +145,10 @@ plD_line_mem( PLStream *pls, short x1a, short y1a, short x2a, short y2a )
         mem[idx + 2] = pls->curcolor.b;
     }
 }
+ 
+float edge_function(plVertex a, plVertex b, plVertex c) {
+    return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+}
 
 void
 plD_polyline_mem( PLStream *pls, short *xa, short *ya, PLINT npts )
@@ -153,7 +157,89 @@ plD_polyline_mem( PLStream *pls, short *xa, short *ya, PLINT npts )
     for ( i = 0; i < npts - 1; i++ )
         plD_line_mem( pls, xa[i], ya[i], xa[i + 1], ya[i + 1] );
 }
-void
+
+void polyline_fill_vertex(PLStream *pls, plVertex A, plVertex B, plVertex C, PLINT falsecolor){
+	if (pls->dev_data == NULL) return;
+	SelfTransform3DFlt(&(A.x), &(A.y), &(A.z));
+	SelfTransform3DFlt(&(B.x), &(B.y), &(B.z));
+	SelfTransform3DFlt(&(C.x), &(C.y), &(C.z));	
+    float area = edge_function(A, B, C);
+    if (area == 0.0f) return; // Degenerate triangle
+
+	short* zbuff=(short*)pls->dev_data;
+	unsigned char *mem = (unsigned char *) pls->dev;
+
+    // 1. Compute projected bounding box
+	PLINT M = pls->phyxma;
+	PLINT N = pls->phyyma;
+	float fxamin = fmax(0, fmin(A.x, fmin(B.x, C.x)));
+    float fxamax = fmin(1, fmax(A.x, fmax(B.x, C.x)));
+    float fyamin = fmax(0, fmin(A.y, fmin(B.y, C.y)));
+    float fyamax = fmin(1, fmax(A.y, fmax(B.y, C.y)));
+	int xamin=fxamin*M;
+	int xamax=fxamax*M;
+	int yamin=fyamin*N;
+	int yamax=fyamax*N;
+	PLINT n = yamax - yamin + 1;
+	PLINT m = xamax - xamin + 1;
+	if (n <= 2 || m <= 2) return;
+
+
+    // 2. Loop over bounding box pixels
+    for (int iy = yamin; iy <= yamax; iy++) {
+	    for (int ix = xamin; ix <= xamax; ix++) {
+			float currx=(float)(ix)/M;
+			float curry=(float)(iy)/N;
+            plVertex p = {currx, curry, 1, 0};
+            
+            // Calculate barycentric coordinates
+            float w1 = edge_function(A, B, p);
+            float w2 = edge_function(B, C, p);
+            float w3 = edge_function(C, A, p);
+			w1 /= area;
+			w2 /= area;
+			w3 /= area; //barycentric
+            // Check if pixel is inside the triangle
+            if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+                // Interpolate Z depth
+					float fact=w1+w2+w3;
+					fact = 1./fact;
+					w1*=fact;w2*=fact;w3*=fact;
+					float z = w1 * C.z + w2 * A.z + w3 * B.z; 
+
+                // Z-buffer test
+                if (z*32768 > zbuff[ iy*M + ix ]) {
+                    zbuff[ iy*M + ix ] = z*32768;
+					float r,g,b;
+
+					float newcol = w1 * C.col + w2 * A.col + w3 * B.col;
+					newcol = fmin(1.0f, fmax(0.0f, newcol));
+
+					if (falsecolor) { //this is an index in the plcol1 map
+						plcol1(newcol);
+						r = plsc->curcolor.r;
+						g = plsc->curcolor.g;
+						b = plsc->curcolor.b;
+						
+					} else {
+                    // Interpolate color (Gouraud shading)
+						r = newcol*255;
+						g = newcol*255;
+						b = newcol*255;
+					}
+                    // Write to framebuffer (clamp 0-255)
+					int ref = 3 * M * (N - iy);
+					int ref2 = ref + 3 * ix;
+                    mem[ref2++] = r;
+                    mem[ref2++] = g;
+                    mem[ref2  ] = b;
+				}
+            }
+        }
+    }
+
+}
+	void
 polyline_fill_mem(PLStream *pls, short *xa, short *ya, PLINT len) {
 	PLINT xamin = xa[0];
 	PLINT xamax = xa[0];
@@ -180,23 +266,20 @@ polyline_fill_mem(PLStream *pls, short *xa, short *ya, PLINT len) {
 	int *subpath_lengths = (int *) malloc(sizeof(*subpath_lengths) * 1);
 	subpath_lengths[0]=len;
 	plSTBTTFill_short(xa, ya, len, 1, subpath_lengths, pixels, m, n, xamin, yamin );
-	//printf("\n");
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
 	unsigned char b = pls->curcolor.b;
 	for (int j = 0, jref=N-yamax; j < n; ++j, ++jref) {
 		int ref = 3 * M * jref; 
 		for (int i = 0; i < m; ++i) {
-			//printf("%2x", pixels[ (n-j-1) * m + i]);
 			if (pixels[(n-j-1) * m + i] > 127) {
 			int iref = xamin + i;
 			int ref2 = ref + 3 * iref;
 			mem[ref2++]=r;
 		    mem[ref2++]=g;
-		    mem[ref2]=b;
+		    mem[ref2  ]=b;
 			}
 		}
-		//printf("\n");
 	}
 	free(pixels);
 	free(subpath_lengths);
@@ -260,14 +343,12 @@ void pathFill(PLStream *pls) {
 	memset(pixels, 0, m * n);
 	int *subpath_lengths = (int *) malloc(sizeof(*subpath_lengths) * pls->dev_npath);
 	plSTBTTFill_int(pls->dev_pathx[0], pls->dev_pathy[0], len, pls->dev_npath , pls->dev_pathnxy, pixels, m, n, xmin, ymin );
-	//printf("\n");
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
 	unsigned char b = pls->curcolor.b;
 	for (int j = 0, jref=N-ymax; j < n; ++j, ++jref) {
 		int ref = 3 * M * jref; 
 		for (int i = 0; i < m; ++i) {
-			//printf("%2x", pixels[ (n-j-1) * m + i]);
 			if (pixels[(n-j-1) * m + i] > 127) {
 			int iref = xmin + i;
 			int ref2 = ref + 3 * iref;
@@ -276,7 +357,6 @@ void pathFill(PLStream *pls) {
 		    mem[ref2]=b;
 			}
 		}
-		//printf("\n");
 	}
 	free(pixels);
 }
@@ -311,6 +391,10 @@ plD_state_mem( PLStream * PL_UNUSED( pls ), PLINT PL_UNUSED( op ) )
 	void
 	plD_esc_mem(PLStream *pls, PLINT op, void *ptr) {
 		switch (op) {
+			case PLESC_FILL_VERTEX: {
+				polyline_fill_vertex(pls, pls->dev_vertex1, pls->dev_vertex2, pls->dev_vertex3, pls->dev_vertex_falsecolor);
+			}
+			break;
 			case PLESC_FILL_POLYGON: // fill polygon
 				if (Status3D == 1) { //enable use everywhere.
 					//perform conversion on the fly

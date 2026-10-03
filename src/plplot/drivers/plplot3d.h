@@ -66,6 +66,22 @@ static void SelfTransform3D(int *xs, int *ys) {
     *ys = (int) (plsc->phyymi + plsc->phyylen * yy);
    }
 }
+static void SelfTransform3DFlt(PLFLT *x, PLFLT *y , PLFLT *z) {
+  if (Status3D == 1) { //enable use everywhere.
+    PLFLT xx, yy, zz, ww;
+    xx = *x * Data3d.T[0] + *y * Data3d.T[1] + *z * Data3d.T[2] + Data3d.T[3];
+    yy = *x * Data3d.T[4] + *y * Data3d.T[5] + *z * Data3d.T[6] + Data3d.T[7];
+    zz = *x * Data3d.T[8] + *y * Data3d.T[9] + *z * Data3d.T[10] + Data3d.T[11];
+    ww = *x * Data3d.T[12] + *y * Data3d.T[13] + *z * Data3d.T[14] + Data3d.T[15];
+    xx /= ww;
+    yy /= ww;
+    zz /= ww;
+    *x = xx;
+    *y = yy;
+	*z = zz;
+   }
+}
+
 //following incomplete, FIXME.
 static void Project3DToPlplotFormMatrix(PLFLT *P) { //P for P ...lplot
    if (Status3D == 1) { //enable use everywhere.

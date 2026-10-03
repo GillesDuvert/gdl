@@ -39,7 +39,7 @@ class DeviceZ: public GraphicsDevice
     for( SizeT i=0; i<n; ++i)
       zBuffer[ i] = -32765;
   }
-
+  
   void DeleteStream()
   {
     // note: the plplot documentation says that the user has to
@@ -152,11 +152,11 @@ public:
     return actStream;
   }
 
-  bool CloseFile() // CLOSE keyword
+  bool CloseFile() // CLOSE keyword NOT CLOSE_FILE!!!
   {
-    delete[] zBuffer; zBuffer = NULL;
-    DeleteStream();
-    return true;
+//    delete[] zBuffer; zBuffer = NULL;
+//    DeleteStream();
+    return false;
   }
 
   bool ZBuffering( bool yes)

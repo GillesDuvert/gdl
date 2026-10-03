@@ -3621,7 +3621,7 @@ DrawImage( PLStream *pls )
                 Ppts[3].y = MIN( Ppts[3].y, (float) ymax );
 
                 // the Z array has size (nx-1)*(ny-1)
-                icol1 = pls->dev_z[ix * ( ny - 1 ) + iy];
+                icol1 = pls->dev_zcolors[ix * ( ny - 1 ) + iy];
 
                 // only plot points within zmin/zmax range
                 if ( icol1 < pls->dev_zmin || icol1 > pls->dev_zmax )

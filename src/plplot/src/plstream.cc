@@ -698,6 +698,14 @@ void plstream::lightsource( PLFLT x, PLFLT y, PLFLT z )
     pllightsource( x, y, z );
 }
 
+// Sets min and max shading
+
+void plstream::shadinglimits( PLFLT smin, PLFLT smax )
+{
+    set_stream();
+
+    plshadinglimits(smin,smax);
+}
 // Draws line segments connecting a series of points.
 
 void plstream::line( PLINT n, const PLFLT *x, const PLFLT *y )

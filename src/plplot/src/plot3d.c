@@ -47,7 +47,8 @@ static PLINT mhi, xxhi, newhisize;
 static PLINT mlo, xxlo, newlosize;
 
 // Light source for shading
-static PLFLT xlight, ylight, zlight;
+static PLFLT xlight=0, ylight=0, zlight=1;
+static PLFLT shademin=0, shademax=255.;
 static PLINT falsecolor = 0;
 static PLFLT fc_minz, fc_maxz;
 
@@ -104,6 +105,18 @@ c_pllightsource( PLFLT x, PLFLT y, PLFLT z )
     xlight = x;
     ylight = y;
     zlight = z;
+}
+//--------------------------------------------------------------------------
+// void c_plshadinglimits(x, y)
+//
+// Sets the limits of shading values
+//--------------------------------------------------------------------------
+
+void
+c_plshadinglimits( PLFLT x, PLFLT y )
+{
+    shademin = x;
+    shademax = y;
 }
 
 //--------------------------------------------------------------------------
@@ -262,9 +275,23 @@ plP_clip_poly( int Ni, PLFLT *Vi[3], int axis, PLFLT dir, PLFLT offset )
 static void
 shade_triangle( PLFLT x0, PLFLT y0, PLFLT z0,
                 PLFLT x1, PLFLT y1, PLFLT z1,
-                PLFLT x2, PLFLT y2, PLFLT z2, PLFLT* passed_color )
-{
-    int   i;
+                PLFLT x2, PLFLT y2, PLFLT z2, PLFLT* passed_color ) {
+	if (plsc->dev_zbuffering) {
+		PLFLT x[3], y[3], z[3];
+		x[0] = x0; x[1] = x1; x[2] = x2;
+		y[0] = y0; y[1] = y1; y[2] = y2;
+		z[0] = z0; z[1] = z1; z[2] = z2;
+		plVertex v[3];
+		for (int i = 0; i < 3; i++) {
+			v[i].x  = x[i];
+			v[i].y  = y[i];
+			v[i].z  = z[i];
+			v[i].col=passed_color[i];
+		}
+		plP_fillz(v[0], v[1], v[2], falsecolor);
+	    return;
+	}
+	int   i;
     // arrays for interface to core functions
     short u[6], v[6];
     PLFLT x[6], y[6], z[6];
@@ -396,6 +423,47 @@ plfsurf3d( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 // problems with the old code, I tried to focus on clarity here.
 //--------------------------------------------------------------------------
 
+static void storeGouraud(PLF2OPS zops, PLINT nx, PLINT i, PLINT j, PLFLT_VECTOR x, PLFLT_VECTOR y, PLPointer zp, PLFLT* g, PLINT* gc) {
+	PLFLT(*getz)(PLPointer, PLINT, PLINT) = zops->get;
+	PLFLT px[3], py[3], pz[3];
+	PLINT ix[3], iy[3];
+	PLFLT val;
+	int i1, j1;
+	i1 = i + 1;
+	j1 = j + 1;
+	px[0] = x[i];
+	py[0] = y[j];
+	ix[0] = i;
+	iy[0] = j;
+	pz[0] = getz(zp, i, j);
+	px[1] = x[i1];
+	py[1] = y[j1];
+	ix[1] = i1;
+	iy[1] = j1;
+	pz[1] = getz(zp, i1, j1);
+	// pixel changes after this
+	px[2] = x[i];
+	py[2] = y[j1];
+	pz[2] = getz(zp, i, j1);
+	ix[2] = i;
+	iy[2] = j1;
+	val=plGetAngleToLight(px, py, pz);
+	for (int k=0; k<3; ++k) {
+		g [ iy[k] * nx + ix[k] ] += val;
+	    gc[ iy[k] * nx + ix[k] ] += 1;
+	}
+	px[2] = x[i1];
+	py[2] = y[j];
+	ix[2] = i1;
+	iy[2] = j;
+	pz[2] = getz(zp, i1, j);
+	val=plGetAngleToLight(px, py, pz);
+	for (int k=0; k<3; ++k) {
+		g [ iy[k] * nx + ix[k] ] += val;
+	    gc[ iy[k] * nx + ix[k] ] += 1;
+	}
+}
+
 void
 c_plsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_MATRIX z, PLINT nx, PLINT ny,
              PLINT opt, PLFLT_VECTOR clevel, PLINT nlevel,
@@ -427,7 +495,7 @@ plfsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp, PLINT nx
     PLFLT      width = plsc->width;
     PLFLT      ( *getz )( PLPointer, PLINT, PLINT ) = zops->get;
     PLFLT ( *getcol )( PLPointer, PLINT, PLINT, PLINT ) = zops->getcol;
-
+    PLFLT passed_color[4] = {-1,-1,-1,-1};
     if ( plsc->level < 3 )
     {
         myabort( "plsurf3dl: Please set up window first" );
@@ -495,7 +563,74 @@ plfsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp, PLINT nx
         if ( y[i + 1] > ymax && y[i] <= ymax )
             iymax = i + 2;
     }
+	if (plsc->dev_zbuffering) {
+		// create all triangles and pass them to shade_triangle. If not falsecolor, bother to create a map of average surface normal for each vertex points
+		// to enable gouraud shading
+		PLFLT* gouraud;
+		PLINT* gcount;
+		PLFLT shadeFact=shademax-shademin;
+		PLFLT shadeBase=shademin;
+		int hasGouraud = 0;
+		if (!falsecolor) {
+			hasGouraud = 1;
+			gouraud = (PLFLT*) malloc(nx * ny * sizeof (PLFLT));
+			gcount = (PLINT*) malloc(nx * ny * sizeof (PLINT));
+			memset(gouraud, 0, nx * ny * sizeof (PLFLT));
+			memset(gcount, 0, nx * ny * sizeof (PLINT));
+			for (int j = 0; j < ny - 1; ++j) {
+				for (int i = 0; i < nx - 1; ++i) {
+					storeGouraud(zops, nx, i, j, x, y, zp, gouraud, gcount);
+				}
+			}
+			// normalize gouraud
+			for (int i = 0; i < nx * ny; ++i) if (gcount[i] > 0) gouraud[i] /= gcount[i];
+			free(gcount);
+		}
+		int i1, j1;
+		for (int j = 0; j < ny - 1; ++j) {
+			j1 = j + 1;
+			for (int i = 0; i < nx - 1; ++i) {
+				i1 = i + 1;
+				px[0] = x[i];
+				py[0] = y[j];
+				pz[0] = getz(zp, i, j);
+				px[1] = x[i1];
+				py[1] = y[j1];
+				pz[1] = getz(zp, i1, j1);
+				px[2] = x[i];
+				py[2] = y[j1];
+				pz[2] = getz(zp, i, j1);
+				if (falsecolor) {
+					passed_color[0] = getcol(shademap, i, j, nx);
+					passed_color[1] = getcol(shademap, i1, j1, nx);
+					passed_color[2] = getcol(shademap, i, j1, nx);
+				} else {
+					passed_color[0] =  (shadeBase+gouraud[i, j]*shadeFact)/255.;
+					passed_color[1] =  (shadeBase+gouraud[i1, j1]*shadeFact)/255.;
+					passed_color[2] =  (shadeBase+gouraud[i, j1]*shadeFact)/255.;
+				}
+				shade_triangle(px[0], py[0], pz[0], px[1], py[1], pz[1], px[2], py[2], pz[2], passed_color);
+				// second triangle in the same orientation staring with the common vector
+				px[2] = x[i1];
+				py[2] = y[j];
+				pz[2] = getz(zp, i1, j);
+				if (falsecolor) {
+					passed_color[2] = getcol(shademap, i1, j, nx);
+				} else {
+					passed_color[2] = (shadeBase+gouraud[i1, j]*shadeFact)/255.;
+				}
+				// now draw the quad as two triangles
+				shade_triangle(px[0], py[0], pz[0], px[1], py[1], pz[1], px[2], py[2], pz[2], passed_color);
+			}
+		}
 
+		if (hasGouraud) {
+			free(gouraud);
+		}
+	
+		return;
+	}
+	
     // get the viewing parameters
     plP_gw3wc( &cxx, &cxy, &cyx, &cyy, &cyz );
 
@@ -548,130 +683,7 @@ plfsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp, PLINT nx
         iyFast = iyDir; iySlow = 0;
     }
 
-    // we've got to draw the background grid first, hidden line code has to draw it last
-    if ( zbflg )
-    {
-        PLFLT bx[3], by[3], bz[3];
-        PLFLT tick = zbtck, tp;
-        PLINT nsub = 0;
-
-        // get the tick spacing
-        pldtik( zmin, zmax, &tick, &nsub, FALSE );
-
-        // determine the vertices for the background grid line
-        bx[0] = ( ixOrigin != ixmin && ixFast == 0 ) || ixFast > 0 ? xmax : xmin;
-        by[0] = ( iyOrigin != iymin && iyFast == 0 ) || iyFast > 0 ? ymax : ymin;
-        bx[1] = ixOrigin != ixmin ? xmax : xmin;
-        by[1] = iyOrigin != iymin ? ymax : ymin;
-        bx[2] = ( ixOrigin != ixmin && ixSlow == 0 ) || ixSlow > 0 ? xmax : xmin;
-        by[2] = ( iyOrigin != iymin && iySlow == 0 ) || iySlow > 0 ? ymax : ymin;
-
-        plwidth( zbwidth );
-        plcol0( zbcol );
-        for ( tp = tick * floor( zmin / tick ) + tick; tp <= zmax; tp += tick )
-        {
-            bz[0] = bz[1] = bz[2] = tp;
-            plline3( 3, bx, by, bz );
-        }
-        // draw the vertical line at the back corner
-        bx[0] = bx[1];
-        by[0] = by[1];
-        bz[0] = zmin;
-        plline3( 2, bx, by, bz );
-        plwidth( width );
-        plcol0( color );
-    }
-
-    // If enabled, draw the contour at the base
-
-    // The contour plotted at the base will be identical to the one obtained
-    // with c_plcont(). The contour plotted at the surface is simple minded, but
-    // can be improved by using the contour data available.
-    //
-
-    if ( clevel != NULL && opt & BASE_CONT )
-    {
-#define NPTS    100
-        int      np = NPTS;
-        PLFLT    **zstore;
-        PLcGrid2 cgrid2;
-        PLFLT    *zzloc = (PLFLT *) malloc( (size_t) NPTS * sizeof ( PLFLT ) );
-        if ( zzloc == NULL )
-            plexit( "plsurf3dl: Insufficient memory" );
-
-        // get the contour lines
-
-        // prepare cont_store input
-        cgrid2.nx = nx;
-        cgrid2.ny = ny;
-        plAlloc2dGrid( &cgrid2.xg, nx, ny );
-        plAlloc2dGrid( &cgrid2.yg, nx, ny );
-        plAlloc2dGrid( &zstore, nx, ny );
-
-        for ( i = indexxmin; i < indexxmax; i++ )
-        {
-            for ( j = 0; j < indexymin[i]; j++ )
-            {
-                cgrid2.xg[i][j] = x[i];
-                cgrid2.yg[i][j] = y[indexymin[i]];
-                zstore[i][j]    = getz( zp, i, indexymin[i] );
-            }
-            for ( j = indexymin[i]; j < indexymax[i]; j++ )
-            {
-                cgrid2.xg[i][j] = x[i];
-                cgrid2.yg[i][j] = y[j];
-                zstore[i][j]    = getz( zp, i, j );
-            }
-            for ( j = indexymax[i]; j < ny; j++ )
-            {
-                cgrid2.xg[i][j] = x[i];
-                cgrid2.yg[i][j] = y[indexymax[i] - 1];
-                zstore[i][j]    = getz( zp, i, indexymax[i] - 1 );
-            }
-        }
-        // Fill cont structure with contours.
-        cont_store( (PLFLT_MATRIX) zstore, nx, ny, indexxmin + 1, indexxmax, 1, ny,
-            clevel, nlevel, pltr2, (void *) &cgrid2, &cont );
-
-        // Free the 2D input arrays to cont_store since not needed any more.
-        plFree2dGrid( zstore, nx, ny );
-        plFree2dGrid( cgrid2.xg, nx, ny );
-        plFree2dGrid( cgrid2.yg, nx, ny );
-
-        // follow the contour levels and lines
-        clev = cont;
-        do  // for each contour level
-        {
-            cline = clev->line;
-            do  // there are several lines that make up the contour
-            {
-                if ( cline->npts > np )
-                {
-                    np = cline->npts;
-                    if ( ( zzloc = (PLFLT *) realloc( zzloc, (size_t) np * sizeof ( PLFLT ) ) ) == NULL )
-                    {
-                        plexit( "plsurf3dl: Insufficient memory" );
-                    }
-                }
-                for ( j = 0; j < cline->npts; j++ )
-                    zzloc[j] = plsc->ranmi;
-                if ( cline->npts > 0 )
-                {
-                    plcol1( ( clev->level - fc_minz ) / ( fc_maxz - fc_minz ) );
-                    plline3( cline->npts, cline->x, cline->y, zzloc );
-                }
-                cline = cline->next;
-            }
-            while ( cline != NULL );
-            clev = clev->next;
-        }
-        while ( clev != NULL );
-
-        cont_clean_store( cont ); // now release the memory
-        free( zzloc );
-  }
-
-  PLFLT passed_color[4] = {-1,-1,-1,-1};
+ 
 
     // Now we can iterate over the grid drawing the quads
     for ( iSlow = 0; iSlow < nSlow - 1; iSlow++ )
@@ -699,8 +711,8 @@ plfsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp, PLINT nx
 
                     if ( indexxmin <= ix && ix < indexxmax &&
                          indexymin[ix] <= iy && iy < indexymax[ix] )
-{
-            if (shademap != NULL) passed_color[k++]= getcol(shademap, ix, iy-1, nx);
+					{
+                    if (shademap != NULL) passed_color[k++]= MAX(0, MIN(1,getcol(shademap, ix, iy-1, nx)));
                         xm += px[2 * i + j] = x[ix];
                         ym += py[2 * i + j] = y[iy];
                         zm += pz[2 * i + j] = getz( zp, ix, iy );
@@ -719,7 +731,7 @@ plfsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp, PLINT nx
                 continue;
             // the "mean point" of the quad, common to all four triangles
             // -- perhaps not a good thing to do for the light shading
-
+			
             xm /= 4.; ym /= 4.; zm /= 4.;
 /*
             if (shademap != NULL) passed_color/=4.;
@@ -734,134 +746,10 @@ plfsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp, PLINT nx
                 }
             }
 
-            // After shading completed for a quad, render surface contours.
-            if ( clevel != NULL && ( opt & SURF_CONT ) )
-            {
-                for ( i = 1; i < 3; i++ )
-                {
-                    for ( j = 0; j < 4; j += 3 )
-#define min3( a, b, c )    ( MIN( ( MIN( a, b ) ), c ) )
-#define max3( a, b, c )    ( MAX( ( MAX( a, b ) ), c ) )
+       }
+	}
 
-                    {
-                        for ( k = 0; k < nlevel; k++ )
-                        {
-                            if ( clevel[k] >= min3( pz[i], zm, pz[j] ) && clevel[k] < max3( pz[i], zm, pz[j] ) )
-                            {
-                                ct = 0;
-                                if ( clevel[k] >= MIN( pz[i], zm ) && clevel[k] < MAX( pz[i], zm ) )     // p0-pm
-                                {
-                                    xx[ct] = ( ( clevel[k] - pz[i] ) * ( xm - px[i] ) ) / ( zm - pz[i] ) + px[i];
-                                    yy[ct] = ( ( clevel[k] - pz[i] ) * ( ym - py[i] ) ) / ( zm - pz[i] ) + py[i];
-                                    ct++;
-                                }
 
-                                if ( clevel[k] >= MIN( pz[i], pz[j] ) && clevel[k] < MAX( pz[i], pz[j] ) )     // p0-p1
-                                {
-                                    xx[ct] = ( ( clevel[k] - pz[i] ) * ( px[j] - px[i] ) ) / ( pz[j] - pz[i] ) + px[i];
-                                    yy[ct] = ( ( clevel[k] - pz[i] ) * ( py[j] - py[i] ) ) / ( pz[j] - pz[i] ) + py[i];
-                                    ct++;
-                                }
-
-                                if ( clevel[k] >= MIN( pz[j], zm ) && clevel[k] < MAX( pz[j], zm ) )     // p1-pm
-                                {
-                                    xx[ct] = ( ( clevel[k] - pz[j] ) * ( xm - px[j] ) ) / ( zm - pz[j] ) + px[j];
-                                    yy[ct] = ( ( clevel[k] - pz[j] ) * ( ym - py[j] ) ) / ( zm - pz[j] ) + py[j];
-                                    ct++;
-                                }
-
-                                if ( ct == 2 )
-                                {
-                                    // yes, xx and yy are the intersection points of the triangle with
-                                    // the contour line -- draw a straight line betweeen the points
-                                    // -- at the end this will make up the contour line
-
-                                    // surface contour with color set by user
-                                    plcol0( color );
-                                    zz[0] = zz[1] = clevel[k];
-                                    plline3( 2, xx, yy, zz );
-
-                                    // don't break; one triangle can span various contour levels
-                                }
-                                else
-                                    plwarn( "plsurf3dl: ***ERROR***\n" );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if ( opt & FACETED )
-    {
-        plcol0( 0 );
-        plfplot3dcl( x, y, zops, zp, nx, ny, MESH | DRAW_LINEXY, NULL, 0,
-            indexxmin, indexxmax, indexymin, indexymax, NULL );
-    }
-
-    if ( opt & DRAW_SIDES ) // the sides look ugly !!!
-    {                       // draw one more row with all the Z's set to zmin
-        plP_grange( &zscale, &zmin, &zmax );
-
-        iSlow      = nSlow - 1;
-        iftriangle = 1;
-        for ( iFast = 0; iFast < nFast - 1; iFast++ )
-        {
-            for ( i = 0; i < 2; i++ )
-            {
-                ix = ixFast * ( iFast + i ) + ixSlow * iSlow + ixOrigin;
-                iy = iyFast * ( iFast + i ) + iySlow * iSlow + iyOrigin;
-                if ( indexxmin <= ix && ix < indexxmax &&
-                     indexymin[ix] <= iy && iy < indexymax[ix] )
-                {
-                    px[2 * i] = x[ix];
-                    py[2 * i] = y[iy];
-                    pz[2 * i] = getz( zp, ix, iy );
-                }
-                else
-                {
-                    iftriangle = 0;
-                    break;
-                }
-            }
-            if ( iftriangle == 0 )
-                break;
-            // now draw the quad as two triangles (4 might be better)
-
-            shade_triangle( px[0], py[0], pz[0], px[2], py[2], pz[2], px[0], py[0], zmin, passed_color );
-            shade_triangle( px[2], py[2], pz[2], px[2], py[2], zmin, px[0], py[0], zmin, passed_color );
-        }
-
-        iFast      = nFast - 1;
-        iftriangle = 1;
-        for ( iSlow = 0; iSlow < nSlow - 1; iSlow++ )
-        {
-            for ( i = 0; i < 2; i++ )
-            {
-                ix = ixFast * iFast + ixSlow * ( iSlow + i ) + ixOrigin;
-                iy = iyFast * iFast + iySlow * ( iSlow + i ) + iyOrigin;
-                if ( indexxmin <= ix && ix < indexxmax &&
-                     indexymin[ix] <= iy && iy < indexymax[ix] )
-                {
-                    px[2 * i] = x[ix];
-                    py[2 * i] = y[iy];
-                    pz[2 * i] = getz( zp, ix, iy );
-                }
-                else
-                {
-                    iftriangle = 0;
-                    break;
-                }
-            }
-            if ( iftriangle == 0 )
-                break;
-
-            // now draw the quad as two triangles (4 might be better)
-            shade_triangle( px[0], py[0], pz[0], px[2], py[2], pz[2], px[0], py[0], zmin, passed_color);
-            shade_triangle( px[2], py[2], pz[2], px[2], py[2], zmin, px[0], py[0], zmin, passed_color );
-        }
-    }
 }
 
 //--------------------------------------------------------------------------
@@ -1308,6 +1196,7 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 
     if ( base_cont )
     {
+        #define NPTS 100
         int np = NPTS, j;
         CONT_LEVEL *cont, *clev;
         CONT_LINE *cline;
@@ -1377,7 +1266,9 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
                 {
                     do
                     {
-                        plcol1( ( clev->level - fc_minz ) / ( fc_maxz - fc_minz ) );
+						PLFLT col=( clev->level - fc_minz ) / ( fc_maxz - fc_minz ) ;
+						col=MAX(0, MIN(1,col));
+                        plcol1( col );
                         cx = plP_wcpcx( plP_w3wcx( cline->x[i], cline->y[i], plsc->ranmi ) );
                         for ( j = i; j < cline->npts; j++ ) // convert to 2D coordinates
                         {
@@ -2276,7 +2167,7 @@ plnxtvhi_draw( PLINT *u, PLINT *v, PLFLT* c, PLINT n )
 static void
 plP_draw3d( PLINT x, PLINT y, PLFLT *c, PLINT j )
 {     
-      if ( c != NULL )  plcol1( c[j] );
+      if ( c != NULL )  plcol1(MAX(0, MIN(1,c[j])));
       plP_draphy( x, y );
 }
 

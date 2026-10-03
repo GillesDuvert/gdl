@@ -947,6 +947,9 @@ plP_polyline( short *x, short *y, PLINT npts );
 PLDLLIMPEXP void
 plP_fill( short *x, short *y, PLINT npts );
 
+PLDLLIMPEXP void
+plP_fillz(plVertex v1, plVertex v2, plVertex v3, PLINT falsecolor);
+
 
 // Fill path
 
