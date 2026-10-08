@@ -264,7 +264,7 @@ std::string GDLSVGStream::svg_to_png64(int width,int height,
    return tmpstr;
 }
 bool  GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
-		   DLong trueColorOrder, DLong channel) {
+		   DLong trueColorOrder, DLong channel, DLong Mode) {
   c_plflush();
   if (channel > 0) {
     cerr << "TV+SVG device: Value of CHANNEL (use TRUE instead) is out of allowed range. (FIXME!)" << endl;
@@ -327,5 +327,5 @@ bool  GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *
 //}
 #else
 bool  GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
-		   DLong trueColorOrder, DLong channel) {return false;}
+		   DLong trueColorOrder, DLong channel, DLong Mode) {return false;}
 #endif

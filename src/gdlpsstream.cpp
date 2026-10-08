@@ -91,7 +91,7 @@ typedef struct
     FILE *fp;
 } PSDev;
 bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
-        DLong trueColorOrder, DLong channel) {
+        DLong trueColorOrder, DLong channel, DLong Mode) {
   if (firstTime){
     PSDev *dev = (PSDev *) pls->dev;
 	int llx,lly,urx,ury;

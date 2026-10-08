@@ -47,7 +47,26 @@ const double INCHToCM = 2.54 ;
 const double CM_IN_MM = 10.00000000 ; 
 const double DEFAULT_FONT_ASPECT_RATIO = 1.3; // Height / Width
 using namespace std;
-  
+
+typedef enum {
+    GDL_CLEAR, //0
+    GDL_AND, //1
+    GDL_AND_REVERSE, //2
+    GDL_COPY, //3
+	GDL_AND_INVERTED, //4
+    GDL_NO_OP, //5
+    GDL_XOR, //6
+    GDL_OR, //7
+    GDL_NOR, //8
+    GDL_EQUIV, //9
+    GDL_INVERT, //10
+    GDL_OR_REVERSE, //11
+    GDL_COPY_INVERTED, //12
+    GDL_OR_INVERTED, //13
+    GDL_NAND, //14
+    GDL_SET
+} GDL_GRAPHIC_FUNCTION;
+
 // Graphic Structures:
 //  typedef struct _P_GRAPHICS {
 //    DLong background;
@@ -246,7 +265,7 @@ public:
   virtual void Flush() {}
   virtual void Clear()         {}
   virtual void Clear( DLong chan)          {}
-  virtual bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos, DLong tru, DLong chan){return false;}
+  virtual bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos, DLong tru, DLong chan, DLong Mode=GDL_COPY){return false;}
   virtual bool HasCrossHair() {return false;}
   virtual void UnMapWindowAndSetPixmapProperty() {usedAsPixmap=true;} 
   bool IsPixmapWindow() {return usedAsPixmap;}

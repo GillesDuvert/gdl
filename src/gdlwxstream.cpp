@@ -210,9 +210,61 @@ void GDLWXStream::Clear(DLong chan) {
   Refresh(); //see #1509
 }
 
+wxRasterOperationMode translate_graphic_function(DLong value) {
+  switch (value) {
+    case GDL_CLEAR: //wxCLEAR:
+      return(wxCLEAR);
+      break;
+    case GDL_AND: //wxAND:
+      return(wxAND);
+      break;
+    case GDL_AND_REVERSE: //wxAND_REVERSE:
+      return(wxAND_REVERSE);
+      break;
+    case GDL_AND_INVERTED: //wxAND_INVERT:
+      return(wxAND_INVERT);
+      break;
+    case GDL_NO_OP: //wxNO_OP:
+      return(wxNO_OP);
+      break;
+    case GDL_XOR: //wxXOR
+      return(wxINVERT /*wxXOR*/); //at least permits box_cursor to be used in some cases. CAIRO has no 'old' graphic functions.
+      break;
+    case GDL_OR: //wxOR:
+      return(wxOR);
+      break;
+    case GDL_NOR: //wxNOR:
+      return(wxNOR);
+      break;
+    case GDL_EQUIV: //wxEQUIV:
+      return(wxEQUIV);
+      break;
+    case GDL_INVERT: //wxINVERT:
+      return(wxINVERT);
+      break;
+    case GDL_OR_REVERSE: //wxOR_REVERSE:
+      return(wxOR_REVERSE);
+      break;
+    case GDL_COPY_INVERTED: //wxSRC_INVERT:
+      return(wxSRC_INVERT);
+      break;
+    case GDL_OR_INVERTED: //wxOR_INVERT:
+      return(wxOR_INVERT);
+      break;
+    case GDL_NAND: //wxNAND:
+      return(wxNAND);
+      break;
+    case GDL_SET: //wxSET:
+      return(wxSET);
+      break;
+    default:
+      return(wxCOPY);
+  }
+}
+
 #include <wx/rawbmp.h>
 bool GDLWXStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
-        DLong trueColorOrder, DLong chan) {
+        DLong trueColorOrder, DLong chan, DLong Mode) {
   PLINT xoff = (PLINT) pos[0]; //(pls->wpxoff / 32767 * dev->width + 1);
   PLINT yoff = (PLINT) pos[2]; //(pls->wpyoff / 24575 * dev->height + 1);
 
@@ -222,7 +274,7 @@ bool GDLWXStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
   //to work on a plane we need to have as start the copy of screen pixels
   wxMemoryDC temp_dc2;
   temp_dc2.SelectObject(bmp);
-  temp_dc2.Blit(0, 0, nx, ny, streamDC, xoff, m_height - yoff - ny);
+  temp_dc2.Blit(0, 0, nx, ny, streamDC, xoff, m_height - yoff - ny, wxCOPY);
   temp_dc2.SelectObject(wxNullBitmap);
   
   wxNativePixelData data(bmp);
@@ -337,66 +389,14 @@ wxNativePixelData::Iterator p(data);
 
   wxMemoryDC temp_dc;
   temp_dc.SelectObject(bmp);
-  streamDC->Blit(xoff, m_height-yoff-ny, nx, ny, &temp_dc, 0, 0);
+  streamDC->Blit(xoff, m_height-yoff-ny, nx, ny, &temp_dc, 0, 0, translate_graphic_function(Mode));
   temp_dc.SelectObject(wxNullBitmap);
   Refresh(); //see #1509 //after a Blit Refresh is MANDATORY.
   return true;
 }
 
-bool GDLWXStream::SetGraphicsFunction( long value) {
-  //use switch since passing an enum to a function is problematic for some compilers, grrrrrrrrrrrr!
-  value=(value<0)?0:(value>15)?15:value;
-  switch ( value ) {
-    case 0: //wxCLEAR:
-      streamDC->SetLogicalFunction( wxCLEAR);
-      break;
-    case 1: //wxAND:
-      streamDC->SetLogicalFunction( wxAND);
-      break;
-    case 2: //wxAND_REVERSE:
-      streamDC->SetLogicalFunction( wxAND_REVERSE);
-      break;
-    default:
-    case 3: //wxCOPY:
-      streamDC->SetLogicalFunction( wxCOPY);
-      break;
-    case 4: //wxAND_INVERT:
-      streamDC->SetLogicalFunction( wxAND_INVERT);
-      break;
-    case 5: //wxNO_OP:
-      streamDC->SetLogicalFunction( wxNO_OP);
-      break;
-    case 6: //wxXOR
-      streamDC->SetLogicalFunction(  wxINVERT /*wxXOR*/); //at least permits box_cursor to be used in some cases. CAIRO has no 'old' graphic functions.
-      break;    
-    case 7: //wxOR:
-      streamDC->SetLogicalFunction( wxOR);
-      break;
-    case 8: //wxNOR:
-      streamDC->SetLogicalFunction( wxNOR);
-      break;
-    case 9: //wxEQUIV:
-      streamDC->SetLogicalFunction( wxEQUIV);
-      break;
-    case 10: //wxINVERT:
-      streamDC->SetLogicalFunction( wxINVERT);
-      break;
-    case 11: //wxOR_REVERSE:
-      streamDC->SetLogicalFunction( wxOR_REVERSE);
-      break;
-    case 12: //wxSRC_INVERT:
-      streamDC->SetLogicalFunction( wxSRC_INVERT);
-      break;
-    case 13: //wxOR_INVERT:
-      streamDC->SetLogicalFunction( wxOR_INVERT);
-      break;
-    case 14: //wxNAND:
-      streamDC->SetLogicalFunction( wxNAND);
-      break;
-    case 15: //wxSET:
-      streamDC->SetLogicalFunction( wxSET);
-      break;
-  }
+bool GDLWXStream::SetGraphicsFunction(long value) {
+  streamDC->SetLogicalFunction(translate_graphic_function(value));
  return true;
 }
 

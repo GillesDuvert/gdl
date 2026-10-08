@@ -100,13 +100,14 @@ void GDLXStream::EventHandler() {
 }
 
 bool GDLXStream::SetGraphicsFunction( long value) {
+  //X11 gcValues are the same and same order as GDL_GRAPHIC_FUNCTIONS
     XGCValues gcValues;
     gcValues.function = (value<0)?0:(value>15)?15:value;
     XwDev *dev = (XwDev *) pls->dev;
     XwDisplay *xwd = (XwDisplay *) dev->xwd;
 //    int ret=XChangeGC( xwd->display, dev->gc, GCFunction, &gcValues );
 	
-	plstream::cmd( PLESC_XORMOD, &value );
+	plstream::cmd( PLESC_XORMOD, &value ); //the xwin driver accepts all these functions
 	return true;
 }
 
@@ -652,7 +653,7 @@ unsigned long event_mask = (EnterWindowMask| LeaveWindowMask | KeyPressMask  | K
 }
 
 bool GDLXStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
-  DLong trueColorOrder, DLong chan) {
+  DLong trueColorOrder, DLong chan, DLong Mode) {
 
   XwDev *dev = (XwDev *) pls->dev;
   XwDisplay *xwd = (XwDisplay *) dev->xwd;

@@ -61,7 +61,7 @@ unsigned long GDLZStream::GetWindowDepth(){
 }
 
 bool GDLZStream::PaintImage( unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
-DLong trueColorOrder, DLong chan ) {
+DLong trueColorOrder, DLong chan , DLong Mode) {
 
   plstream::cmd( PLESC_FLUSH, NULL );
   unsigned char *mem = (unsigned char *) pls->dev;

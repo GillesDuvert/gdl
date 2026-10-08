@@ -43,7 +43,7 @@ public:
   void Clear( DLong bColor);
   
   void Init();
-  bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny,  DLong *pos, DLong tru, DLong chan);
+  bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny,  DLong *pos, DLong tru, DLong chan, DLong Mode=GDL_COPY);
   void GetGeometry( long& xSize, long& ySize);
   unsigned long GetWindowDepth();
   virtual DByteGDL* GetBitmapData(int xoff, int yoff, int nx, int ny) final;

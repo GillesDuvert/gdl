@@ -100,6 +100,7 @@ public: // methods
     virtual void SetColor0( PLStream *pls )        = 0;
     virtual void SetColor1( PLStream *pls )        = 0;
     virtual void SetExternalBuffer( void* buffer ) = 0;
+	virtual void AnyMod(PLINT mode) = 0;
 
 public: // variables
     const int    backend;
@@ -200,6 +201,7 @@ public: // methods
     void SetColor0( PLStream *pls );
     void SetColor1( PLStream *pls );
     void SetExternalBuffer( void* buffer );
+	void AnyMod(PLINT mode);
 
 private: // variables
     wxBitmap         * m_bitmap;

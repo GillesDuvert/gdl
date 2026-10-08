@@ -363,7 +363,8 @@ shade_triangle( PLFLT x0, PLFLT y0, PLFLT z0,
 void
 c_plsurf3d( PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_MATRIX z, PLINT nx, PLINT ny,
             PLINT opt, PLFLT_VECTOR clevel, PLINT nlevel, PLINT* shadeval )
-{
+{    //plfsurf3d( x, y, plf2ops_grid_row_major(), (PLPointer) z, nx, ny,
+		
     plfsurf3d( x, y, plf2ops_c(), (PLPointer) z, nx, ny,
         opt, clevel, nlevel, shadeval );
 }
@@ -1097,7 +1098,7 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 
     if ( opt & MAG_COLOR )    // If enabled, use magnitude colored wireframe
     {
-        if ( ( ctmp = (PLFLT *) malloc( (size_t) ( 2 * MAX( nx, ny ) ) * sizeof ( PLFLT ) ) ) == NULL )
+        if ( ( ctmp = (PLFLT *) calloc( (size_t) ( 2 * MAX( nx, ny ) ) , sizeof ( PLFLT ) ) ) == NULL )
         {
             plexit( "c_plot3dcl: Insufficient memory" );
         }
@@ -1498,19 +1499,19 @@ plGetAngleToLight( PLFLT* x, PLFLT* y, PLFLT* z )
     if ( mag1 == 0 )
         return 1;
 
-    vlx  = xlight - x[0];
-    vly  = ylight - y[0];
-    vlz  = zlight - z[0];
+    vlx  = xlight ;
+    vly  = ylight ;
+    vlz  = zlight ;
     mag2 = vlx * vlx + vly * vly + vlz * vlz;
     if ( mag2 == 0 )
         return 1;
 
 // Now have 3 vectors going through the first point on the given surface
-    cosangle = fabs( ( vlx * px + vly * py + vlz * pz ) / sqrt( mag1 * mag2 ) );
+    cosangle = ( xlight * px + ylight * py + zlight * pz ) / sqrt( mag1 * mag2 ); printf("%",cosangle);
 
 // In case of numerical rounding
-    if ( cosangle > 1 )
-        cosangle = 1;
+    if ( cosangle > 1 )  cosangle = 1;
+    if ( cosangle < -1 )  cosangle = -1;
     return cosangle;
 }
 
@@ -1546,7 +1547,7 @@ plt3zz( PLINT x0, PLINT y0, PLINT dx, PLINT dy, PLINT flag, PLINT *init,
 /*
             c[n] = ( getz( zp, x0 - 1, y0 - 1 ) - fc_minz ) / ( fc_maxz - fc_minz );
 */
-            c[n] = getcol( shademap, x0 - 1, y0 - 1, nx ) ;
+            c[n] = shademap[ (x0 -1) + nx * (y0-1)]/255.; //getcol( shademap, x0 - 1, y0 - 1, nx ) ;
 
         switch ( flag )
         {
@@ -1598,7 +1599,7 @@ plt3zz( PLINT x0, PLINT y0, PLINT dx, PLINT dy, PLINT flag, PLINT *init,
 /*
                 c[n] = ( getz( zp, x0 - 1, y0 - 1 ) - fc_minz ) / ( fc_maxz - fc_minz );
 */
-                c[n] = getcol (shademap, x0 -1 , y0 - 1, nx );
+                c[n] = shademap[ (x0 -1) + nx * (y0-1)]/255.; //c[n] = getcol (shademap, x0 -1 , y0 - 1, nx );
               n++;
         }
     }

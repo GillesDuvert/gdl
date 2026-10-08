@@ -85,7 +85,7 @@ public:
     bool HasDoubleBuffering(){return true;}
     bool HasSafeDoubleBuffering(){return ( streamDC->GetLogicalFunction() == wxCOPY);};
     bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
-		   DLong trueColorOrder, DLong channel);
+		   DLong trueColorOrder, DLong channel, DLong Mode=GDL_COPY);
     virtual bool HasCrossHair() {return true;}
     bool SetGraphicsFunction( long value);
     bool GetWindowPosition(long& xpos, long& ypos );

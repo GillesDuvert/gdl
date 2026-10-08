@@ -24,7 +24,7 @@ namespace lib
   using namespace std;
 
 // shared parameter
-  static PLFLT lightSourcePos[3]={0,0,1.0};
+  static PLFLT lightSourceUnitVector[3]={0,0,1.0};
   static PLFLT shadinglimits[2]={0,255.};
 
   class shade_surf_call: public plotting_routine_call
@@ -48,6 +48,7 @@ namespace lib
     bool below=false;
     DDouble* Current3DMatrix;
     DDoubleGDL* gdlBox3d;
+    Guard<BaseGDL> g; // to get rid of it when out
 	PLFLT xratio, yratio, zratio, trans[3];
 	PLINT nx, ny;    
  private:
@@ -93,20 +94,20 @@ namespace lib
     }
 
     if ( nParam ( )==1) {
-       BaseGDL* p0=e->GetNumericArrayParDefined ( 0 )->Transpose ( NULL );
-        p0_guard.Init ( p0 ); // delete upon exit
+        BaseGDL* p0 = e->GetNumericArrayParDefined(0)->Transpose(NULL);
+        p0_guard.Init(p0); // delete upon exit
 
-        zVal=static_cast<DDoubleGDL*>( p0->Convert2 ( GDL_DOUBLE, BaseGDL::COPY ) );
-        zval_guard.Init ( zVal ); // delete upon exit
+        zVal = static_cast<DDoubleGDL*> (p0->Convert2(GDL_DOUBLE, BaseGDL::COPY));
+        zval_guard.Init(zVal); // delete upon exit
 
-        xEl=zVal->Dim ( 1 );
-        yEl=zVal->Dim ( 0 );
+        xEl = zVal->Dim(1);
+        yEl = zVal->Dim(0);
 
-        xVal=new DDoubleGDL ( dimension ( xEl ), BaseGDL::INDGEN );
-        xval_guard.Init ( xVal ); // delete upon exit
+        xVal = new DDoubleGDL(dimension(xEl), BaseGDL::INDGEN);
+        xval_guard.Init(xVal); // delete upon exit
         if (xLog) xVal->Inc();
-        yVal=new DDoubleGDL ( dimension ( yEl ), BaseGDL::INDGEN );
-        yval_guard.Init ( yVal ); // delete upon exit
+        yVal = new DDoubleGDL(dimension(yEl), BaseGDL::INDGEN);
+        yval_guard.Init(yVal); // delete upon exit
         if (yLog) yVal->Inc();
       } else {
         BaseGDL* p0 = e->GetNumericArrayParDefined(0)->Transpose(NULL);
@@ -205,19 +206,19 @@ namespace lib
       if (yLog && yStart <= 0.0) Warning("SURFACE: Infinite y plot range.");
       if (zLog && zStart <= 0.0) Warning("SURFACE: Infinite z plot range.");
 
-      static int MIN_VALUEIx = e->KeywordIx( "MIN_VALUE");
-      static int MAX_VALUEIx = e->KeywordIx( "MAX_VALUE");
+      static int MIN_VALUEIx = e->KeywordIx("MIN_VALUE");
+      static int MAX_VALUEIx = e->KeywordIx("MAX_VALUE");
 
       hasMinVal = e->KeywordPresent(MIN_VALUEIx);
       hasMaxVal = e->KeywordPresent(MAX_VALUEIx);
       minVal = datamin;
       maxVal = datamax;
-      e->AssureDoubleScalarKWIfPresent ( MIN_VALUEIx, minVal );
-      e->AssureDoubleScalarKWIfPresent ( MAX_VALUEIx, maxVal );
+      e->AssureDoubleScalarKWIfPresent(MIN_VALUEIx, minVal);
+      e->AssureDoubleScalarKWIfPresent(MAX_VALUEIx, maxVal);
 
       if (!setZrange) {
-        zStart=max(minVal,zStart);
-        zEnd=min(zEnd,maxVal);
+        zStart = max(minVal, zStart);
+        zEnd = min(zEnd, maxVal);
       }
 
       //Box adjustement:
@@ -266,33 +267,32 @@ namespace lib
         e->AssureFloatScalarKWIfPresent(AZIx, az_change);
         az = az_change;
         
-      DFloat alt_change=alt;
-      static int AXIx=e->KeywordIx("AX");
-      e->AssureFloatScalarKWIfPresent(AXIx, alt_change);
-      alt=alt_change;
-        alt=atan2(sin(alt * GDL_PI/180.0), cos(alt * GDL_PI/180.0)) * 180.0/GDL_PI;
-        alt=fmod((alt+360),360.0);
-        if (alt > 90 && alt <= 270) {
-          az+=180.;
-          if (alt > 180) {below=true; alt-=180; alt*=-1;} else alt=180-alt;
-        } else if (alt > 270) {
-          below=true;
-          alt=-(360.-alt);
-      }
+        DFloat alt_change=alt;
+        static int AXIx=e->KeywordIx("AX");
+        e->AssureFloatScalarKWIfPresent(AXIx, alt_change);
+        alt=alt_change;
+          alt=atan2(sin(alt * GDL_PI/180.0), cos(alt * GDL_PI/180.0)) * 180.0/GDL_PI;
+          alt=fmod((alt+360),360.0);
+          if (alt > 90 && alt <= 270) {
+            az+=180.;
+            if (alt > 180) {below=true; alt-=180; alt*=-1;} else alt=180-alt;
+          } else if (alt > 270) {
+            below=true;
+            alt=-(360.-alt);
+        }
 		//Compute special transformation matrix for the BOX and give it to the driver. Subpage info is important
-        gdlBox3d=gdlDefinePlplotRotationMatrix( az, alt, scale, saveT3d);
+		gdlBox3d = gdlDefinePlplotRotationMatrix(az, alt, scale, saveT3d);
 		//now that 3D matrix is OK, we pass in 'No Sub'. The plot will be scaled ans offsetted to the size of the actual subpage or position
 		get3DMatrixParametersFor2DPosition(xratio, yratio, zratio, trans);
 		actStream->NoSub();
-		//recompute viewport etc now that ratio and offests will permit to displace the NoSub() plot at the correct position and scale:
+		//recompute viewport etc now that ratio and offsets will permit to displace the NoSub() plot at the correct position and scale:
 		zValue=gdlSetViewPortAndWorldCoordinates(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue);
-		gdlMakeSubpageRotationMatrix3d(gdlBox3d, xratio, yratio, zratio,trans);
+//		gdlMakeSubpageRotationMatrix3d(gdlBox3d, xratio, yratio, zratio,trans);
 
         GDL_3DTRANSFORMDEVICE T3DForAXes;
         for (int i = 0; i < 16; ++i)T3DForAXes.T[i] =(*gdlBox3d)[i];
         T3DForAXes.zValue = (std::isfinite(zValue))?zValue:0;
         gdlStartSpecial3DDriverTransform(actStream,T3DForAXes);
-        Current3DMatrix=static_cast<DDouble*>(gdlBox3d->DataAddr());
       } else {
         //just ask for P.T3D transform with the driver:
         bool ok=gdlInterpretT3DMatrixAsPlplotRotationMatrix(az, alt, ay, scale, axisExchangeCode, below);
@@ -301,9 +301,12 @@ namespace lib
 
         DStructGDL* pStruct = SysVar::P(); //MUST NOT BE STATIC, due to .reset
         static unsigned tTag = pStruct->Desc()->TagIndex("T");
-        Current3DMatrix = static_cast<DDouble*> (pStruct->GetTag(tTag, 0)->DataAddr());
-        
+        //make a copy for internal use
+        gdlBox3d = static_cast<DDoubleGDL*>(pStruct->GetTag(tTag, 0)->Dup());
       }
+      Current3DMatrix=static_cast<DDouble*>(gdlBox3d->DataAddr());
+      g.Reset(gdlBox3d);
+
       // We could have kept the old code where the box was written by plplot's box3(), but it would not be compatible with the rest of the eventual other (over)plots
       //Draw axes with normal color!
       //Should draw 3d mesh before axes
@@ -340,40 +343,39 @@ namespace lib
       actStream->vpor(0,1,0,1);
 	  actStream->wind(-0.5 / scale[0], 0.5 / scale[0], -0.5 / scale[1], 0.5 / scale[1]); //mandatory: to center in (0,0,0) for 3D Matrix rotation.
 	  PLFLT shift=0;
-	  if (below) {
-		  actStream->w3d(1,1,1,0,1,0,1,0,1, -alt, az);
-			DDouble xp = 0;
-			DDouble yp1 = 0;
-			DDouble yp2 = 0;
-			Matrix3DTransformXYZval(0, 0, 0, &xp, &yp1, Current3DMatrix);
-			Matrix3DTransformXYZval(0, 0, 0.5, &xp, &yp2, Current3DMatrix);
-			shift=1 - (yp1 - yp2);
-			gdlShiftYaxisUsing3DDriverTransform(actStream, shift, true);
-		} else {
-		  actStream->w3d(1,1,1,0,1,0,1,0,1, alt, az); //mandatory: in order to have shades plotted correctly, z must go from 0 to 1, not -0.5 to 0.5
-		  //as the code in plplot prevents negative "normalized" values.
-		  // To insure this (and shade_surf) to work in all cases, we must rely on the 3DDriverTransform, once again, to shift the [0,1] plot in [-0.5, 0.5]
-		  // 
-		  //compute vertical displacement of point [0,0,0] in projected coordinates between zv=0 and zv=0.5
-			DDouble xp = 0;
-			DDouble yp1 = 0;
-			DDouble yp2 = 0;
-			Matrix3DTransformXYZval(0, 0, 0, &xp, &yp1,Current3DMatrix);
-			Matrix3DTransformXYZval(0, 0, 0.5, &xp, &yp2,Current3DMatrix);
-			shift=yp1 - yp2;
-			gdlShiftYaxisUsing3DDriverTransform(actStream, shift, false);
-	  }
-	  if (!doT3d) { //use a special matrix to shift and scale into current subpage
-		gdlMakeSubpageRotationMatrix2d(gdlBox3d, xratio, yratio, zratio, trans, shift, below);
-		GDL_3DTRANSFORMDEVICE T3DForAXes;
-		for (int i = 0; i < 16; ++i)T3DForAXes.T[i] = (*gdlBox3d)[i];
-		T3DForAXes.zValue = (std::isfinite(zValue)) ? zValue : 0;
-		gdlStartSpecial3DDriverTransform(actStream, T3DForAXes);
-		Guard<BaseGDL> g(gdlBox3d);
-		//restore region info
-		gdlStoreXAxisRegion(actStream, save_region);
-		gdlStoreYAxisRegion(actStream, save_region);
-	  }
+//	  if (below) {
+//		  actStream->w3d(1,1,1,0,1,0,1,0,1, -alt, az);
+//			DDouble xp = 0;
+//			DDouble yp1 = 0;
+//			DDouble yp2 = 0;
+//			Matrix3DTransformXYZval(0, 0, 0, &xp, &yp1, Current3DMatrix);
+//			Matrix3DTransformXYZval(0, 0, 0.5, &xp, &yp2, Current3DMatrix);
+//			shift=1 - (yp1 - yp2);
+//			gdlShiftYaxisUsing3DDriverTransform(actStream, shift, true);
+//		} else {
+//		  actStream->w3d(1,1,1,0,1,0,1,0,1, alt, az); //mandatory: in order to have shades plotted correctly, z must go from 0 to 1, not -0.5 to 0.5
+//		  //as the code in plplot prevents negative "normalized" values.
+//		  // To insure this (and shade_surf) to work in all cases, we must rely on the 3DDriverTransform, once again, to shift the [0,1] plot in [-0.5, 0.5]
+//		  // 
+//		  //compute vertical displacement of point [0,0,0] in projected coordinates between zv=0 and zv=0.5
+//			DDouble xp = 0;
+//			DDouble yp1 = 0;
+//			DDouble yp2 = 0;
+//			Matrix3DTransformXYZval(0, 0, 0, &xp, &yp1,Current3DMatrix);
+//			Matrix3DTransformXYZval(0, 0, 0.5, &xp, &yp2,Current3DMatrix);
+//			shift=yp1 - yp2;
+//			gdlShiftYaxisUsing3DDriverTransform(actStream, shift, false);
+//	  }
+//	  if (!doT3d) { //use a special matrix to shift and scale into current subpage
+//		gdlMakeSubpageRotationMatrix2d(gdlBox3d, xratio, yratio, zratio, trans, shift, below);
+//		GDL_3DTRANSFORMDEVICE T3DForAXes;
+//		for (int i = 0; i < 16; ++i)T3DForAXes.T[i] = (*gdlBox3d)[i];
+//		T3DForAXes.zValue = (std::isfinite(zValue)) ? zValue : 0;
+//		gdlStartSpecial3DDriverTransform(actStream, T3DForAXes);
+//	    //restore region info
+//		gdlStoreXAxisRegion(actStream, save_region);
+//		gdlStoreYAxisRegion(actStream, save_region);
+//	  }
 		return false;
       }
 
@@ -384,20 +386,20 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
 
       // PLOT ONLY IF NODATA=0
       if (!nodata) {
-		//SHADES : works now with our internal plplot patches
-		static int shadesIx = e->KeywordIx("SHADES");
-		bool doShade = false;
-		DLongGDL* shadevalues = NULL;
-		PLINT * shadevals = NULL;
+	  static int shadesIx = e->KeywordIx("SHADES");
+      bool doShade=false;
+      DLongGDL* shadevalues=NULL;
+	  PLINT * shadevals=NULL;
 		if (e->GetKW(shadesIx) != NULL) {
 		  shadevalues = e->GetKWAs<DLongGDL>(shadesIx);
 		  if (shadevalues->N_Elements() < xEl * yEl) e->Throw("Shade array too short.");
-		  shadevals = static_cast<PLINT*> (shadevalues->DataAddr());
-		  doShade = true;
+		shadevals=static_cast<PLINT*>(shadevalues->DataAddr());
+        doShade=true;
 		}
 	  // doShade will work correctly only if decomposed=0 --- same as IDL.
       // Get decomposed value for shades
-        DLong decomposed;
+        DLong decomposed; // = GraphicsDevice::GetDevice()->GetDecomposed();
+
 		if (doShade) decomposed=actStream->ForceColorMap1Ramp(0.0); else decomposed=actStream->ForceColorMap1Ramp(0.33);
         //use of intermediate map for correct handling of blanking values and nans.
         PLFLT ** map;
@@ -426,25 +428,43 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         for ( SizeT i=0; i<xEl; i++ ) cgrid1.xg[i] = (*xVal)[i];
         for ( SizeT i=0; i<yEl; i++ ) cgrid1.yg[i] = (*yVal)[i];
         
-        //mesh option
-        PLINT meshOpt=0;
-        meshOpt=(doShade)?MAG_COLOR:0;
 
         //position of light Source. Plplot does not use only the direction of the beam but the position of the illuminating
         //source. And its illumination looks strange. We try to make the ill. source a bit far in the good direction.
         PLFLT sun[3];
-        sun[0]=lightSourcePos[0];
-        sun[1]=lightSourcePos[1];
-        sun[2]=lightSourcePos[2];if (below) sun[2]*=-1;
+        sun[0]=lightSourceUnitVector[0];
+        sun[1]=lightSourceUnitVector[1];
+        sun[2]=lightSourceUnitVector[2];
+        //if (below) sun[2]*=-1;
         static unsigned nameTag = SysVar::D()->Desc()->TagIndex("NAME");
-        // when !d.name == Z  we provide the driver transform
-        DString name = (*static_cast<DStringGDL*> (SysVar::D()->GetTag(nameTag, 0)))[0];
-        bool isZ=(name=="Z");
-        if (isZ) gdlStartT3DMatrixDriverTransform(actStream, zValue);
+        // 
         actStream->lightsource(sun[0],sun[1],sun[2]);
         actStream->shadinglimits(shadinglimits[0], shadinglimits[1]);
-        actStream->surf3d(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0,shadevals);
-        if (isZ) gdlStop3DDriverTransform(actStream);
+
+        // when !d.name == Z  we provide the driver transform, since the z-buffering is performed at the driver level
+        DString name = (*static_cast<DStringGDL*> (SysVar::D()->GetTag(nameTag, 0)))[0];
+        bool isZ=(name=="Z");
+        if (isZ) {
+          //mesh option
+          PLINT meshOpt = 0;
+          meshOpt = (doShade) ? MAG_COLOR : 0;
+          gdlStartT3DMatrixDriverTransform(actStream, zValue);
+          actStream->surf3d(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0,shadevals);
+          gdlStop3DDriverTransform(actStream);
+        }
+        else {
+//          PLFLT* save_region = gdlGetRegion(); //too complicated
+          DLong npixx = actStream->xPageSize(); //(DLong)((save_region[2]-save_region[0])*actStream->xPageSize());
+          DLong npixy = actStream->yPageSize(); //(DLong)((save_region[3]-save_region[1])*actStream->yPageSize());
+          DLong pixx0=0; //save_region[0]*actStream->xPageSize();
+          DLong pixy0=0; //save_region[1]*actStream->yPageSize();
+          unsigned char* bitmap = shadeSurface(npixx,npixy, (PLFLT*)xVal->DataAddr(),(PLFLT*)yVal->DataAddr(),
+              (PLFLT*)zVal->DataAddr(), xEl,yEl, !doShade, Current3DMatrix , shadevals);
+          DLong devicebox[4] = {pixx0,npixx,pixy0,npixy};
+          if (!actStream->PaintImage(bitmap,npixx,npixy, devicebox, 0, 0, GDL_OR)) e->Throw("device does not support Paint");
+        }
+        
+
 //Clean allocated data struct
         delete[] xg1;
         delete[] yg1;
@@ -467,12 +487,26 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
     shade_surf_call shade_surf;
     shade_surf.call(e, 1);
   }
+  PLFLT* get_lightsource(){return  lightSourceUnitVector;}
+  PLFLT* get_shadeLimits(){return shadinglimits;
+  }
 
+  inline void normalize(EnvT* e, DDouble* dlight){
+    // normalize: this is a direction, not a vector
+  PLFLT mag = dlight[0]*dlight[0];
+  mag += dlight[1]*dlight[1];
+  mag += dlight[2]*dlight[2];
+  if (mag <= 0) {if (e) e->Throw("invalid light coordinates");else for (int i = 0; i < 3; ++i) dlight[i]=1; return;}
+  mag = sqrt(mag);
+  for (int i = 0; i < 3; ++i) dlight[i] /= mag;
+  return;
+  }
+  
  void set_shading(EnvT* e)
  {
-   lightSourcePos[0]=0;
-   lightSourcePos[1]=0;
-   lightSourcePos[2]=1;
+   lightSourceUnitVector[0]=0;
+   lightSourceUnitVector[1]=0;
+   lightSourceUnitVector[2]=1;
    shadinglimits[0]=0.;
    shadinglimits[1]=255.;
     DDoubleGDL *light;
@@ -481,14 +515,15 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
     {
       light=e->GetKWAs<DDoubleGDL>( lightIx );
       if (light->N_Elements()>3) e->Throw("Keyword array parameter LIGHT must have from 1 to 3 elements.");
-      for (SizeT i=0; i< light->N_Elements(); ++i) lightSourcePos[i]=(*light)[i];
+      normalize(e, &(*light)[0]);
+      for (int i=0; i< 3; ++i) lightSourceUnitVector[i]=(*light)[i];
     }
     static int valuesIx=e->KeywordIx ( "VALUES" );
     if ( e->GetKW ( valuesIx )!=NULL )
     {
       light=e->GetKWAs<DDoubleGDL>( valuesIx );
       if (light->N_Elements()>2) e->Throw("Keyword array parameter VALUES must have from 1 to 2 elements.");
-      for (SizeT i=0; i< light->N_Elements(); ++i) shadinglimits[i]=(*light)[i];
+      for (int i=0; i< 2; ++i) shadinglimits[i]=(*light)[i];
     }
  }
 } // namespace

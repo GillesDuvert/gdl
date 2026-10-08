@@ -186,7 +186,8 @@ namespace lib {
   void tv_image(EnvT* e);
   void usersym(EnvT* e);
   void set_shading(EnvT* e);
-
+  PLFLT* get_lightsource();
+  PLFLT* get_shadeLimits();
   // other plotting routines
   void erase(EnvT* e);
   void tvlct(EnvT* e);
@@ -228,9 +229,11 @@ namespace lib {
   void yaxisFlip(DDouble* me);
   void SelfConvertToNormXYZ(DDoubleGDL* x, bool &xLog, DDoubleGDL* y, bool &yLog, DDoubleGDL* z, bool &zLog, COORDSYS &code);
   void SelfConvertToNormXYZ(DDouble &x, bool const xLog, DDouble &y, bool const yLog, DDouble &z, bool const zLog, COORDSYS const code);
+  void SelfConvertToNormXYZ(SizeT n, DDouble *x, bool const xLog, DDouble *y, bool const yLog, DDouble *z, bool const zLog, COORDSYS const code);
   void SelfConvertToNormXY(SizeT n, PLFLT *xt, bool const xLog, PLFLT *yt, bool const yLog, COORDSYS const code);
   void SelfConvertToNormXY(DDoubleGDL* x, bool &xLog, DDoubleGDL* y, bool &yLog, COORDSYS &code);
   void SelfPDotTTransformXYZ(SizeT n, PLFLT *xt, PLFLT *yt, PLFLT *zt);
+  void SelfPDotTTransformXYZ(SizeT n, PLFLT *xt, PLFLT *yt, PLFLT *zt, PLFLT* T);
   void SelfPDotTTransformXYZ(DDoubleGDL *xt, DDoubleGDL *yt, DDoubleGDL *zt);
   void PDotTTransformXYZval(PLFLT x, PLFLT y, PLFLT *xt, PLFLT *yt, PLPointer data);
   DDoubleGDL* gdlDefinePlplotRotationMatrix(DDouble az, DDouble alt, DDouble *scale, bool save);
@@ -246,6 +249,7 @@ namespace lib {
   void gdlShiftYaxisUsing3DDriverTransform( GDLGStream *a, DDouble yval, bool invert=false);
   void gdlSetZto3DDriverTransform( GDLGStream *a, DDouble zValue);
   void gdlStop3DDriverTransform(GDLGStream *a);
+  DDouble* gdlGet3DDriverTransform(GDLGStream *a);
   void Matrix3DTransformXYZval(DDouble x, DDouble y, DDouble z, DDouble *xt, DDouble *yt, DDouble *t);
   bool T3Denabled();
   void gdlDoRangeExtrema(DDoubleGDL *xVal, DDoubleGDL *yVal, DDouble &min, DDouble &max, DDouble xmin, DDouble xmax, bool doMinMax = false, DDouble minVal = 0, DDouble maxVal = 0);
@@ -452,7 +456,7 @@ namespace lib {
   
   //just test if clip values (!P.CLIP , CLIP=) are OK (accounting for all NOCLIP etc possibilities!)
   bool gdlTestClipValidity(EnvT *e, GDLGStream *actStream, bool invertedClipMeaning=false, bool commandHasCoordSys=true );
-
+  unsigned char* shadeSurface(PLINT M, PLINT N, PLFLT* x, PLFLT* y, PLFLT* zp, SizeT nx, SizeT ny, PLINT decomposed, DDouble *TransformMatrix, PLINT* shadevals=NULL);
 } // namespace
 
 #endif

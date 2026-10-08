@@ -78,6 +78,10 @@ void wxPLDevGC::DrawLine( short x1a, short y1a, short x2a, short y2a )
     AddtoClipRegion( (int) x1, (int) y1, (int) x2, (int) y2 );
 }
 
+void wxPLDevGC::AnyMod( PLINT mode )
+{
+   m_dc->SetLogicalFunction( (wxRasterOperationMode) mode );
+}
 
 //--------------------------------------------------------------------------
 //  void wxPLDevGC::DrawPolyline( short *xa, short *ya, PLINT npts )

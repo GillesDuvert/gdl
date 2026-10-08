@@ -569,14 +569,7 @@ void plD_esc_wxwidgets( PLStream *pls, PLINT op, void *ptr )
         fill_path( pls );
         break;
     case PLESC_XORMOD:
-      printf("PLESC_XORMOD not implemented, FIXME\n");
-        // switch between wxXOR and wxCOPY
-        // if( dev->ready ) {
-        //                  if( dev->m_dc->GetLogicalFunction() == wxCOPY )
-        //                          dev->m_dc->SetLogicalFunction( wxXOR );
-        //                  else if( dev->m_dc->GetLogicalFunction() == wxXOR )
-        //                          dev->m_dc->SetLogicalFunction( wxCOPY );
-        //          }
+        dev->AnyMod(*(PLINT*)ptr);
         break;
 
     case PLESC_DEVINIT:
@@ -662,7 +655,6 @@ static void fill_path( PLStream *pls) {
 
   wxPLDevBase* dev = (wxPLDevBase *) pls->dev;
 
-  //    if ( !( dev->ready ) )        install_buffer( pls );
 
   if (Status3D == 1) { //enable use everywhere.
     //perform conversion on the fly

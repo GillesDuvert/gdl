@@ -49,6 +49,7 @@ namespace lib
     static PLFLT* x_buff;
     static PLFLT* y_buff;
 
+
   static DLong savedStyle=0;
   static DDouble savedPointX=std::numeric_limits<double>::quiet_NaN();
   static DDouble savedPointY=std::numeric_limits<double>::quiet_NaN();
@@ -2007,6 +2008,9 @@ PLFLT gdlGetBoxNYSize() {
     for (int i = 0; i < 16; ++i) PlotDevice3D.T[i] = 0;PlotDevice3D.T[0] = 1;PlotDevice3D.T[5] = 1;PlotDevice3D.T[10] = 1;PlotDevice3D.T[15] = 1;
     PlotDevice3D.zValue=0;
     a->cmd(PLESC_2D, NULL);
+  }
+  DDouble* gdlGet3DDriverTransform( GDLGStream *a){ //access T matrix
+    return PlotDevice3D.T;
   }
   //Convert 3D to 2D using a passed PlotDevice3D matrix
   void Matrix3DTransformXYZval(DDouble x, DDouble y, DDouble z, DDouble *xt, DDouble *yt, DDouble* t) {
@@ -4235,4 +4239,330 @@ NoTitlesAccepted:
     }
     return false; //should be OK
   }
+  inline PLFLT dot(PLFLT* A, PLFLT* B){
+    PLFLT dot=0;
+    for (int i = 0; i < 3; ++i) dot+= A[i]  * B[i];
+    return dot;
+  }
+  inline void normalize(EnvT* e, DDouble* dlight){
+    // normalize: this is a direction, not a vector
+  PLFLT mag = dlight[0]*dlight[0];
+  mag += dlight[1]*dlight[1];
+  mag += dlight[2]*dlight[2];
+  if (mag <= 0) {if (e) e->Throw("invalid light coordinates");else for (int i = 0; i < 3; ++i) dlight[i]=1; return;}
+  mag = sqrt(mag);
+  for (int i = 0; i < 3; ++i) dlight[i] /= mag;
+  return;
+  }  
+  inline void normalize(DDouble* vect){
+    // normalize: this is a direction, not a vector
+  PLFLT mag = vect[0]*vect[0]+vect[1]*vect[1]+ vect[2]*vect[2];
+  mag = sqrt(mag);
+  for (int i = 0; i < 3; ++i) vect[i] /= mag;
+  return;
+  } 
+  static void T3DTransformCoordinates(SizeT n, PLFLT *x, PLFLT *y , PLFLT *z, PLFLT* T) {
+    for (SizeT i=0; i< n; ++i) {
+    PLFLT xx, yy, zz, ww;
+      xx = x[i] * T[0] + y[i] * T[1] + z[i] * T[2] + T[3];
+      yy = x[i] * T[4] + y[i] * T[5] + z[i] * T[6] + T[7];
+      zz = x[i] * T[8] + y[i] * T[9] + z[i] * T[10] + T[11];
+      ww = x[i] * T[12] + y[i] * T[13] + z[i] * T[14] + T[15];
+      xx /= ww;
+      yy /= ww;
+      zz /= ww;
+      x[i] = xx;
+      y[i] = yy;
+      z[i] = zz;
+    }
+}
+  static void T3DTransformXYZ(SizeT n, PLFLT *v, PLFLT* T) {
+    for (SizeT i=0; i< n*3; i+=3) {
+    PLFLT xx, yy, zz, ww;
+      xx = v[i] * T[0] + v[i+1] * T[1] + v[i+2] * T[2] + T[3];
+      yy = v[i] * T[4] + v[i+1] * T[5] + v[i+2] * T[6] + T[7];
+      zz = v[i] * T[8] + v[i+1] * T[9] + v[i+2] * T[10] + T[11];
+      ww = v[i] * T[12] + v[i+1] * T[13] + v[i+2] * T[14] + T[15];
+      xx /= ww;
+      yy /= ww;
+      zz /= ww;
+      v[i] = xx;
+      v[i+1] = yy;
+      v[i+2] = zz;
+      PLFLT mag = v[0]*v[0]+v[1]*v[1]+ v[2]*v[2]; printf("%d", mag > 1.001);
+    }
+  }
+  
+  float edge_function(plVertex a, plVertex b, plVertex c) {
+    return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+  }
+
+  void shade_triangle(unsigned char* mem, DInt* zbuff, SizeT M, SizeT N, plVertex A, plVertex B, plVertex C, bool falseColor){
+    float area = edge_function(A, B, C);
+    if (area == 0.0f) return; // Degenerate triangle
+
+    // 1. Compute projected bounding box
+	float fxamin = fmax(0, fmin(A.x, fmin(B.x, C.x)));
+    float fxamax = fmin(1, fmax(A.x, fmax(B.x, C.x)));
+    float fyamin = fmax(0, fmin(A.y, fmin(B.y, C.y)));
+    float fyamax = fmin(1, fmax(A.y, fmax(B.y, C.y)));
+	int xamin=fxamin*M;
+	int xamax=fxamax*M;
+	int yamin=fyamin*N;
+	int yamax=fyamax*N;
+	PLINT n = yamax - yamin + 1;
+	PLINT m = xamax - xamin + 1;
+	if (n <= 2 || m <= 2) return;
+
+
+    // 2. Loop over bounding box pixels
+    for (int iy = yamin; iy <= yamax; iy++) {
+	    for (int ix = xamin; ix <= xamax; ix++) {
+			float currx=(float)(ix)/M;
+			float curry=(float)(iy)/N;
+            plVertex p = {currx, curry, 1, 0};
+            
+            // Calculate barycentric coordinates
+            float w1 = edge_function(A, B, p);
+            float w2 = edge_function(B, C, p);
+            float w3 = edge_function(C, A, p);
+			w1 /= area;
+			w2 /= area;
+			w3 /= area; //barycentric
+            // Check if pixel is inside the triangle
+            if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+                // Interpolate Z depth
+					float fact=w1+w2+w3;
+					fact = 1./fact;
+					w1*=fact;w2*=fact;w3*=fact;
+					float z = w1 * C.z + w2 * A.z + w3 * B.z; 
+
+                // Z-buffer test
+                if (z*32768 > zbuff[ iy*M + ix ]) {
+                    zbuff[ iy*M + ix ] = z*32768;
+					float r,g,b;
+
+					float newcol = w1 * C.col + w2 * A.col + w3 * B.col;
+					newcol = fmin(1.0f, fmax(0.0f, newcol));
+
+					if (falseColor) { //this is an index in the plcol1 map
+						plcol1(newcol);
+						r = plsc->curcolor.r;
+						g = plsc->curcolor.g;
+						b = plsc->curcolor.b;
+						
+					} else {
+                    // Gouraud shading:
+						r = newcol*255;
+						g = newcol*255;
+						b = newcol*255;
+					}
+                    mem[iy*M+ix+0] = r;
+                    mem[iy*M+ix+1] = g;
+                    mem[iy*M+ix+2] = b;
+				}
+            }
+        }
+    }
+
+}
+  
+inline void getNormalToTriangle( PLFLT* x, PLFLT* y, PLFLT* z, PLFLT* normal)
+{
+    PLFLT vx1, vx2, vy1, vy2, vz1, vz2;
+
+    vx1 = x[1] - x[0];
+    vx2 = x[2] - x[1];
+    vy1 = y[1] - y[0];
+    vy2 = y[2] - y[1];
+    vz1 = z[1] - z[0];
+    vz2 = z[2] - z[1];
+
+// Unit vector normal to the facet
+    normal[0] = vy1 * vz2 - vz1 * vy2;
+    normal[1] = vz1 * vx2 - vx1 * vz2;
+    normal[2] = vx1 * vy2 - vy1 * vx2;
+    PLFLT mag = sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]); 
+    normal[0]   /= mag;
+    normal[1]   /= mag;
+    normal[2]   /= mag;
+}
+
+void storeNormals(PLINT nx, PLINT i, PLINT j, PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_VECTOR zp, PLFLT* g, PLINT* gc, PLFLT* T) {
+	PLFLT px[3], py[3], pz[3];
+	PLINT ix[3], iy[3];
+	PLFLT normal[3];
+	int i1, j1;
+	i1 = i + 1;
+	j1 = j + 1;
+	px[0] = x[i];
+	py[0] = y[j];
+	ix[0] = i;
+	iy[0] = j;
+	pz[0] = zp[ j*nx+i];
+	px[1] = x[i1];
+	py[1] = y[j1];
+	ix[1] = i1;
+	iy[1] = j1;
+	pz[1] = zp[j1*nx+i1];
+	// pixel changes after this
+	px[2] = x[i];
+	py[2] = y[j1];
+	pz[2] = zp[j1*nx+i];
+	ix[2] = i;
+	iy[2] = j1;
+    getNormalToTriangle(px, py, pz, normal);
+	for (int k=0; k<3; ++k) {
+		g [ iy[k] * nx * 3 + ix[k] + 0 ] += normal[0];
+		g [ iy[k] * nx * 3 + ix[k] + 1 ] += normal[1];
+		g [ iy[k] * nx * 3 + ix[k] + 2 ] += normal[2];
+	    gc[ iy[k] * nx + ix[k] ] += 1;
+	}
+	px[2] = x[i1];
+	py[2] = y[j];
+	ix[2] = i1;
+	iy[2] = j;
+	pz[2] = zp[j*nx+i1];
+	getNormalToTriangle(px, py, pz, normal);
+	for (int k=0; k<3; ++k) {
+		g [ iy[k] * nx *3 + ix[k] + 0 ] += normal[0];
+		g [ iy[k] * nx *3 + ix[k] + 1 ] += normal[1];
+		g [ iy[k] * nx *3 + ix[k] + 2 ] += normal[2];
+	    gc[ iy[k] * nx + ix[k] ] += 1;
+	}
+  }
+
+  inline PLFLT BlinnPhong(PLFLT* half_direction, PLFLT* normal, PLFLT* lamppos) {
+    static const PLFLT shininess=16.;
+    static const PLFLT ambient=0.05;
+    PLFLT lambertian=0;
+    for (int i = 0; i < 3; ++i) lambertian+= normal[i]  * lamppos[i];
+    lambertian=MAX(0,lambertian);
+    if (lambertian <= 0 ) return ambient;
+    PLFLT specular=0;
+    for (int i = 0; i < 3; ++i) specular+= half_direction[i]  * normal[i];
+    specular = MAX(0,specular);
+//    specular = pow(specular,shininess);
+    return MAX(0,MIN(lambertian+specular,1));
+  }
+  inline PLFLT* GetNormal(PLFLT* pos, PLINT n, PLINT i, PLINT j) {
+    return &(pos[i+j*n*3]);
+  }
+  unsigned char* shadeSurface(PLINT M, PLINT N, PLFLT* x, PLFLT* y, PLFLT* zp, SizeT nx, SizeT ny, PLINT decomposed, DDouble* T, PLINT* shademap) {
+    static const PLFLT* lightsource = get_lightsource();
+    PLFLT lamppos[3]; memcpy(lamppos, lightsource, 3*sizeof(PLFLT));
+    T3DTransformCoordinates(1, &lamppos[0], &lamppos[1], &lamppos[2], T);
+    normalize(lamppos);
+
+    static const PLFLT* shadinglimits = get_shadeLimits();
+    PLFLT shadeFact = shadinglimits[1] - shadinglimits[0];
+    PLFLT shadeBase = shadinglimits[0];
+    // create all triangles and pass them to shade_triangle. If not falsecolor, bother to create a map of average surface normal for each vertex points
+    unsigned char* bitmap=(unsigned char*) malloc(M * N * 3);
+    memset(bitmap,0,M * N * 3);
+    short* zbuffer=(short*) malloc(M * N * sizeof(short));
+    bool falsecolor=(decomposed==0);
+    
+    for (SizeT i=0; i< M * N; ++i) zbuffer[i]=-32765;
+    // to enable gouraud shading
+		PLFLT* normal;
+		PLINT* normalsCount;
+
+        plVertex v[3];
+        
+		bool hasGouraud = 0;
+		if (decomposed==1) {
+			hasGouraud = true;
+			normal = (PLFLT*) malloc(nx * ny * 3 * sizeof (PLFLT));
+			memset(normal, 0, nx * ny * 3 * sizeof (PLFLT));
+			normalsCount = (PLINT*) malloc(nx * ny * sizeof (PLINT));
+			memset(normalsCount, 0, nx * ny * sizeof (PLINT));
+			for (int j = 0; j < ny - 1; ++j) {
+				for (int i = 0; i < nx - 1; ++i) {
+					storeNormals(nx, i, j, x, y, zp, normal, normalsCount, T);
+				}
+			}
+			// mean Normals
+			for (SizeT ii = 0, k=0; ii < nx * ny; ++ii) if (normalsCount[ii] > 0) { for (int jj=0;jj<3;++jj) normal[k++] /= normalsCount[ii];} else k+=3;
+            // transform
+            T3DTransformXYZ(nx*ny, normal, T);
+            // normalize
+            for (SizeT ii = 0, k=0; ii < nx * ny; ++ii, k+=3) normalize(&normal[k]);
+			free(normalsCount);
+		}
+		int i1, j1;
+        PLFLT camera_dir[3][3];
+        PLFLT half_direction[3][3];
+		for (int j = 0; j < ny - 1; ++j) {
+			j1 = j + 1;
+			for (int i = 0; i < nx - 1; ++i) {
+				i1 = i + 1;
+				v[0].x = x[i];
+				v[0].y = y[j];
+				v[0].z = zp[j*nx+ i];
+				v[1].x = x[i1];
+				v[1].y = y[j1];
+				v[1].z = zp[j1*nx+ i1];
+				v[2].x = x[i];
+				v[2].y = y[j1];
+				v[2].z = zp[j1*nx+ i];
+				if (decomposed==0 ) {
+                  if (shademap!=NULL){
+					v[0].col = shademap[j*nx+i]/255.;
+					v[1].col = shademap[j1*nx+i1]/255.;
+					v[2].col = shademap[j1*nx+i]/255.;
+                  } else {
+                    static bool notseen=true;
+                    if (notseen) {notseen=false; std::cerr<<"WARNING invalid shade map, please report!"<<std::endl;}
+					v[0].col = 127.;
+					v[1].col = 127.;
+					v[2].col = 127.;
+                  }
+                } else {
+                  for (int j = 0; j < 3; ++j) {
+                    camera_dir[j][0] = -v[j].x;
+                    camera_dir[j][1] = -v[j].y;
+                    camera_dir[j][2] = -v[j].z;
+                    normalize(camera_dir[j]);
+                    for (int i = 0; i < 3; ++i) {
+                      half_direction[j][i] = camera_dir[j][i] + lamppos[i];
+                    }
+                    normalize(half_direction[j]);
+                  }
+                  v[0].col = BlinnPhong(half_direction[0], GetNormal(normal, nx, i, j), lamppos);
+                  v[1].col = BlinnPhong(half_direction[1], GetNormal(normal, nx, i1, j1), lamppos);
+                  v[2].col = BlinnPhong(half_direction[2], GetNormal(normal, nx, i, j1), lamppos);
+                }
+                for (int k=0; k< 3; ++k) T3DTransformCoordinates(1, &(v[k].x), &(v[k].y), &(v[k].z), T);
+				shade_triangle(bitmap,zbuffer, M, N, v[0], v[1], v[2], falsecolor);
+				// second triangle in the same orientation starting with the common vector
+				v[2].x = x[i1];
+				v[2].y = y[j];
+				v[2].z = zp[j*nx+ i1];
+				if (falsecolor) {
+					v[2].col = shademap[j*nx+i1]/255.;
+				} else {
+                    camera_dir[2][0] = -v[2].x;
+                    camera_dir[2][1] = -v[2].y;
+                    camera_dir[2][2] = -v[2].z;
+                    normalize(camera_dir[2]);
+                    for (int i = 0; i < 3; ++i) {
+                      half_direction[2][i] = camera_dir[2][i] + lamppos[i];
+                    }
+                    normalize(half_direction[2]);
+                  v[2].col = BlinnPhong(half_direction[2], GetNormal(normal, nx, i1, j), lamppos);
+				}
+                
+                T3DTransformCoordinates(1, &(v[2].x), &(v[2].y), &(v[2].z), T);
+				shade_triangle(bitmap,zbuffer, M, N, v[0], v[1], v[2], falsecolor);
+			}
+		}
+
+		if (hasGouraud) {
+			free(normal);
+		}
+        free(zbuffer);
+        return bitmap;
+  }
+
 } // namespace

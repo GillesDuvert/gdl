@@ -129,7 +129,7 @@ public:
   void UnSetDoubleBuffering();
   void UglyPatchMakeHidden(); 
   bool HasSafeDoubleBuffering();
-  bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny,  DLong *pos, DLong tru, DLong chan);
+  bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny,  DLong *pos, DLong tru, DLong chan, DLong Mode=GDL_COPY);
   virtual bool HasCrossHair() {return true;}
   void UnMapWindowAndSetPixmapProperty();
   virtual DByteGDL* GetBitmapData(int xoff, int yoff, int nx, int ny) final;
