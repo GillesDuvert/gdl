@@ -612,7 +612,7 @@ namespace lib {
       for (auto i=nEl; i< 2*nEl; ++i) (*xyzw)[i] = (*xyzw)[i]*sy[1]+sy[0];
       for (auto i=2*nEl; i< 3*nEl; ++i) (*xyzw)[i] = (*xyzw)[i]*sz[1]+sz[0];
       DDoubleGDL* trans = t3dMatrix->MatrixOp(xyzw, false, true); //transpose xyzw for Operation
-      SelfPrint3d(trans);
+      //SelfPrint3d(trans);
       for (auto i=0; i< nEl; ++i) (*xVal)[i] = (*trans)[i*4];
       for (auto i=0; i< nEl; ++i) (*yVal)[i] = (*trans)[i*4+1];
       for (auto i=0; i< nEl; ++i) (*zVal)[i] = (*trans)[i*4+2];

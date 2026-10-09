@@ -401,34 +401,6 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         DLong decomposed; // = GraphicsDevice::GetDevice()->GetDecomposed();
 
 		if (doShade) decomposed=actStream->ForceColorMap1Ramp(0.0); else decomposed=actStream->ForceColorMap1Ramp(0.33);
-        //use of intermediate map for correct handling of blanking values and nans.
-        PLFLT ** map;
-        actStream->Alloc2dGrid( &map, xEl, yEl);
-        for ( SizeT i=0, k=0; i<xEl; i++ )
-        {
-          for ( SizeT j=0; j<yEl; j++)
-          { //plplot does not like NaNs and any other terribly large gradient!
-            PLFLT v=(*zVal)[k++];
-              if ( !isfinite(v) ) v=minVal;
-              if ( hasMinVal && v < minVal) v=minVal;
-              if ( hasMaxVal && v > maxVal) v=maxVal;
-            map[i][j] = (below)?1-v:v;
-          }
-        }
-        // 1 types of grid only: 1D X and Y.
-        PLcGrid cgrid1; // X and Y independent deformation
-        PLFLT* xg1;
-        PLFLT* yg1;
-        xg1 = new PLFLT[xEl];
-        yg1 = new PLFLT[yEl];
-        cgrid1.xg = xg1;
-        cgrid1.yg = yg1;
-        cgrid1.nx = xEl;
-        cgrid1.ny = yEl;
-        for ( SizeT i=0; i<xEl; i++ ) cgrid1.xg[i] = (*xVal)[i];
-        for ( SizeT i=0; i<yEl; i++ ) cgrid1.yg[i] = (*yVal)[i];
-        
-
         //position of light Source. Plplot does not use only the direction of the beam but the position of the illuminating
         //source. And its illumination looks strange. We try to make the ill. source a bit far in the good direction.
         PLFLT sun[3];
@@ -445,15 +417,56 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         DString name = (*static_cast<DStringGDL*> (SysVar::D()->GetTag(nameTag, 0)))[0];
         bool isZ=(name=="Z");
         if (isZ) {
+          //use of intermediate map for correct handling of blanking values and nans.
+          PLFLT ** map;
+          actStream->Alloc2dGrid( &map, xEl, yEl);
+          for ( SizeT i=0, k=0; i<xEl; i++ )
+          {
+            for ( SizeT j=0; j<yEl; j++)
+            { //plplot does not like NaNs and any other terribly large gradient!
+              PLFLT v=(*zVal)[k++];
+                if ( !isfinite(v) ) v=minVal;
+                if ( hasMinVal && v < minVal) v=minVal;
+                if ( hasMaxVal && v > maxVal) v=maxVal;
+              map[i][j] = (below)?1-v:v;
+            }
+          }
+          // 1 types of grid only: 1D X and Y.
+          PLcGrid cgrid1; // X and Y independent deformation
+          PLFLT* xg1;
+          PLFLT* yg1;
+          xg1 = new PLFLT[xEl];
+          yg1 = new PLFLT[yEl];
+          cgrid1.xg = xg1;
+          cgrid1.yg = yg1;
+          cgrid1.nx = xEl;
+          cgrid1.ny = yEl;
+          for ( SizeT i=0; i<xEl; i++ ) cgrid1.xg[i] = (*xVal)[i];
+          for ( SizeT i=0; i<yEl; i++ ) cgrid1.yg[i] = (*yVal)[i];
           //mesh option
           PLINT meshOpt = 0;
           meshOpt = (doShade) ? MAG_COLOR : 0;
           gdlStartT3DMatrixDriverTransform(actStream, zValue);
           actStream->surf3d(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0,shadevals);
           gdlStop3DDriverTransform(actStream);
+          //Clean allocated data struct
+          delete[] xg1;
+          delete[] yg1;
+          actStream->Free2dGrid(map, xEl, yEl);
         }
         else {
 //          PLFLT* save_region = gdlGetRegion(); //too complicated
+          DLong xPageSize = actStream->xPageSize();
+          DLong yPageSize = actStream->yPageSize();
+          static DDouble xcorner[]={0,1,1,0,0,1,1,0}; 
+          static DDouble ycorner[]={0,0,1,1,0,0,1,1}; 
+          static DDouble zcorner[]={0,0,0,0,1,1,1,1};
+          SelfPDotTTransformXYZ(8, xcorner, ycorner, zcorner); //T3D transform for point
+          DDouble xmin = xcorner[0]; for (auto i=1; i< 8; ++i) xmin=min(xmin,xcorner[i]);//xmin*=xPageSize;
+          DDouble ymin = ycorner[0]; for (auto i=1; i< 8; ++i) ymin=min(ymin,ycorner[i]);//ymin*=yPageSize;
+          DDouble xmax = xcorner[0]; for (auto i=1; i< 8; ++i) xmax=max(xmax,xcorner[i]);//xmax*=xPageSize;
+          DDouble ymax = ycorner[0]; for (auto i=1; i< 8; ++i) ymax=max(ymax,ycorner[i]);//ymax*=yPageSize;
+          std::cerr<<"plots,["<<xmin<<","<<xmax<<"],["<<ymin<<","<<ymax<<"],/dev"<<std::endl;
           DLong npixx = actStream->xPageSize(); //(DLong)((save_region[2]-save_region[0])*actStream->xPageSize());
           DLong npixy = actStream->yPageSize(); //(DLong)((save_region[3]-save_region[1])*actStream->yPageSize());
           DLong pixx0=0; //save_region[0]*actStream->xPageSize();
@@ -463,12 +476,6 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           DLong devicebox[4] = {pixx0,npixx,pixy0,npixy};
           if (!actStream->PaintImage(bitmap,npixx,npixy, devicebox, 0, 0, GDL_OR)) e->Throw("device does not support Paint");
         }
-        
-
-//Clean allocated data struct
-        delete[] xg1;
-        delete[] yg1;
-        actStream->Free2dGrid(map, xEl, yEl);
         if (decomposed > 0) GraphicsDevice::GetDevice()->Decomposed(true);
       }
     } 
@@ -515,15 +522,15 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
     {
       light=e->GetKWAs<DDoubleGDL>( lightIx );
       if (light->N_Elements()>3) e->Throw("Keyword array parameter LIGHT must have from 1 to 3 elements.");
-      normalize(e, &(*light)[0]);
-      for (int i=0; i< 3; ++i) lightSourceUnitVector[i]=(*light)[i];
+      for (int i=0; i< light->N_Elements(); ++i) lightSourceUnitVector[i]=(*light)[i];
+      normalize(e, lightSourceUnitVector);
     }
     static int valuesIx=e->KeywordIx ( "VALUES" );
     if ( e->GetKW ( valuesIx )!=NULL )
     {
       light=e->GetKWAs<DDoubleGDL>( valuesIx );
       if (light->N_Elements()>2) e->Throw("Keyword array parameter VALUES must have from 1 to 2 elements.");
-      for (int i=0; i< 2; ++i) shadinglimits[i]=(*light)[i];
+      for (int i=0; i< light->N_Elements(); ++i) shadinglimits[i]=(*light)[i];
     }
  }
 } // namespace

@@ -493,6 +493,7 @@ public:
 //      wymin=theBox.dy1;
 //      wymax=theBox.dy2;
 //  }
+  void  getBoxDevicePosition(PLINT* pos){pos[0]=theBox.dx1;  pos[1]=theBox.dy1; pos[2]=theBox.dx2-theBox.dx1; pos[3]=theBox.dy2-theBox.dy1;}
   PLFLT  boxAspectDevice(){return (theBox.dy2-theBox.dy1)/(theBox.dx2-theBox.dx1);}
   PLFLT  boxAspectWorld(){return fabs(theBox.wy2-theBox.wy1)/fabs(theBox.wx2-theBox.wx1);}
 

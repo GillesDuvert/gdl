@@ -401,20 +401,31 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
       if (!nodata)
       {
         //use of intermediate map for correct handling of blanking values and nans.
-        PLFLT * map=(PLFLT*) malloc(xEl*yEl*sizeof(PLFLT));
-        for ( SizeT k=0; k<xEl*yEl; ++k )
+        PLFLT ** map;
+        actStream->Alloc2dGrid( &map, xEl, yEl);
+        for ( SizeT i=0, k=0; i<xEl; i++ )
+        {
+          for ( SizeT j=0; j<yEl; j++)
           { //plplot does not like NaNs and any other terribly large gradient!
-            PLFLT v=(*zVal)[k];
+            PLFLT v=(*zVal)[k++];
             if ( !isfinite(v) ) v=minVal;
             if ( hasMinVal && v < minVal) v=minVal;
             if ( hasMaxVal && v > maxVal) v=maxVal;
-            map[k] = (below)?1-v:v;
+            map[i][j] = (below)?1-v:v;
           }
+        }
         // 1 types of grid only: 1D X and Y.
-        PLfGrid2 grid;
-        grid.f = (double**)map;
-        grid.nx=xEl;
-        grid.ny=yEl;
+        PLcGrid cgrid1; // X and Y independent deformation
+        PLFLT* xg1;
+        PLFLT* yg1;
+        xg1 = new PLFLT[xEl];
+        yg1 = new PLFLT[yEl];
+        cgrid1.xg = xg1;
+        cgrid1.yg = yg1;
+        cgrid1.nx = xEl;
+        cgrid1.ny = yEl;
+        for ( SizeT i=0; i<xEl; i++ ) cgrid1.xg[i] = (*xVal)[i];
+        for ( SizeT i=0; i<yEl; i++ ) cgrid1.yg[i] = (*yVal)[i];
        
         //mesh option
         PLINT meshOpt=0;
@@ -429,8 +440,10 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         //in not up not low: mesh since mesh plots both sides
         if (up)
         {
-          if (doShade) plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt|MAG_COLOR,NULL,0,0,0,NULL,NULL,shadevals);
-          else plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt,NULL,0,0,0,NULL,NULL,shadevals);
+          if (doShade)
+            actStream->plot3dcl(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt+MAG_COLOR,NULL,0,0,0,NULL,NULL,shadevals);
+          else
+            actStream->plot3dc(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0);
         }
         else //mesh (both sides) but contains 'low' (remove top) and/or bottom
         {
@@ -438,30 +451,35 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
            if (bottomColorIndex!=-1)
            {
              gdlSetGraphicsForegroundColorFromKw ( e, actStream, "BOTTOM" );
-             plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt,NULL,0,0,0,NULL,NULL,shadevals);
+             actStream->meshc(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0);
              gdlSetGraphicsForegroundColorFromKw ( e, actStream );
              if (!low) //redraw top with top color
              {
-               if (doShade) plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt|MAG_COLOR,NULL,0,0,0,NULL,NULL,shadevals);
-
-                 else  plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt,NULL,0,0,0,NULL,NULL,shadevals);
-
+               if (doShade) actStream->plot3dcl(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt+MAG_COLOR,NULL,0,0,0,NULL,NULL,shadevals);
+               else 
+                 actStream->plot3dc(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0);
              }
            }
            else
            {
-			 if (doShade) plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt|MAG_COLOR,NULL,0,0,0,NULL,NULL,shadevals);
-             else plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt,NULL,0,0,0,NULL,NULL,shadevals);
+			 if (doShade) actStream->plot3dcl(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt+MAG_COLOR,NULL,0,0,0,NULL,NULL,shadevals);
+             else 
+               actStream->mesh(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt);
            }
            //redraw upper part with background color to remove it... Not 100% satisfying though.
            if (low)
            {
             if (e->KeywordSet ( SKIRTIx )) meshOpt-=DRAW_SIDES;
-            gdlSetGraphicsPenColorToBackground(actStream);plfplot3dcl(&((*xVal)[0]),&((*yVal)[0]),plf2ops_grid_col_major(),&grid,xEl,yEl,meshOpt,NULL,0,0,0,NULL,NULL,shadevals);
+            gdlSetGraphicsPenColorToBackground(actStream);
+            actStream->plot3dc(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0);
             gdlSetGraphicsForegroundColorFromKw ( e, actStream );
            }
         }
-        free(map);
+
+//Clean allocated data struct
+        delete[] xg1;
+        delete[] yg1;
+        actStream->Free2dGrid(map, xEl, yEl);
 		if (decomposed > 0) GraphicsDevice::GetDevice()->Decomposed(true);
       }
     }
