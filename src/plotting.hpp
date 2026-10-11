@@ -187,7 +187,8 @@ namespace lib {
   void usersym(EnvT* e);
   void set_shading(EnvT* e);
   PLFLT* get_lightsource();
-  PLFLT* get_shadeLimits();
+  PLINT* get_shadeLimits();
+  PLINT* get_gouraud();
   // other plotting routines
   void erase(EnvT* e);
   void tvlct(EnvT* e);
@@ -232,8 +233,8 @@ namespace lib {
   void SelfConvertToNormXYZ(SizeT n, DDouble *x, bool const xLog, DDouble *y, bool const yLog, DDouble *z, bool const zLog, COORDSYS const code);
   void SelfConvertToNormXY(SizeT n, PLFLT *xt, bool const xLog, PLFLT *yt, bool const yLog, COORDSYS const code);
   void SelfConvertToNormXY(DDoubleGDL* x, bool &xLog, DDoubleGDL* y, bool &yLog, COORDSYS &code);
-  void SelfPDotTTransformXYZ(SizeT n, PLFLT *xt, PLFLT *yt, PLFLT *zt);
-  void SelfPDotTTransformXYZ(SizeT n, PLFLT *xt, PLFLT *yt, PLFLT *zt, PLFLT* T);
+  void SelfPDotTTransformXYZ(const SizeT n, PLFLT *xt, PLFLT *yt, PLFLT *zt);
+  void ApplyT3DtoXYZ(const SizeT n, DDouble *xt, DDouble *yt, DDouble *zt, const DDouble* T);
   void SelfPDotTTransformXYZ(DDoubleGDL *xt, DDoubleGDL *yt, DDoubleGDL *zt);
   void PDotTTransformXYZval(PLFLT x, PLFLT y, PLFLT *xt, PLFLT *yt, PLPointer data);
   DDoubleGDL* gdlDefinePlplotRotationMatrix(DDouble az, DDouble alt, DDouble *scale, bool save);
@@ -456,7 +457,7 @@ namespace lib {
   
   //just test if clip values (!P.CLIP , CLIP=) are OK (accounting for all NOCLIP etc possibilities!)
   bool gdlTestClipValidity(EnvT *e, GDLGStream *actStream, bool invertedClipMeaning=false, bool commandHasCoordSys=true );
-  unsigned char* shadeSurface(PLINT M, PLINT N, PLFLT* x, PLFLT* y, PLFLT* zp, SizeT nx, SizeT ny, PLINT decomposed, DDouble *TransformMatrix, PLINT* shadevals=NULL);
+  void shadeSurface(unsigned char* bitmap, const PLINT M, const PLINT N, const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox);
 } // namespace
 
 #endif

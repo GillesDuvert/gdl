@@ -24,8 +24,9 @@ namespace lib
   using namespace std;
 
 // shared parameter
-  static PLFLT lightSourceUnitVector[3]={0,0,1.0};
-  static PLFLT shadinglimits[2]={0,255.};
+  static PLFLT lightSourceUnitVector[3]={0,0,1.0}; //light direction is in the 3D projected coordiantes, not the unrotated object coordinates.
+  static PLINT shadinglimits[2]={60,255};
+  static PLINT doesGouraud[1]={1};
 
   class shade_surf_call: public plotting_routine_call
   {
@@ -287,7 +288,7 @@ namespace lib
 		actStream->NoSub();
 		//recompute viewport etc now that ratio and offsets will permit to displace the NoSub() plot at the correct position and scale:
 		zValue=gdlSetViewPortAndWorldCoordinates(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue);
-//		gdlMakeSubpageRotationMatrix3d(gdlBox3d, xratio, yratio, zratio,trans);
+		gdlMakeSubpageRotationMatrix3d(gdlBox3d, xratio, yratio, zratio,trans);
 
         GDL_3DTRANSFORMDEVICE T3DForAXes;
         for (int i = 0; i < 16; ++i)T3DForAXes.T[i] =(*gdlBox3d)[i];
@@ -328,7 +329,7 @@ namespace lib
       //WARNING Following sets coordinateSystem=NORM!
       COORDSYS coordinateSystem2 = DATA;
       SelfConvertToNormXY(xVal, xLog, yVal, yLog, coordinateSystem2); //always DATA for PLOT X,Y values
-		ConvertToNormZ(xEl*yEl, (DDouble*) zVal->DataAddr(), zLog, coordinateSystem);
+	  ConvertToNormZ(xEl*yEl, (DDouble*) zVal->DataAddr(), zLog, coordinateSystem);
 // the mapping between data 3-d and world 3-d coordinates is given by:
 //
 //   x = xmin   =>   wx = -0.5*basex
@@ -455,26 +456,32 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           actStream->Free2dGrid(map, xEl, yEl);
         }
         else {
-//          PLFLT* save_region = gdlGetRegion(); //too complicated
-          DLong xPageSize = actStream->xPageSize();
-          DLong yPageSize = actStream->yPageSize();
-          static DDouble xcorner[]={0,1,1,0,0,1,1,0}; 
-          static DDouble ycorner[]={0,0,1,1,0,0,1,1}; 
-          static DDouble zcorner[]={0,0,0,0,1,1,1,1};
-          SelfPDotTTransformXYZ(8, xcorner, ycorner, zcorner); //T3D transform for point
-          DDouble xmin = xcorner[0]; for (auto i=1; i< 8; ++i) xmin=min(xmin,xcorner[i]);//xmin*=xPageSize;
-          DDouble ymin = ycorner[0]; for (auto i=1; i< 8; ++i) ymin=min(ymin,ycorner[i]);//ymin*=yPageSize;
-          DDouble xmax = xcorner[0]; for (auto i=1; i< 8; ++i) xmax=max(xmax,xcorner[i]);//xmax*=xPageSize;
-          DDouble ymax = ycorner[0]; for (auto i=1; i< 8; ++i) ymax=max(ymax,ycorner[i]);//ymax*=yPageSize;
-          std::cerr<<"plots,["<<xmin<<","<<xmax<<"],["<<ymin<<","<<ymax<<"],/dev"<<std::endl;
-          DLong npixx = actStream->xPageSize(); //(DLong)((save_region[2]-save_region[0])*actStream->xPageSize());
-          DLong npixy = actStream->yPageSize(); //(DLong)((save_region[3]-save_region[1])*actStream->yPageSize());
-          DLong pixx0=0; //save_region[0]*actStream->xPageSize();
-          DLong pixy0=0; //save_region[1]*actStream->yPageSize();
-          unsigned char* bitmap = shadeSurface(npixx,npixy, (PLFLT*)xVal->DataAddr(),(PLFLT*)yVal->DataAddr(),
-              (PLFLT*)zVal->DataAddr(), xEl,yEl, !doShade, Current3DMatrix , shadevals);
-          DLong devicebox[4] = {pixx0,npixx,pixy0,npixy};
-          if (!actStream->PaintImage(bitmap,npixx,npixy, devicebox, 0, 0, GDL_OR)) e->Throw("device does not support Paint");
+          PLFLT* save_region = gdlGetRegion(); //too complicated
+          DLong npixx = (DLong)((save_region[2]-save_region[0])*actStream->xPageSize());
+          DLong npixy = (DLong)((save_region[3]-save_region[1])*actStream->yPageSize());
+          DLong pixx0 = save_region[0]*actStream->xPageSize();
+          DLong pixy0 = save_region[1]*actStream->yPageSize();
+          DByteGDL* bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0,pixy0,npixx,npixy));
+          unsigned char* bitmap=static_cast<unsigned char*>(bitmapgdl->DataAddr());
+          DLong devicebox[4] = {npixx+1,0,npixy+1,0}; //needs initializing here
+          shadeSurface(bitmap, npixx,npixy, (PLFLT*)xVal->DataAddr(),(PLFLT*)yVal->DataAddr(),
+              (PLFLT*)zVal->DataAddr(), xEl,yEl, !doShade, Current3DMatrix , shadevals, devicebox);
+          std::cerr<<devicebox[0]<<","<<devicebox[1]<<","<<devicebox[2]<<","<<devicebox[3]<<std::endl;
+          //if devicebox is wrong, just do nothing:
+          if (devicebox[0] >= 0 && devicebox[1] <= npixx && devicebox[2] >= 0 && devicebox[3] <= npixy) { 
+          //pass only devicebox subset to whatever needs it, with correct offsets
+             unsigned char* subset=(unsigned char*)malloc(devicebox[1]*devicebox[3]*3);
+             for (int j=0; j< devicebox[3]; ++j) for (int i=0; i< devicebox[1]; ++i) {
+                int ref = 3 * (npixx * (j+devicebox[2]) + i+devicebox[0]);
+                int dest = 3 * (devicebox[1] * j + i);
+                subset[dest++] = bitmap[ref++];
+                subset[dest++] = bitmap[ref++];
+                subset[dest]   = bitmap[ref];
+             }
+             free(bitmap);
+             if (!actStream->PaintImage(subset,devicebox[1],devicebox[3], devicebox, 1, 0)) e->Throw("device does not support Paint");
+             free(subset);
+          }
         }
         if (decomposed > 0) GraphicsDevice::GetDevice()->Decomposed(true);
       }
@@ -495,8 +502,8 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
     shade_surf.call(e, 1);
   }
   PLFLT* get_lightsource(){return  lightSourceUnitVector;}
-  PLFLT* get_shadeLimits(){return shadinglimits;
-  }
+  PLINT* get_shadeLimits(){return shadinglimits;}
+  PLINT* get_gouraud(){return doesGouraud;}
 
   inline void normalize(EnvT* e, DDouble* dlight){
     // normalize: this is a direction, not a vector
@@ -511,12 +518,8 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
   
  void set_shading(EnvT* e)
  {
-   lightSourceUnitVector[0]=0;
-   lightSourceUnitVector[1]=0;
-   lightSourceUnitVector[2]=1;
-   shadinglimits[0]=0.;
-   shadinglimits[1]=255.;
-    DDoubleGDL *light;
+    DDoubleGDL* light;
+    DLongGDL* values;
     static int lightIx=e->KeywordIx ( "LIGHT" );
     if ( e->GetKW ( lightIx )!=NULL )
     {
@@ -528,9 +531,16 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
     static int valuesIx=e->KeywordIx ( "VALUES" );
     if ( e->GetKW ( valuesIx )!=NULL )
     {
-      light=e->GetKWAs<DDoubleGDL>( valuesIx );
-      if (light->N_Elements()>2) e->Throw("Keyword array parameter VALUES must have from 1 to 2 elements.");
-      for (int i=0; i< light->N_Elements(); ++i) shadinglimits[i]=(*light)[i];
+      values=e->GetKWAs<DLongGDL>( valuesIx );
+      if (values->N_Elements()>2) e->Throw("Keyword array parameter VALUES must have from 1 to 2 elements.");
+      for (int i=0; i< values->N_Elements(); ++i) {
+        shadinglimits[i]=max(0,min(255,(*values)[i]));
+      }
+    }
+    static int gouraudIx=e->KeywordIx ( "GOURAUD" );
+    if ( e->KeywordPresentAndDefined( gouraudIx ) )
+    {
+      doesGouraud[0]=e->KeywordSet(gouraudIx);
     }
  }
 } // namespace

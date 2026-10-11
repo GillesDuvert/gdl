@@ -834,7 +834,7 @@ DDoubleGDL* gdlDoAsScale3(DDouble az, DDouble alt, DDouble *scalex, DDouble *sca
   }
    
   //Implied Useage: x,y,z in NORMAL coordinates
-  void SelfPDotTTransformXYZ(SizeT n, DDouble *x, DDouble *y, DDouble *z){
+  void SelfPDotTTransformXYZ(const SizeT n, DDouble *x, DDouble *y, DDouble *z){
 //  std::cerr<<"SelfPDotTTransformXYZ()"<<std::endl;
     //retrieve !P.T 
     DStructGDL* pStruct = SysVar::P(); //MUST NOT BE STATIC, due to .reset
@@ -852,6 +852,22 @@ DDoubleGDL* gdlDoAsScale3(DDouble az, DDouble alt, DDouble *scalex, DDouble *sca
       z[i] = c / w;
     }
   }
+  // same but with PLFLT and a T3D matrix
+  void ApplyT3DtoXYZ(const SizeT n, DDouble *x, DDouble *y, DDouble *z, const DDouble* T) {
+    for (SizeT i=0; i< n; ++i) {
+    PLFLT xx, yy, zz, ww;
+      xx = x[i] * T[0] + y[i] * T[1] + z[i] * T[2] + T[3];
+      yy = x[i] * T[4] + y[i] * T[5] + z[i] * T[6] + T[7];
+      zz = x[i] * T[8] + y[i] * T[9] + z[i] * T[10] + T[11];
+      ww = x[i] * T[12] + y[i] * T[13] + z[i] * T[14] + T[15];
+      xx /= ww;
+      yy /= ww;
+      zz /= ww;
+      x[i] = xx;
+      y[i] = yy;
+      z[i] = zz;
+    }
+}
   void SelfPDotTTransformXYZ(DDoubleGDL *x, DDoubleGDL *y, DDoubleGDL *z){
 //  std::cerr<<"SelfPDotTTransformXYZ()"<<std::endl;
     assert (x->N_Elements()==y->N_Elements());
@@ -871,7 +887,7 @@ DDoubleGDL* gdlDoAsScale3(DDouble az, DDouble alt, DDouble *scalex, DDouble *sca
       (*y)[i] = b / w; 
       (*z)[i] = c / w;
     }
-  }  
+  }
 
    void PDotTTransformXYZval(DDouble x, DDouble y, DDouble *xt, DDouble *yt, PLPointer data){
 //    std::cerr<<"PDotTTransformXYZval()"<<std::endl;

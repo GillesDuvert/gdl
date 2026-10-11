@@ -1507,7 +1507,7 @@ plGetAngleToLight( PLFLT* x, PLFLT* y, PLFLT* z )
         return 1;
 
 // Now have 3 vectors going through the first point on the given surface
-    cosangle = ( xlight * px + ylight * py + zlight * pz ) / sqrt( mag1 * mag2 ); printf("%",cosangle);
+    cosangle = ( xlight * px + ylight * py + zlight * pz ) / sqrt( mag1 * mag2 );
 
 // In case of numerical rounding
     if ( cosangle > 1 )  cosangle = 1;
