@@ -51,7 +51,10 @@ namespace lib
     DDoubleGDL* gdlBox3d;
     Guard<BaseGDL> g; // to get rid of it when out
 	PLFLT xratio, yratio, zratio, trans[3];
-	PLINT nx, ny;    
+	PLINT nx, ny;
+    // for GDL-ONLY (test) "PATTERN" keyword
+    DByteGDL* pattern=NULL;
+
  private:
     bool handle_args (EnvT* e)
     {
@@ -152,7 +155,7 @@ namespace lib
           if ((yVal->Dim(0) != zVal->Dim(1))&&(yVal->Dim(1) != zVal->Dim(0)))
             e->Throw("X, Y, or Z array dimensions are incompatible.");
         }
-        
+
         //plplot is unable to handle such subtetlies, better to throw?
         
 //        // But if X is 2D and Y is 1D (or reciprocally), we need to promote the 1D to 2D since this is supported by IDL
@@ -171,6 +174,14 @@ namespace lib
 //        }
       }
       
+      //pattern (GDl only, for fun)
+      static int xPatternIx = e->KeywordIx("PATTERN");
+      if (e->KeywordPresent(xPatternIx)) {
+        pattern = e->GetKWAs<DByteGDL>(xPatternIx);
+        if (pattern->EquivalentRank() != 2 && pattern->EquivalentRank() != 3) e->Throw("Pattern dimensions must be 2 or 3");
+        if (pattern->EquivalentRank() == 3 && pattern->Dim(0) != 3) e->Throw("Pattern dimensions must be MxN or 3xMxN.");
+      }
+
       GetMinMaxVal ( xVal, &xStart, &xEnd );
       GetMinMaxVal ( yVal, &yStart, &yEnd );
       //XRANGE and YRANGE overrides all that, but  Start/End should be recomputed accordingly
@@ -387,102 +398,79 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
 
       // PLOT ONLY IF NODATA=0
       if (!nodata) {
-	  static int shadesIx = e->KeywordIx("SHADES");
-      bool doShade=false;
-      DLongGDL* shadevalues=NULL;
-	  PLINT * shadevals=NULL;
-		if (e->GetKW(shadesIx) != NULL) {
-		  shadevalues = e->GetKWAs<DLongGDL>(shadesIx);
-		  if (shadevalues->N_Elements() < xEl * yEl) e->Throw("Shade array too short.");
-		shadevals=static_cast<PLINT*>(shadevalues->DataAddr());
-        doShade=true;
-		}
-	  // doShade will work correctly only if decomposed=0 --- same as IDL.
-      // Get decomposed value for shades
+        static int shadesIx = e->KeywordIx("SHADES");
+        bool doShade = false;
+        DLongGDL* shadevalues = NULL;
+        PLINT * shadevals = NULL;
+        if (e->GetKW(shadesIx) != NULL) {
+          shadevalues = e->GetKWAs<DLongGDL>(shadesIx);
+          if (shadevalues->N_Elements() < xEl * yEl) e->Throw("Shade array too short.");
+          shadevals = static_cast<PLINT*> (shadevalues->DataAddr());
+          doShade = true;
+        }
+        // doShade will work correctly only if decomposed=0 --- same as IDL.
+        // Get decomposed value for shades
         DLong decomposed; // = GraphicsDevice::GetDevice()->GetDecomposed();
 
-		if (doShade) decomposed=actStream->ForceColorMap1Ramp(0.0); else decomposed=actStream->ForceColorMap1Ramp(0.33);
+        if (doShade) decomposed = actStream->ForceColorMap1Ramp(0.0);
+        else decomposed = actStream->ForceColorMap1Ramp(0.33);
         //position of light Source. Plplot does not use only the direction of the beam but the position of the illuminating
         //source. And its illumination looks strange. We try to make the ill. source a bit far in the good direction.
         PLFLT sun[3];
-        sun[0]=lightSourceUnitVector[0];
-        sun[1]=lightSourceUnitVector[1];
-        sun[2]=lightSourceUnitVector[2];
-        //if (below) sun[2]*=-1;
-        static unsigned nameTag = SysVar::D()->Desc()->TagIndex("NAME");
-        // 
-        actStream->lightsource(sun[0],sun[1],sun[2]);
+        sun[0] = lightSourceUnitVector[0];
+        sun[1] = lightSourceUnitVector[1];
+        sun[2] = lightSourceUnitVector[2];
+        if (below) sun[2] *= -1;
+        actStream->lightsource(sun[0], sun[1], sun[2]);
         actStream->shadinglimits(shadinglimits[0], shadinglimits[1]);
 
-        // when !d.name == Z  we provide the driver transform, since the z-buffering is performed at the driver level
-        DString name = (*static_cast<DStringGDL*> (SysVar::D()->GetTag(nameTag, 0)))[0];
-        bool isZ=(name=="Z");
-        if (isZ) {
-          //use of intermediate map for correct handling of blanking values and nans.
-          PLFLT ** map;
-          actStream->Alloc2dGrid( &map, xEl, yEl);
-          for ( SizeT i=0, k=0; i<xEl; i++ )
-          {
-            for ( SizeT j=0; j<yEl; j++)
-            { //plplot does not like NaNs and any other terribly large gradient!
-              PLFLT v=(*zVal)[k++];
-                if ( !isfinite(v) ) v=minVal;
-                if ( hasMinVal && v < minVal) v=minVal;
-                if ( hasMaxVal && v > maxVal) v=maxVal;
-              map[i][j] = (below)?1-v:v;
-            }
-          }
-          // 1 types of grid only: 1D X and Y.
-          PLcGrid cgrid1; // X and Y independent deformation
-          PLFLT* xg1;
-          PLFLT* yg1;
-          xg1 = new PLFLT[xEl];
-          yg1 = new PLFLT[yEl];
-          cgrid1.xg = xg1;
-          cgrid1.yg = yg1;
-          cgrid1.nx = xEl;
-          cgrid1.ny = yEl;
-          for ( SizeT i=0; i<xEl; i++ ) cgrid1.xg[i] = (*xVal)[i];
-          for ( SizeT i=0; i<yEl; i++ ) cgrid1.yg[i] = (*yVal)[i];
-          //mesh option
-          PLINT meshOpt = 0;
-          meshOpt = (doShade) ? MAG_COLOR : 0;
-          gdlStartT3DMatrixDriverTransform(actStream, zValue);
-          actStream->surf3d(xg1,yg1,map,cgrid1.nx,cgrid1.ny,meshOpt,NULL,0,shadevals);
-          gdlStop3DDriverTransform(actStream);
-          //Clean allocated data struct
-          delete[] xg1;
-          delete[] yg1;
-          actStream->Free2dGrid(map, xEl, yEl);
+        //use of intermediate map for correct handling of blanking values and nans.
+        PLFLT* map = (PLFLT*) malloc(xEl * yEl * sizeof(PLFLT));
+        for (SizeT k = 0; k < xEl * yEl; ++k) { //plplot does not like NaNs and any other terribly large gradient!
+          PLFLT v = (*zVal)[k];
+          if (!isfinite(v)) v = minVal;
+          if (hasMinVal && v < minVal) v = minVal;
+          if (hasMaxVal && v > maxVal) v = maxVal;
+          map[k] = (below) ? 1 - v : v;
         }
-        else {
-          PLFLT* save_region = gdlGetRegion(); //too complicated
-          DLong npixx = (DLong)((save_region[2]-save_region[0])*actStream->xPageSize());
-          DLong npixy = (DLong)((save_region[3]-save_region[1])*actStream->yPageSize());
-          DLong pixx0 = save_region[0]*actStream->xPageSize();
-          DLong pixy0 = save_region[1]*actStream->yPageSize();
-          DByteGDL* bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0,pixy0,npixx,npixy));
-          unsigned char* bitmap=static_cast<unsigned char*>(bitmapgdl->DataAddr());
-          DLong devicebox[4] = {npixx+1,0,npixy+1,0}; //needs initializing here
-          shadeSurface(bitmap, npixx,npixy, (PLFLT*)xVal->DataAddr(),(PLFLT*)yVal->DataAddr(),
-              (PLFLT*)zVal->DataAddr(), xEl,yEl, !doShade, Current3DMatrix , shadevals, devicebox);
-          std::cerr<<devicebox[0]<<","<<devicebox[1]<<","<<devicebox[2]<<","<<devicebox[3]<<std::endl;
-          //if devicebox is wrong, just do nothing:
-          if (devicebox[0] >= 0 && devicebox[1] <= npixx && devicebox[2] >= 0 && devicebox[3] <= npixy) { 
+
+        PLFLT* save_region = gdlGetRegion(); 
+        DLong npixx = (DLong) ((save_region[2] - save_region[0]) * actStream->xPageSize());
+        DLong npixy = (DLong) ((save_region[3] - save_region[1]) * actStream->yPageSize());
+        DLong pixx0 = save_region[0] * actStream->xPageSize();
+        DLong pixy0 = save_region[1] * actStream->yPageSize();
+        DByteGDL* bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0, pixy0, npixx, npixy));
+        unsigned char* bitmap = static_cast<unsigned char*> (bitmapgdl->DataAddr());
+        DInt* zbuff = actStream->GetZbuffer(pixx0, pixy0, npixx, npixy);
+        DLong devicebox[4] = {npixx + 1, 0, npixy + 1, 0}; //needs initializing here
+        SizeT npx, npy, pattrue=false;
+        unsigned char* pat=NULL;
+        if (pattern) {
+          pattrue=(pattern->EquivalentRank()==3); //permit to have 2d-subsets [0,*,*] of 3D arrays (jpeg images etc)
+          bool rankok=(pattern->EquivalentRank() == pattern->Rank());
+          npx=(pattrue)?pattern->Dim(1):pattern->Dim(0);
+          npy=(pattrue)?pattern->Dim(2):pattern->Dim(1);
+          pat=(unsigned char*)pattern->DataAddr();
+          if (!rankok) pattrue=false;
+        }
+        shadeSurface(bitmap, zbuff, pat, npx, npy, pattrue, npixx, npixy, (PLFLT*) xVal->DataAddr(), (PLFLT*) yVal->DataAddr(),
+            map, xEl, yEl, !doShade, Current3DMatrix, shadevals, devicebox);
+        //if devicebox is wrong, just do nothing:
+        if (devicebox[0] >= 0 && devicebox[1] <= npixx && devicebox[2] >= 0 && devicebox[3] <= npixy) {
           //pass only devicebox subset to whatever needs it, with correct offsets
-             unsigned char* subset=(unsigned char*)malloc(devicebox[1]*devicebox[3]*3);
-             for (int j=0; j< devicebox[3]; ++j) for (int i=0; i< devicebox[1]; ++i) {
-                int ref = 3 * (npixx * (j+devicebox[2]) + i+devicebox[0]);
-                int dest = 3 * (devicebox[1] * j + i);
-                subset[dest++] = bitmap[ref++];
-                subset[dest++] = bitmap[ref++];
-                subset[dest]   = bitmap[ref];
-             }
-             free(bitmap);
-             if (!actStream->PaintImage(subset,devicebox[1],devicebox[3], devicebox, 1, 0)) e->Throw("device does not support Paint");
-             free(subset);
+          unsigned char* subset = (unsigned char*) malloc(devicebox[1] * devicebox[3]*3);
+          for (int j = 0; j < devicebox[3]; ++j) for (int i = 0; i < devicebox[1]; ++i) {
+              int ref = 3 * (npixx * (j + devicebox[2]) + i + devicebox[0]);
+              int dest = 3 * (devicebox[1] * j + i);
+              subset[dest++] = bitmap[ref++];
+              subset[dest++] = bitmap[ref++];
+              subset[dest] = bitmap[ref];
           }
+          if (!actStream->PaintImage(subset, devicebox[1], devicebox[3], devicebox, 1, 0)) e->Throw("device does not support Paint");
+          free(subset);
         }
+        free(bitmap);
+        free(map);
         if (decomposed > 0) GraphicsDevice::GetDevice()->Decomposed(true);
       }
     } 

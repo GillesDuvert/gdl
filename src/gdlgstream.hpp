@@ -270,8 +270,8 @@ public:
   virtual void UnMapWindowAndSetPixmapProperty() {usedAsPixmap=true;} 
   bool IsPixmapWindow() {return usedAsPixmap;}
   virtual bool IsPlot() {return true;} //except some wxWidgets
-  virtual BaseGDL* GetBitmapData(int xoff, int yoff, int nx, int ny){return NULL;
-	}
+  virtual BaseGDL* GetBitmapData(int xoff, int yoff, int nx, int ny){return NULL;}
+  virtual DInt* GetZbuffer(int xoff, int yoff, int nx, int ny){return NULL;}
 
 	void SetCurrentFont(int n) {
 		this->settt(n);

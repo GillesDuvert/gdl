@@ -4288,83 +4288,102 @@ NoTitlesAccepted:
     return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
   }
 
-  void shade_triangle(unsigned char* mem, DInt* zbuff, const SizeT M, const SizeT N, const plVertex A, const plVertex B, const plVertex C, const bool falseColor, PLINT* devicebox){
+  void shade_triangle(unsigned char* mem, DInt* zbuff, const unsigned char* pattern, const SizeT patx, const SizeT paty, const bool pattrue, const SizeT M, const SizeT N, const plVertex A, const plVertex B, const plVertex C, const bool falseColor, PLINT* devicebox) {
     float area = edge_function(A, B, C);
     if (area == 0.0f) return; // Degenerate triangle
 
     // 1. Compute projected bounding box
-	float fxamin = fmax(0, fmin(A.x, fmin(B.x, C.x)));
+    float fxamin = fmax(0, fmin(A.x, fmin(B.x, C.x)));
     float fxamax = fmin(1, fmax(A.x, fmax(B.x, C.x)));
     float fyamin = fmax(0, fmin(A.y, fmin(B.y, C.y)));
     float fyamax = fmin(1, fmax(A.y, fmax(B.y, C.y)));
-	int xamin=fxamin*M;
-	int xamax=fxamax*M;
-	int yamin=fyamin*N;
-	int yamax=fyamax*N;
-	PLINT n = yamax - yamin + 1;
-	PLINT m = xamax - xamin + 1;
-	if (n <= 1 || m <= 1) {
+    int xamin = fxamin*M;
+    int xamax = fxamax*M;
+    int yamin = fyamin*N;
+    int yamax = fyamax*N;
+    PLINT n = yamax - yamin + 1;
+    PLINT m = xamax - xamin + 1;
+    if (n <= 1 || m <= 1) {
       return; // ignore also
     }
     // change devicebox only if OK
-    devicebox[0]=MIN(devicebox[0],xamin);
-    devicebox[1]=MAX(devicebox[1],xamax);
-    devicebox[2]=MIN(devicebox[2],yamin);
-    devicebox[3]=MAX(devicebox[3],yamax);
+    devicebox[0] = MIN(devicebox[0], xamin);
+    devicebox[1] = MAX(devicebox[1], xamax);
+    devicebox[2] = MIN(devicebox[2], yamin);
+    devicebox[3] = MAX(devicebox[3], yamax);
 
 
     // 2. Loop over bounding box pixels
     for (int iy = yamin; iy <= yamax; iy++) {
-	    for (int ix = xamin; ix <= xamax; ix++) {
-			float currx=(float)(ix)/M;
-			float curry=(float)(iy)/N;
-            plVertex p = {currx, curry, 1, 0};
-            
-            // Calculate barycentric coordinates
-            float w1 = edge_function(A, B, p);
-            float w2 = edge_function(B, C, p);
-            float w3 = edge_function(C, A, p);
-			w1 /= area;
-			w2 /= area;
-			w3 /= area; //barycentric
-            // Check if pixel is inside the triangle
-            if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
-                // Interpolate Z depth
-					float fact=w1+w2+w3;
-					fact = 1./fact;
-					w1*=fact;w2*=fact;w3*=fact;
-					float z = w1 * C.z + w2 * A.z + w3 * B.z; 
+      for (int ix = xamin; ix <= xamax; ix++) {
+        float currx = (float) (ix) / M;
+        float curry = (float) (iy) / N;
+        plVertex p = {currx, curry, 1, 0};
 
-                // Z-buffer test
-                if (z*32768 > zbuff[ iy*M + ix ]) {
-                    zbuff[ iy*M + ix ] = z*32768;
-					float r,g,b;
+        // Calculate barycentric coordinates
+        float w1 = edge_function(A, B, p);
+        float w2 = edge_function(B, C, p);
+        float w3 = edge_function(C, A, p);
+        w1 /= area;
+        w2 /= area;
+        w3 /= area; //barycentric
+        // Check if pixel is inside the triangle
+        if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+          // Interpolate Z depth
+          float fact = w1 + w2 + w3;
+          fact = 1. / fact;
+          w1 *= fact;
+          w2 *= fact;
+          w3 *= fact;
+          float z = w1 * C.z + w2 * A.z + w3 * B.z;
 
-					float newcol = w1 * C.col + w2 * A.col + w3 * B.col;
-					newcol = fmin(1.0f, fmax(0.0f, newcol));
+          // Z-buffer test
+          if (z * 32768 > zbuff[ iy * M + ix ]) {
+            zbuff[ iy * M + ix ] = z * 32768;
+            float r, g, b;
 
-					if (falseColor) { //this is an index in the plcol1 map
-						plcol1(newcol);
-						r = plsc->curcolor.r;
-						g = plsc->curcolor.g;
-						b = plsc->curcolor.b;
-						
-					} else {
-                    // Gouraud shading:
-						r = newcol*255;
-						g = newcol*255;
-						b = newcol*255;
+            float newcol = w1 * C.col + w2 * A.col + w3 * B.col;
+            newcol = fmin(1.0f, fmax(0.0f, newcol));
+            if (falseColor) { //this is an index in the plcol1 map
+              plcol1(newcol);
+              r = plsc->curcolor.r;
+              g = plsc->curcolor.g;
+              b = plsc->curcolor.b;
+
+            } else if (pattern) {
+              float newx = w1 * C.i + w2 * A.i + w3 * B.i;
+              float newy = w1 * C.j + w2 * A.j + w3 * B.j;
+              SizeT inew = newx;
+              inew %= patx;
+              SizeT jnew = newy;
+              jnew %= paty;
+              if (pattrue) {
+                SizeT ref = 3 * (jnew * patx + inew);
+                r = pattern[ref + 0];
+                g = pattern[ref + 1];
+                b = pattern[ref + 2];
+              } else {
+                 SizeT ref = jnew * patx + inew;
+                r = pattern[ref];
+                g = r;
+                b = r;
+             }
+            } else {
+              // Gouraud shading:
+              r = newcol * 255;
+              g = newcol * 255;
+              b = newcol * 255;
             }
             int ref = 3 * M * iy;
             int ref2 = ref + 3 * ix;
             mem[ref2++] = r;
             mem[ref2++] = g;
             mem[ref2 ] = b;
-				}
-            }
+          }
         }
+      }
     }
-}
+  }
   inline PLFLT length( const PLFLT *x) {
     return sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
   }
@@ -4438,17 +4457,6 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
     normal[2]   /= mag;
 }
 
-  inline PLFLT BlinnPhong(const PLFLT* lamppos, const PLFLT* normal) {
-    PLFLT view[3]={0,0,1};
-    PLFLT half_direction[3];
-    for (int ii = 0; ii < 3; ++ii) {
-      half_direction[ii] = lamppos[ii] + view[ii] ; // projected 
-    }
-    normalize(half_direction);
-    PLFLT specular=dot(half_direction, normal);
-    return specular;
-  }
-
   void add_vector( PLFLT* mean, PLFLT* vec) {
     for (int i=0; i<3; ++i) {
       mean[i]+=vec[i];
@@ -4514,8 +4522,8 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
     }
    
   }
-
-  void shadeSurface(unsigned char* bitmap, const PLINT M, const PLINT N, const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox) {
+// shade a 2 function z=f(x,y) using a zbuffer (provided or not), a simple gouraud-blinn-phong shading, colors or passed pattern (image)
+  void shadeSurface(unsigned char* bitmap, DInt* zbuffer, const unsigned char* pattern, const SizeT npatx, const SizeT npaty, const bool pattrue, const PLINT M, const PLINT N, const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox) {
     static PLFLT* lightsource = get_lightsource();
     static PLINT* shadinglimits = get_shadeLimits();
     static PLINT* doesGouraud = get_gouraud();
@@ -4523,12 +4531,12 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
     PLFLT shadeBase = shadinglimits[0];
     assert(M>0);
     assert(N>0);
-    bool hasGouraud = (decomposed && doesGouraud[0]==1);
+    bool usesGouraudMethod = (decomposed && doesGouraud[0]==1);
     // to enable gouraud shading
     PLFLT* gouraud;
     PLINT* gc;
     bool falsecolor = (decomposed == 0);
-    if (hasGouraud) {
+    if (usesGouraudMethod) {
       gouraud = (PLFLT*) malloc(nx * ny * 3 * sizeof (PLFLT));
       memset(gouraud, 0, nx * ny * 3 * sizeof (PLFLT));
       gc = (PLINT*) malloc(nx * ny * sizeof (PLINT));
@@ -4540,13 +4548,24 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
       }
       free(gc);
     }
-    
- // create all triangles and pass them to shade_triangle. If not falsecolor, bother to create a map of average surface normal for each vertex points
+    bool eraseZbuf = false;
+    if (zbuffer == NULL) {
+      eraseZbuf = true;
+      zbuffer = (short*) malloc(M * N * sizeof (short));
+      for (SizeT i = 0; i < M * N; ++i) zbuffer[i] = -32765;
+    }
+// create all triangles and pass them to shade_triangle. If not falsecolor, bother to create a map of average surface normal for each vertex points
 //   A-->B       A-->B 
 //   | / | then  | \ |  i.e; ABD BCD, ACD ABC  makes each pixel i,i get 4 symmetrical values for "normals" than can be averaged.
 //   D<--C       D<--C 
-    short* zbuffer = (short*) malloc(M * N * sizeof (short));
-    for (SizeT i = 0; i < M * N; ++i) zbuffer[i] = -32765;
+
+    //used in Blinn-Phong "sort of" shading
+    PLFLT view[3]={0,0,1};
+    PLFLT half_direction[3];
+    for (int ii = 0; ii < 3; ++ii) {
+      half_direction[ii] = lightsource[ii] + view[ii] ; // projected 
+    }
+    normalize(half_direction);
 
     plVertex A,B,C,D;
     PLFLT normal[3];
@@ -4558,18 +4577,26 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
                 iA = j*nx+i;
                 A.x = x[i];
                 A.y = y[j];
+                A.i = i;
+                A.j = j;
                 A.z = zp[iA];
                 iC = j1*nx+ i1;
                 C.x = x[i1];
                 C.y = y[j1];
+                C.i = i1;
+                C.j = j1;
                 C.z = zp[iC];
                 iD = j1*nx+ i;
                 D.x = x[i];
                 D.y = y[j1];
+                D.i = i;
+                D.j = j1;
                 D.z = zp[iD];
                 iB = j*nx+ i1;
                 B.x = x[i1];
                 B.y = y[j];
+                B.i = i1;
+                B.j = j;
                 B.z = zp[iB];
 
                 T3DTransformCoordinates(A, T);
@@ -4590,39 +4617,37 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
                     C.col = 0.5;
                     D.col = 0.5;
                   }
-                   shade_triangle(bitmap, zbuffer, M, N, A, B, D, falsecolor, devicebox);
-                   shade_triangle(bitmap, zbuffer, M, N, B, C, D, falsecolor, devicebox);
+                   shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
+                   shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
                 } else {
                   PLFLT g;
-                  if (hasGouraud) {
-                    A.col = BlinnPhong(lightsource, &gouraud[3*iA]);  
-                    B.col = BlinnPhong(lightsource, &gouraud[3*iB]);  
-                    C.col = BlinnPhong(lightsource, &gouraud[3*iC]);  
-                    D.col = BlinnPhong(lightsource, &gouraud[3*iD]);  
-                    shade_triangle(bitmap, zbuffer, M, N, A, B, D, falsecolor, devicebox);
-                    shade_triangle(bitmap, zbuffer, M, N, B, C, D, falsecolor, devicebox);
+                  if (usesGouraudMethod) {
+                    A.col = dot(half_direction, &gouraud[3*iA]);  
+                    B.col = dot(half_direction, &gouraud[3*iB]);  
+                    C.col = dot(half_direction, &gouraud[3*iC]);  
+                    D.col = dot(half_direction, &gouraud[3*iD]);  
+                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
+                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
                 } else {
                     getVectorNormalToTriangle(A, B, D, normal);
-                    g = BlinnPhong(lightsource, normal);
+                    g = dot(half_direction, normal);
                     A.col = g * 0.5 + 0.5;
                     B.col = g * 0.5 + 0.5;
                     D.col = g * 0.5 + 0.5;
-                    shade_triangle(bitmap, zbuffer, M, N, A, B, D, falsecolor, devicebox);
+                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
                     getVectorNormalToTriangle(B, C, D, normal);
-                    g = BlinnPhong(lightsource, normal);
+                    g = dot(half_direction, normal);
                     B.col = g * 0.5 + 0.5;
                     D.col = g * 0.5 + 0.5;
                     C.col = g * 0.5 + 0.5;
-                    shade_triangle(bitmap, zbuffer, M, N, B, C, D, falsecolor, devicebox);
+                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
                   }
                 }
 			      }
 		        }
 
-		if (hasGouraud) {
-			free(gouraud);
-		}
-        free(zbuffer);
+		if (usesGouraudMethod) free(gouraud);
+        if (eraseZbuf) free(zbuffer);
   }
 
 } // namespace

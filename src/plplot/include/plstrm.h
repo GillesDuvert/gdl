@@ -53,6 +53,7 @@ typedef struct
 // Structure for a 3D Vector / Vertex
 typedef struct {
     PLFLT x, y, z;      // Screen/View coordinates
+	PLINT i,j;
 	PLFLT col;
 } plVertex;
 

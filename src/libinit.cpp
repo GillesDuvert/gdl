@@ -867,13 +867,9 @@ void LibInit()
       "ZTICK_GET", "YTICK_GET", "XTICK_GET",
       "ZTITLE", "YTITLE", "XTITLE",
       //3D KW
-      "ZVALUE","T3D", "SAVE", "SKIRT", "ZAXIS", "CHANNEL",  "SHADES", KLISTEND
+      "ZVALUE","T3D", "SAVE", "SKIRT", "ZAXIS", "CHANNEL",  "SHADES", "IMAGE", "PIXELS", "PATTERN", KLISTEND
     };
-  const string shade_surfWarnKey[]=
-  {
-      "IMAGE", "PIXELS", KLISTEND 
-  };
-  new DLibPro(lib::shade_surf,string("SHADE_SURF"),3,shade_surfKey, shade_surfWarnKey);
+  new DLibPro(lib::shade_surf,string("SHADE_SURF"),3,shade_surfKey);
 
   const string surfaceKey[]=
     {
