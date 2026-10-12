@@ -33,6 +33,7 @@ public:
 //cairo is nice but buffering prevents TV to work...
 //    GDLGStream( nx, ny, checkPlplotDriver("svgcairo") ? "svgcairo" : "svg")
   {
+		scalable = true;
 //    plsetopt( "debug", "1");
   }
 

@@ -4288,7 +4288,9 @@ NoTitlesAccepted:
     return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
   }
 
-  void shade_triangle(unsigned char* mem, DInt* zbuff, const unsigned char* pattern, const SizeT patx, const SizeT paty, const bool pattrue, const SizeT M, const SizeT N, const plVertex A, const plVertex B, const plVertex C, const bool falseColor, PLINT* devicebox) {
+  void shade_triangle(unsigned char* mem, DInt* zbuff, const unsigned char* pattern, const SizeT patx, 
+      const SizeT paty, const bool pattrue, const SizeT M, const SizeT N, 
+      const plVertex A, const plVertex B, const plVertex C, const bool falseColor, PLINT* devicebox) {
     float area = edge_function(A, B, C);
     if (area == 0.0f) return; // Degenerate triangle
 

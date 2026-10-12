@@ -37,7 +37,6 @@ namespace lib
     DDouble minVal,maxVal;
     bool hasMinVal, hasMaxVal;
     bool doT3d;
-    bool nodata;
     bool setZrange;
     bool xLog;
     bool yLog;
@@ -394,7 +393,18 @@ namespace lib
 void applyGraphics(EnvT* e, GDLGStream * actStream) {
       //NODATA
       static int nodataIx = e->KeywordIx("NODATA");
-      nodata = e->KeywordSet(nodataIx);
+      bool nodata = e->KeywordSet(nodataIx);
+      static int imageIx = e->KeywordIx("IMAGE");
+      bool doImage = e->KeywordSet(imageIx);
+
+      bool scalable=false;
+      bool donewsize=false;
+      static int pixelsIx = e->KeywordIx("PIXELS");
+      
+      if (actStream->HasScalablePixels()){
+        scalable=true;
+        donewsize = e->KeywordSet(pixelsIx);
+      }
 
       // PLOT ONLY IF NODATA=0
       if (!nodata) {
@@ -439,8 +449,18 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         DLong npixy = (DLong) ((save_region[3] - save_region[1]) * actStream->yPageSize());
         DLong pixx0 = save_region[0] * actStream->xPageSize();
         DLong pixy0 = save_region[1] * actStream->yPageSize();
-        DByteGDL* bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0, pixy0, npixx, npixy));
-        unsigned char* bitmap = static_cast<unsigned char*> (bitmapgdl->DataAddr());
+        unsigned char* bitmap;
+        if (scalable) {
+          DLong referenceSize = 256;
+          float aspect=(float)npixy/(float)npixx;
+          if (donewsize) e->AssureLongScalarKW(pixelsIx, referenceSize);
+          npixx=referenceSize;
+          npixy=referenceSize*aspect;
+          bitmap = (unsigned char*) malloc(npixx * npixy * 3);
+        } else {
+          DByteGDL* bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0, pixy0, npixx, npixy));
+          bitmap = static_cast<unsigned char*> (bitmapgdl->DataAddr());
+        }
         DInt* zbuff = actStream->GetZbuffer(pixx0, pixy0, npixx, npixy);
         DLong devicebox[4] = {npixx + 1, 0, npixy + 1, 0}; //needs initializing here
         SizeT npx, npy, pattrue=false;

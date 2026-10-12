@@ -176,11 +176,11 @@ protected:
   PLFLT theCurrentSymSize;
   PLFLT theLineSpacing_in_mm;
   bool usedAsPixmap; //for WINDOW,/PIXMAP retains the fact that this is a pixmap (invisible) window.
-//  int activeFontCodeNum; //simplex Roman by default.
+  bool scalable; //true for scalable pixels (PS, SVG)
 public:
 
    GDLGStream( int nx, int ny, const char *driver, const char *file=NULL)
-    : plstream( nx, ny, driver, file), valid( true), thickFactor(1.0), usedAsPixmap(false)//, activeFontCodeNum(3)
+    : plstream( nx, ny, driver, file), valid( true), thickFactor(1.0), usedAsPixmap(false), scalable(false)
   {
     if (!checkPlplotDriver(driver))
       ThrowGDLException(std::string("PLplot installation lacks the requested driver: ") + driver);
@@ -212,6 +212,7 @@ public:
 //      
   }
 
+  bool HasScalablePixels(){return scalable;}
   static bool checkPlplotDriver(const char *driver) {
   int numdevs = 128;
   const char **devlongnames = (const char**) malloc(numdevs * sizeof (char*));

@@ -38,6 +38,7 @@ public:
     portrait = orient_portrait;
     bitsPerPix=bpp;
     firstTime=true;
+	scalable=true;
   }
 
   ~GDLPSStream(){}
