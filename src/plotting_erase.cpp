@@ -74,8 +74,7 @@ namespace lib {
       } else {
         e->AssureLongScalarPar(0, bColor);
       }
-      if (bColor > MaxColorIdx) bColor = MaxColorIdx;
-      if (bColor < 0) bColor = 0;
+      if (MaxColorIdx==256) bColor &= 0xFF; else bColor &= 0xFFFFFF;
       DLong decomposed = GraphicsDevice::GetDevice()->GetDecomposed();
       actStream->Background(bColor, decomposed);
       if (chan > 0) actStream->Clear(chan - 1);
