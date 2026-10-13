@@ -225,6 +225,19 @@ namespace MyPaths {
 }
 }
 
+int tests_run_within_valgrind (void) //see https://stackoverflow.com/questions/365458/how-can-i-detect-if-a-program-is-running-from-within-valgrind
+{
+#ifdef __linux__
+  char *p = getenv ("LD_PRELOAD");
+  if (p == NULL)
+    return 0;
+  return (strstr (p, "/valgrind/") != NULL ||
+          strstr (p, "/vgpreload") != NULL);
+#else
+  return 0;
+#endif
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -275,6 +288,7 @@ int main(int argc, char *argv[])
   useDSFMTAcceleration = true;
   iAmANotebook=false; //option --notebook
   iAmMaster=true; //special option --subprocess
+  bool atexitRequested=false;
  #ifdef HAVE_LIBWXWIDGETS 
 
     #if defined (__WXMAC__) 
@@ -316,6 +330,7 @@ int main(int argc, char *argv[])
       cerr << "  --no-smart-tpool   switch to a mode where the number of threads is NOT adaptive." <<endl;
       cerr << "  --silent           Supresses some messages (mainly \"Compiled Module XXX\" ." <<endl;
       cerr << "  --warn-loop        GDL will emit a warning if a loop variable is modified inside the loop. (affects perfomance)" <<endl;
+      cerr << "  --clean-at-exit    call a special funtion at exit of program to dealloc some internal buffers (debug command)" <<endl;
 #ifdef _WIN32
       cerr << "  --posix (Windows only): paths will be posix paths (experimental)." << endl;
 #endif
@@ -465,7 +480,7 @@ int main(int argc, char *argv[])
           }
         pretendRelease = string(argv[++a]);
 	} else if (string(argv[a]) == "--clean-at-exit") {
-	  if (atexit(AtExit) != 0) cerr << "atexit registration failed. option \"--clean-at-exit\" unefficient." << endl;
+      atexitRequested=true;
 	} else if (*argv[a] == '-') {
       if (string(argv[a],5)=="-IDL_" || string(argv[a],5)=="-GDL_") { //an IDL/GDL preference ? do it.
       char* what=argv[a];
@@ -484,7 +499,11 @@ int main(int argc, char *argv[])
         batch_files.push_back(argv[a]);
       }
     }
-
+  if (atexitRequested) {
+    if (atexit(AtExit) != 0) cerr << "atexit registration failed. option \"--clean-at-exit\" unefficient." << endl;
+  } else if (tests_run_within_valgrind()) {
+    atexit(AtExit);
+  }
   if (0&&statement.length() > 0 && batch_files.size() > 0) 
   {
     cerr << argv[0] << ": " << "-e option cannot be specified with batch files" << endl;
