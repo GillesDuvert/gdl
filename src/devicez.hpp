@@ -20,7 +20,6 @@
 
 static const PLFLT Z_DPI = 96 ; //in dpi;
 
-//#include "dstructgdl.hpp"
 #include "gdlzstream.hpp"
 
 class DeviceZ: public GraphicsDevice
@@ -46,7 +45,7 @@ class DeviceZ: public GraphicsDevice
     //       free this buffer, but plplot does it itself.
     //       even worse: it does it with 'free'
     delete actStream; actStream = NULL;
-    // delete[] memBuffer; memBuffer =  NULL;
+    if (memBuffer) delete[] memBuffer; memBuffer =  NULL;
     memBuffer =  NULL;
   }
 
