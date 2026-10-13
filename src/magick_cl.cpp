@@ -139,10 +139,10 @@ namespace lib {
 
       WordExp(filename);
       
-      Image *a = new Image;
+      Image a;
       try {
-        a->ping(filename);
-        //a->read(filename);
+        a.ping(filename);
+        //a.read(filename);
       } catch (WarningCoder &warning_) {
         cerr << warning_.what() << endl;
       }
@@ -150,70 +150,70 @@ namespace lib {
       if (nParam == 2) {
         DString magick;
         e->AssureScalarPar<DStringGDL>(1, magick);
-        if (a->magick() != magick) return new DLongGDL(0);
+        if (a.magick() != magick) return new DLongGDL(0);
       }
 
       int debug = 0;
       if (debug == 1) {
-        cout << "a->type()      :" << a->type() << endl;
-        cout << "a->classType() :" << a->classType() << endl;
-        cout << "a->matte()     :" << a->matte() << endl;
-        // no useful info here:cout << "a->colorSpace()     :" << a->colorSpace() << endl;
-        // Always 8:cout << "a->depth()     :" << a->depth() << endl;
-        // Always 1: cout << "a->colorSpace() :" << a->colorSpace() << endl;
+        cout << "a.type()      :" << a.type() << endl;
+        cout << "a.classType() :" << a.classType() << endl;
+        cout << "a.matte()     :" << a.matte() << endl;
+        // no useful info here:cout << "a.colorSpace()     :" << a.colorSpace() << endl;
+        // Always 8:cout << "a.depth()     :" << a.depth() << endl;
+        // Always 1: cout << "a.colorSpace() :" << a.colorSpace() << endl;
       }
 
       // AC 2012-May-10
       // http://www.graphicsmagick.org/Magick++/Image.html#type
       // relevant information that, in some cases, is provided after pinging:
-      // a->matte(), a->classType() [and a->type() for Palette info only]
+      // a.matte(), a.classType() [and a.type() for Palette info only]
       DLong channels = 0;
-      if (a->classType() == 1) channels = 3; // DirectColor
-      if (a->classType() == 2) channels = 1; // PseudoColor
+      if (a.classType() == 1) channels = 3; // DirectColor
+      if (a.classType() == 2) channels = 1; // PseudoColor
       if (channels == 0) cout << "no ClassType found for current Image" << endl;
 
-      // AC 2012-May-10 this is NOT working with only a a->ping()
-      // a->type() is FULLY reliable if and only if a->read() was done before !!! 
+      // AC 2012-May-10 this is NOT working with only a a.ping()
+      // a.type() is FULLY reliable if and only if a.read() was done before !!! 
       //http://www.graphicsmagick.org/Magick++/Image.html#type
-      // (should be OK with a a->read())
+      // (should be OK with a a.read())
       /*
-      channels = a->classType() == PseudoClass 
+      channels = a.classType() == PseudoClass 
         ? 1      // color palette
-        : a->type() == GrayscaleType 
+        : a.type() == GrayscaleType 
           ? 1    // greyscale
-          : a->type() == ColorSeparationType 
+          : a.type() == ColorSeparationType 
             ? 4  // CMYK
             : 3; // RGB
        */
 
       // AC 2012-May-10 this is OK (reliable), see example "589 Lavandula mono"
-      if (a->matte()) channels += 1;
+      if (a.matte()) channels += 1;
 
       // TODO! multiple images (using the Magick++ STL interface)
       DLong image_index, num_images;
       image_index = 0;
-      num_images = 1; //a->scene()+1;
+      num_images = 1; //a.scene()+1;
 
       DInt pixel_type;
-      pixel_type = a->depth() == 16 ? 2 : 1;
+      pixel_type = a.depth() == 16 ? 2 : 1;
 
       // AC 2012-May-10 Palette only if type == 4 OR 5
-      // Despite Type is NOT useful without a a->read(), it is OK for Palette !
+      // Despite Type is NOT useful without a a.read(), it is OK for Palette !
       // This should be reliable (OK with ImageMagick AND GraphicsMagick)
       DInt has_palette = 0;
-      if ( a->classType() == PseudoClass) has_palette = 1;
+      if ( a.classType() == PseudoClass) has_palette = 1;
 
       DString type;
-      type = a->magick() == "PNM" ? "PPM" :
-        a->magick() == "PGM" ? "PPM" :
-        a->magick() == "DCM" ? "DICOM" :
-        a->magick() == "JPC" ? "JPEG2000" :
-        a->magick() == "JP2" ? "JPEG2000" :
-        a->magick() == "JNG" ? "JPEG2000" :
-        a->magick();
+      type = a.magick() == "PNM" ? "PPM" :
+        a.magick() == "PGM" ? "PPM" :
+        a.magick() == "DCM" ? "DICOM" :
+        a.magick() == "JPC" ? "JPEG2000" :
+        a.magick() == "JP2" ? "JPEG2000" :
+        a.magick() == "JNG" ? "JPEG2000" :
+        a.magick();
 
-      if (debug == 1) cout << "Type (via a->magick()) : " << type << endl;
-      bool addSBit=(a->magick() == "PNG"); //only one type?
+      if (debug == 1) cout << "Type (via a.magick()) : " << type << endl;
+      bool addSBit=(a.magick() == "PNG"); //only one type?
       static int infoIx = e->KeywordIx("INFO");
       if (e->KeywordPresent(infoIx)) {
         e->AssureGlobalKW(infoIx);
@@ -239,8 +239,8 @@ namespace lib {
         info->InitTag("CHANNELS", DLongGDL(channels));
         {
           DLongGDL dims(dimension(2));
-          dims[0] = a->columns();
-          dims[1] = a->rows();
+          dims[0] = a.columns();
+          dims[1] = a.rows();
           info->InitTag("DIMENSIONS", dims);
         }
         info->InitTag("HAS_PALETTE", DIntGDL(has_palette));
@@ -261,8 +261,8 @@ namespace lib {
       if (e->KeywordPresent(dimensionsIx)) {
         e->AssureGlobalKW(dimensionsIx);
         DLongGDL *dims = new DLongGDL(dimension(2));
-        (*dims)[0] = a->columns();
-        (*dims)[1] = a->rows();
+        (*dims)[0] = a.columns();
+        (*dims)[1] = a.rows();
         e->SetKW(dimensionsIx, dims);
       }
 
