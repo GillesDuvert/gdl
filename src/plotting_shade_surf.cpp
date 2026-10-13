@@ -324,7 +324,7 @@ namespace lib
       gdlSetGraphicsForegroundColorFromKw ( e, actStream ); //COLOR
       //write OUR box using our 3D PLESC tricks:
       gdlBox3(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue, zAxis, zaxis_value);
-       //reset driver to 2D plotting routines, further 3D is just plplot drawing a mesh.
+       //reset driver to 2D plotting routines, further 3D is just adding an image.
       gdlStop3DDriverTransform(actStream); 
       
       //we now pass EVERYTHING in normalized coordinates w/o clipping and set up a transformation to have plplot mesh correct on the 2D vpor.
@@ -351,9 +351,14 @@ namespace lib
       
 //Due to a bug in plplot, shading (here) and surface (in plotting_surface) do not behave similarly WRT the vpor and wind.
 //This is the good version for shade_surf, shifting the shaded surface by som amount in the 3DDriverTransform of the driver, not the plplot library.     
-      actStream->vpor(0,1,0,1);
-	  actStream->wind(-0.5 / scale[0], 0.5 / scale[0], -0.5 / scale[1], 0.5 / scale[1]); //mandatory: to center in (0,0,0) for 3D Matrix rotation.
-	  PLFLT shift=0;
+//      actStream->vpor(0,1,0,1);
+//	  actStream->wind(-0.5 / scale[0], 0.5 / scale[0], -0.5 / scale[1], 0.5 / scale[1]); //mandatory: to center in (0,0,0) for 3D Matrix rotation.
+//	  PLFLT shift=0;
+//
+//      
+      
+      
+      
 //	  if (below) {
 //		  actStream->w3d(1,1,1,0,1,0,1,0,1, -alt, az);
 //			DDouble xp = 0;
@@ -394,8 +399,9 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
       //NODATA
       static int nodataIx = e->KeywordIx("NODATA");
       bool nodata = e->KeywordSet(nodataIx);
+      
       static int imageIx = e->KeywordIx("IMAGE");
-      bool doImage = e->KeywordSet(imageIx);
+      bool return_image = e->KeywordPresent(imageIx);
 
       bool scalable=false;
       bool donewsize=false;
@@ -407,7 +413,7 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
       }
 
       // PLOT ONLY IF NODATA=0
-      if (!nodata) {
+      if (!nodata || return_image) {
         static int shadesIx = e->KeywordIx("SHADES");
         bool doShade = false;
         DLongGDL* shadevalues = NULL;
@@ -449,36 +455,47 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         DLong npixy = (DLong) ((save_region[3] - save_region[1]) * actStream->yPageSize());
         DLong pixx0 = save_region[0] * actStream->xPageSize();
         DLong pixy0 = save_region[1] * actStream->yPageSize();
-        unsigned char* bitmap;
+
+        // scalable pixel device
         if (scalable) {
-          DLong referenceSize = 256;
+          DLong referenceSize = 512;
           float aspect=(float)npixy/(float)npixx;
+          if (aspect > 1) referenceSize/=aspect; 
           if (donewsize) e->AssureLongScalarKW(pixelsIx, referenceSize);
           npixx=referenceSize;
           npixy=referenceSize*aspect;
-          bitmap = (unsigned char*) malloc(npixx * npixy * 3);
-        } else {
-          DByteGDL* bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0, pixy0, npixx, npixy));
-          bitmap = static_cast<unsigned char*> (bitmapgdl->DataAddr());
         }
-        DInt* zbuff = actStream->GetZbuffer(pixx0, pixy0, npixx, npixy);
-        DLong devicebox[4] = {npixx + 1, 0, npixy + 1, 0}; //needs initializing here
-        SizeT npx, npy, pattrue=false;
-        unsigned char* pat=NULL;
+
+        // pattern (GDL only, amusing)
+        SizeT npx, npy, pattrue = false;
+        unsigned char* pat = NULL;
         if (pattern) {
-          pattrue=(pattern->EquivalentRank()==3); //permit to have 2d-subsets [0,*,*] of 3D arrays (jpeg images etc)
-          bool rankok=(pattern->EquivalentRank() == pattern->Rank());
-          npx=(pattrue)?pattern->Dim(1):pattern->Dim(0);
-          npy=(pattrue)?pattern->Dim(2):pattern->Dim(1);
-          pat=(unsigned char*)pattern->DataAddr();
-          if (!rankok) pattrue=false;
+          pattrue = (pattern->EquivalentRank() == 3); //permit to have 2d-subsets [0,*,*] of 3D arrays (jpeg images etc)
+          bool rankok = (pattern->EquivalentRank() == pattern->Rank());
+          npx = (pattrue) ? pattern->Dim(1) : pattern->Dim(0);
+          npy = (pattrue) ? pattern->Dim(2) : pattern->Dim(1);
+          pat = (unsigned char*) pattern->DataAddr();
+          if (!rankok) pattrue = false;
         }
+        // bitmap as work area, 24 bits
+        unsigned char* bitmap = (unsigned char*) malloc(npixx * npixy * 3);
+        memset(bitmap, 0, npixx * npixy* 3);
+        //z-buffer, may be the device Z buffer. Otherwise shadeSurface will create its own.
+        DInt* zbuff = actStream->GetZbuffer(pixx0, pixy0, npixx, npixy);
+        // initialize devicebox to 'impossible' values
+        DLong devicebox[4] = {npixx + 1, -1, npixy + 1, -1}; //needs initializing here
+
         shadeSurface(bitmap, zbuff, pat, npx, npy, pattrue, npixx, npixy, (PLFLT*) xVal->DataAddr(), (PLFLT*) yVal->DataAddr(),
             map, xEl, yEl, !doShade, Current3DMatrix, shadevals, devicebox);
+        //devicebox is xmin,xmax,ymin,ymax, convert to offx,xsize, offy,ysize:
+        devicebox[1]=devicebox[1]-devicebox[0]+1;
+        devicebox[3]=devicebox[3]-devicebox[2]+1;
         //if devicebox is wrong, just do nothing:
         if (devicebox[0] >= 0 && devicebox[1] <= npixx && devicebox[2] >= 0 && devicebox[3] <= npixy) {
+          devicebox[1]=MAX(2,devicebox[1]);
+          devicebox[3]=MAX(2,devicebox[3]); //e.g. "SHADE_SURF, a, ax=0, AZ=20,zv=1,/save,image=b"
           //pass only devicebox subset to whatever needs it, with correct offsets
-          unsigned char* subset = (unsigned char*) malloc(devicebox[1] * devicebox[3]*3);
+          unsigned char* subset = (unsigned char*) malloc(devicebox[1] * devicebox[3] * 3);
           for (int j = 0; j < devicebox[3]; ++j) for (int i = 0; i < devicebox[1]; ++i) {
               int ref = 3 * (npixx * (j + devicebox[2]) + i + devicebox[0]);
               int dest = 3 * (devicebox[1] * j + i);
@@ -486,10 +503,14 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
               subset[dest++] = bitmap[ref++];
               subset[dest] = bitmap[ref];
           }
-          if (!actStream->PaintImage(subset, devicebox[1], devicebox[3], devicebox, 1, 0)) e->Throw("device does not support Paint");
+          if (!nodata && !actStream->PaintImage(subset, devicebox[1], devicebox[3], devicebox, 1, 0)) e->Throw("device does not support Paint");
+          if (return_image) {
+            DByteGDL* image = new DByteGDL(dimension( devicebox[1], devicebox[3]), BaseGDL::NOZERO);
+            for (SizeT i=0; i<devicebox[1]*devicebox[3]; ++i) (*image)[i]=subset[3*i];
+            e->SetKW(imageIx,image);
+          }
           free(subset);
         }
-        free(bitmap);
         free(map);
         if (decomposed > 0) GraphicsDevice::GetDevice()->Decomposed(true);
       }

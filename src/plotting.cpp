@@ -4308,12 +4308,7 @@ NoTitlesAccepted:
     if (n <= 1 || m <= 1) {
       return; // ignore also
     }
-    // change devicebox only if OK
-    devicebox[0] = MIN(devicebox[0], xamin);
-    devicebox[1] = MAX(devicebox[1], xamax);
-    devicebox[2] = MIN(devicebox[2], yamin);
-    devicebox[3] = MAX(devicebox[3], yamax);
-
+    PLINT imin=M+1,imax=-1,jmin=N+1,jmax=-1;
 
     // 2. Loop over bounding box pixels
     for (int iy = yamin; iy <= yamax; iy++) {
@@ -4341,6 +4336,11 @@ NoTitlesAccepted:
 
           // Z-buffer test
           if (z * 32768 > zbuff[ iy * M + ix ]) {
+            // change devicebox only if OK
+            imin = MIN(imin, ix);
+            imax = MAX(imax, ix);
+            jmin = MIN(jmin, iy);
+            jmax = MAX(jmax, iy);
             zbuff[ iy * M + ix ] = z * 32768;
             float r, g, b;
 
@@ -4385,6 +4385,11 @@ NoTitlesAccepted:
         }
       }
     }
+    // change devicebox 
+    devicebox[0] = MIN(devicebox[0], imin);
+    devicebox[1] = MAX(devicebox[1], imax);
+    devicebox[2] = MIN(devicebox[2], jmin);
+    devicebox[3] = MAX(devicebox[3], jmax);
   }
   inline PLFLT length( const PLFLT *x) {
     return sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);

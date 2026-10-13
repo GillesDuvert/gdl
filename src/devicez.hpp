@@ -34,8 +34,8 @@ class DeviceZ: public GraphicsDevice
   void SetZBuffer( DLong x, DLong y)
   {
     delete[] zBuffer;
-    zBuffer = new DInt[ x*y];
-    SizeT n = x*y;
+    SizeT n = (x+1)*(y+1); //+1 to avoid problems
+    zBuffer = new DInt[n];
     for( SizeT i=0; i<n; ++i)
       zBuffer[ i] = -32765;
   }
