@@ -458,9 +458,9 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
 
         // scalable pixel device
         if (scalable) {
-          DLong referenceSize = 512;
+          DLong referenceSize = MIN(512, MAX(npixx,npixy));
           float aspect=(float)npixy/(float)npixx;
-          if (aspect > 1) referenceSize/=aspect; 
+          if (aspect > 1) referenceSize=ceil((float)referenceSize/aspect); 
           if (donewsize) e->AssureLongScalarKW(pixelsIx, referenceSize);
           npixx=referenceSize;
           npixy=referenceSize*aspect;
@@ -511,6 +511,7 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           }
           free(subset);
         }
+        free(bitmap);
         free(map);
         if (decomposed > 0) GraphicsDevice::GetDevice()->Decomposed(true);
       }
