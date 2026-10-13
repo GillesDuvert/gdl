@@ -2170,7 +2170,7 @@ class gdlwxPhantomFrame : public wxFrame {
 
 // basic for (completely separated from widgets) plot windows done with wxWidgets driver.
 class gdlwxPlotFrame : public wxFrame {
- wxTimer * m_resizeTimer;
+ wxTimer m_resizeTimer;
  bool scrolled;
 public:
  // ctor(s)

@@ -7509,10 +7509,9 @@ void gdlwxPhantomFrame::Realize() {
 
 // Frame for Plots ========================================================
 gdlwxPlotFrame::gdlwxPlotFrame( const wxString& title , const wxPoint& pos, const wxSize& size, long style, bool scrolled_)
-: wxFrame( NULL, wxID_ANY, title, pos, size, style )
+: wxFrame( NULL, wxID_ANY, title, pos, size, style ),m_resizeTimer(this,RESIZE_PLOT_TIMER)
 , scrolled(scrolled_)
 {
-  m_resizeTimer = new wxTimer(this,RESIZE_PLOT_TIMER);
   this->SetIcon(wxgdlicon);
 }
 
@@ -7521,7 +7520,7 @@ gdlwxPlotFrame::~gdlwxPlotFrame() {
   // However, we MUST insure this is equivalent to "WDELETE" because the complicated interplay of multidevices, plplot streams, and widgets.
   // So it is better to pass and wait for the deletion of the contained window id (by marking it unValid) and let TidyWindowsList clear everything.
   // this widget will be actually destroyed when the inside GraphicsPanel will be destroyed.
-  if (m_resizeTimer->IsRunning()) m_resizeTimer->Stop();
+  if (m_resizeTimer.IsRunning()) m_resizeTimer.Stop();
 #ifdef GDL_DEBUG_WIDGETS
   std::cout << "~gdlwxPlotFrame: " << this << std::endl;
 #endif

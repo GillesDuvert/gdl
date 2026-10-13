@@ -957,13 +957,13 @@ void gdlwxPlotFrame::OnPlotSizeWithTimer(wxSizeEvent& event) {
 #else
   if (mouse.LeftDown()) {
 #endif
-    m_resizeTimer->Start(50, wxTIMER_ONE_SHOT);
+    m_resizeTimer.Start(50, wxTIMER_ONE_SHOT);
     return;
   } else { //take it immediately.
 #if (GDL_DEBUG_ALL_EVENTS || GDL_DEBUG_SIZE_EVENTS)
     wxMessageOutputStderr().Printf(_T("gdlwxPlotFrame::OnPlotSizeWithTimer: handle new size \n"));
 #endif
-    m_resizeTimer->Stop(); //StartOnce(1);
+    m_resizeTimer.Stop(); //StartOnce(1);
   }
 }
 // 2) actual resize when mouse released
@@ -987,7 +987,7 @@ void gdlwxPlotFrame::OnTimerPlotResize(wxTimerEvent& event) {
 #else
   if (mouse.LeftDown()) {
 #endif
-    m_resizeTimer->Start(50, wxTIMER_ONE_SHOT);
+    m_resizeTimer.Start(50, wxTIMER_ONE_SHOT);
     return;
   }
   
