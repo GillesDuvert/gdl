@@ -1528,12 +1528,12 @@ c_plsmaj( PLFLT def, PLFLT scale );
 // Set the RGB memory area to be plotted (with the 'mem' or 'memcairo' drivers)
 
 PLDLLIMPEXP void
-c_plsmem( PLINT maxx, PLINT maxy, PLPointer plotmem , PLPointer zbuff);
+c_plsmem( PLINT maxx, PLINT maxy, PLPointer plotmem );
 
 // Set the RGBA memory area to be plotted (with the 'memcairo' driver)
 
 PLDLLIMPEXP void
-c_plsmema( PLINT maxx, PLINT maxy, PLPointer plotmem, PLPointer zbuff );
+c_plsmema( PLINT maxx, PLINT maxy, PLPointer plotmem);
 
 // Set up lengths of minor tick marks.
 

@@ -2382,25 +2382,27 @@ c_plgdev( char *p_dev )
 //
 
 void
-c_plsmem( PLINT maxx, PLINT maxy, void *plotmem, void *zbuffer )
+c_plsmem( PLINT maxx, PLINT maxy, void *plotmem)
 {
     plsc->dev           = plotmem;
-    plsc->dev_data      = zbuffer;
-	if (zbuffer) plsc->dev_zbuffering=1; else plsc->dev_zbuffering=0;
+	plsc->dev_zbuffering=1;
     plsc->dev_mem_alpha = 0;
-    plP_setphy( 0, maxx, 0, maxy );
+    plP_setphy( 0, maxx-1, 0, maxy-1 );
+	unsigned char* data=(unsigned char*)plotmem;
+	plsc->dev_data      = (void*)&data[maxx*maxy*3];
 }
 
 // Same as plsmem, but the buffer is (Y, X, RGBA)
 
 void
-c_plsmema( PLINT maxx, PLINT maxy, void *plotmem, void *zbuffer  )
+c_plsmema( PLINT maxx, PLINT maxy, void *plotmem)
 {
     plsc->dev           = plotmem;
-    plsc->dev_data      = zbuffer;
-	if (zbuffer) plsc->dev_zbuffering=1; else plsc->dev_zbuffering=0;
+	plsc->dev_zbuffering=1;
     plsc->dev_mem_alpha = 1;
-    plP_setphy( 0, maxx, 0, maxy );
+    plP_setphy( 0, maxx-1, 0, maxy-1 );
+	unsigned char* data=(unsigned char*)plotmem;
+	plsc->dev_data      = (void*)&data[maxx*maxy*3];
 }
 
 // Get the current stream pointer

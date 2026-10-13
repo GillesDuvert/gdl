@@ -754,11 +754,11 @@ public:
 
 // Set the RGB memory area to be plotted (with the 'mem' or 'memcairo' drivers)
 
-    void smem( PLINT maxx, PLINT maxy, void *plotmem, void* zbuf );
+    void smem( PLINT maxx, PLINT maxy, void *plotmem);
 
 // Set the RGBA memory area to be plotted (with the 'memcairo' driver)
 
-    void smema( PLINT maxx, PLINT maxy, void *plotmem, void* zbuf  );
+    void smema( PLINT maxx, PLINT maxy, void *plotmem);
 
 // Set up lengths of minor tick marks.
 

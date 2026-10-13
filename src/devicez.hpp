@@ -28,14 +28,12 @@ class DeviceZ: public GraphicsDevice
 
   char*  memBuffer;
   DInt*  zBuffer;
+  SizeT  memM;
+  SizeT  memN;
   int    decomposed;
-    
-  void SetZBuffer( DLong x, DLong y)
-  {
-    delete[] zBuffer;
-    SizeT n = (x+1)*(y+1); //+1 to avoid problems
-    zBuffer = new DInt[n];
-    for( SizeT i=0; i<n; ++i)
+
+  void ResetZbuffer() {
+  for( SizeT i=0; i<memM*memN; ++i)
       zBuffer[ i] = -32765;
   }
   
@@ -44,9 +42,13 @@ class DeviceZ: public GraphicsDevice
     // note: the plplot documentation says that the user has to
     //       free this buffer, but plplot does it itself.
     //       even worse: it does it with 'free'
-    delete actStream; actStream = NULL;
-    if (memBuffer) delete[] memBuffer; memBuffer =  NULL;
+    delete actStream;
+	actStream = NULL;
+    if (memBuffer) delete[] memBuffer;
     memBuffer =  NULL;
+	memM=0;
+	memN=0;
+    zBuffer =  NULL;
   }
 
   void InitStream()
@@ -65,17 +67,13 @@ class DeviceZ: public GraphicsDevice
 
     // always allocate the buffer with creating a new stream
     actStream = new GDLZStream( nx, ny);
-    // here we allocate the memory
-    // plplot frees this with 'free'
-    //    memBuffer = new char[ actX * actY * 3];
-    //    memBuffer = (char*) malloc( sizeof( char) * actX * actY * 3);
-    // plplot mem driver error, lines could be drawn up to actY (rather that
-    // actY-1)
-
-    memBuffer = (char*) calloc( sizeof( char), actX * (actY+1) * 3);
-
+	memM=actX;
+	memN=actY;
+	SizeT buffersize = memM * memN * 5;//3 planes for 24 bits + 1 UInt plane for zBuffer
+    memBuffer = (char*) calloc( sizeof( char), buffersize); 
+	zBuffer=(DInt*) &memBuffer[ memM * memN * 3]; //pointer 
     // make it known to plplot
-    plsmem( actX, actY, memBuffer, zBuffer);
+    plsmem( actX, actY, memBuffer);
 
     // no pause on destruction
     actStream->spause( false);
@@ -90,9 +88,9 @@ class DeviceZ: public GraphicsDevice
     actStream->SetColorMap0( r, g, b, ctSize); 
     actStream->SetColorMap1( r, g, b, ctSize); 
     
-   actStream->spage(Z_DPI, Z_DPI, nx, ny, 0, 0 );
+    actStream->spage(Z_DPI, Z_DPI, nx, ny, 0, 0 );
 
-   actStream->Init();
+    actStream->Init();
     // need to be called initially. permit to fix things
     actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
     actStream->plstream::adv(0); //-->this one is the 1st and only pladv
@@ -106,7 +104,7 @@ class DeviceZ: public GraphicsDevice
   }
 
 public:
-  DeviceZ(): GraphicsDevice(), actStream( NULL), memBuffer( NULL), zBuffer( NULL), decomposed(0)
+  DeviceZ(): GraphicsDevice(), actStream( NULL), memBuffer( NULL), decomposed(0)
   {
     name = "Z";
 
@@ -137,7 +135,6 @@ public:
   
   ~DeviceZ()
   {
-    delete[] zBuffer;
     DeleteStream();
   }
 
@@ -153,27 +150,9 @@ public:
 
   bool CloseFile() // CLOSE keyword NOT CLOSE_FILE!!!
   {
-//    delete[] zBuffer; zBuffer = NULL;
-//    DeleteStream();
     return false;
   }
 
-  bool ZBuffering( bool yes)
-  {
-    if( !yes)
-      {
-	delete[] zBuffer; zBuffer = NULL;
-      }
-    else if( zBuffer == NULL)
-      {
-	DLong& actX = (*static_cast<DLongGDL*>( dStruct->GetTag( xSTag, 0)))[0];
-	DLong& actY = (*static_cast<DLongGDL*>( dStruct->GetTag( ySTag, 0)))[0];
-	
-	SetZBuffer( actX, actY);
-      }
-    return true;
-  }
-  
   bool SetResolution( DLong nx, DLong ny)
   {
     DLong& actX = (*static_cast<DLongGDL*>( dStruct->GetTag( xSTag, 0)))[0];
@@ -182,11 +161,6 @@ public:
     if( nx == actX && ny == actY) return true;
 
     DeleteStream();
-
-    if( zBuffer != NULL)
-      {
-	SetZBuffer( nx, ny);
-      }
 
     actX = nx;
     actY = ny;
@@ -202,11 +176,7 @@ public:
 
   void ClearStream( DLong bColor)
   {
-    DLong& actX = (*static_cast<DLongGDL*>( dStruct->GetTag( xSTag, 0)))[0];
-    DLong& actY = (*static_cast<DLongGDL*>( dStruct->GetTag( ySTag, 0)))[0];
-
-    for( SizeT i=0; i<actX * (actY+1) * 3; ++i)
-      memBuffer[i] = bColor;
+    for( SizeT i=0; i< memM*memN* 3; ++i)  memBuffer[i] = bColor;
   }
 
   DInt GetPixelDepth() { return 24;}  
@@ -215,10 +185,7 @@ public:
    static int displayed=0;
    if (!displayed) {displayed=1; cerr<<"Pixel Depth changes ignored in GDL, stays at 24."<<endl;}
    //this command should nevertheless reset Zbuffer:
-   DLong& actX = (*static_cast<DLongGDL*>( dStruct->GetTag( xSTag, 0)))[0];
-   DLong& actY = (*static_cast<DLongGDL*>( dStruct->GetTag( ySTag, 0)))[0];
-	
-   SetZBuffer( actX, actY);  
+   ResetZbuffer();  
    return true;
   }
   
@@ -234,7 +201,10 @@ public:
   {
     return decomposed;  
   }
-
+  virtual bool ZBuffering( bool yes) final                  {
+	  ResetZbuffer(); 
+	  return true;
+  }
 };
 
 #endif

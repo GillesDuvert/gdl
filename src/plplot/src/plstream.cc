@@ -1280,20 +1280,20 @@ void plstream::smaj( PLFLT def, PLFLT scale )
 
 // Set the RGB memory area to be plotted (with the 'mem' or 'memcairo' drivers)
 
-void plstream::smem( PLINT maxx, PLINT maxy, void *plotmem, void *zbuff  )
+void plstream::smem( PLINT maxx, PLINT maxy, void *plotmem)
 {
     set_stream();
 
-    plsmem( maxx, maxy, plotmem, zbuff );
+    plsmem( maxx, maxy, plotmem);
 }
 
 // Set the RGBA memory area to be plotted (with the 'memcairo' drivers)
 
-void plstream::smema( PLINT maxx, PLINT maxy, void *plotmem,  void *zbuff   )
+void plstream::smema( PLINT maxx, PLINT maxy, void *plotmem)
 {
     set_stream();
 
-    plsmema( maxx, maxy, plotmem, zbuff );
+    plsmema( maxx, maxy, plotmem);
 }
 
 // Set up lengths of minor tick marks.
