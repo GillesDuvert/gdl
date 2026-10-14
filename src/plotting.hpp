@@ -457,7 +457,7 @@ namespace lib {
   
   //just test if clip values (!P.CLIP , CLIP=) are OK (accounting for all NOCLIP etc possibilities!)
   bool gdlTestClipValidity(EnvT *e, GDLGStream *actStream, bool invertedClipMeaning=false, bool commandHasCoordSys=true );
-  void shadeSurface(unsigned char* bitmap, DInt* zbuffer, const unsigned char* pattern, const SizeT patx, const SizeT paty, const bool pattrue, const PLINT M, const PLINT N, const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox);
+  void shadeSurface(unsigned char* bitmap, DInt* zbuffer, const unsigned char* pattern, const SizeT patx, const SizeT paty, const bool isTexture, const bool pattrue, const PLINT M, const PLINT N, const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox);
 } // namespace
 
 #endif

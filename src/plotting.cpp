@@ -4289,7 +4289,7 @@ NoTitlesAccepted:
   }
 
   void shade_triangle(unsigned char* mem, DInt* zbuff, const unsigned char* pattern, const SizeT patx, 
-      const SizeT paty, const bool pattrue, const SizeT M, const SizeT N, 
+      const SizeT paty, const bool pattrue, const bool texture, const SizeT M, const SizeT N, 
       const plVertex &A, const plVertex &B, const plVertex &C, const bool falseColor, PLINT* devicebox) {
     float area = edge_function(A, B, C);
     if (area == 0.0f) return; // Degenerate triangle
@@ -4326,12 +4326,13 @@ NoTitlesAccepted:
         w3 /= area; //barycentric
         // Check if pixel is inside the triangle
         if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
-          // Interpolate Z depth
+          // should be normalized and unnecessary 
           float fact = w1 + w2 + w3;
           fact = 1. / fact;
           w1 *= fact;
           w2 *= fact;
           w3 *= fact;
+          // Interpolate Z depth
           float z = w1 * C.z + w2 * A.z + w3 * B.z;
 
           // Z-buffer test
@@ -4352,7 +4353,7 @@ NoTitlesAccepted:
               g = plsc->curcolor.g;
               b = plsc->curcolor.b;
 
-            } else if (pattern) {
+            } else if (pattern && ! texture ) {
               float newx = w1 * C.i + w2 * A.i + w3 * B.i;
               float newy = w1 * C.j + w2 * A.j + w3 * B.j;
               SizeT inew = newx;
@@ -4371,10 +4372,32 @@ NoTitlesAccepted:
                 b = r;
              }
             } else {
-              // Gouraud shading:
-              r = newcol * 255;
-              g = newcol * 255;
-              b = newcol * 255;
+              if (texture) {
+                float newx= w1 * C.x + w2 * A.x + w3 * B.x;
+                float newy= w1 * C.y + w2 * A.y + w3 * B.y;
+                newx*=patx;
+                newy*=paty;
+                SizeT inew = newx;
+                inew %= patx;
+                SizeT jnew = newy;
+                jnew %= paty;
+                if (pattrue) {
+                  SizeT ref = 3 * (jnew * patx + inew);
+                  r = newcol * pattern[ref + 0];
+                  g = newcol * pattern[ref + 1];
+                  b = newcol * pattern[ref + 2];
+                } else {
+                   SizeT ref = jnew * patx + inew;
+                  r = newcol * pattern[ref];
+                  g = r;
+                  b = r;
+               }
+              } else {
+                  // Gouraud shading:
+                r = newcol * 255;
+                g = newcol * 255;
+                b = newcol * 255;
+              }
             }
             int ref = 3 * M * iy;
             int ref2 = ref + 3 * ix;
@@ -4539,7 +4562,7 @@ inline PLFLT absdot( const PLFLT* x, const PLFLT* y) {
   }
 // shade a 2 function z=f(x,y) using a zbuffer (provided or not), a simple gouraud-blinn-phong shading, colors or passed pattern (image)
   void shadeSurface(unsigned char* bitmap, DInt* zbuffer, const unsigned char* pattern, 
-      const SizeT npatx, const SizeT npaty, const bool pattrue, const PLINT M, const PLINT N, 
+      const SizeT npatx, const SizeT npaty, const bool pattrue, const bool isTexture, const PLINT M, const PLINT N, 
       const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, 
       const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox) {
     static PLFLT* lightsource = get_lightsource();
@@ -4635,8 +4658,8 @@ inline PLFLT absdot( const PLFLT* x, const PLFLT* y) {
                 C.col = 0.5;
                 D.col = 0.5;
               }
-              shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
-              shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
+              shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture,  M, N, A, B, D, falsecolor, devicebox);
+              shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, B, C, D, falsecolor, devicebox);
             } else {
               PLFLT g;
               if (usesGouraudMethod) {
@@ -4644,21 +4667,21 @@ inline PLFLT absdot( const PLFLT* x, const PLFLT* y) {
                 B.col = absdot(half_direction, &gouraud[3*iB]);  
                 C.col = absdot(half_direction, &gouraud[3*iC]);  
                 D.col = absdot(half_direction, &gouraud[3*iD]);  
-                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
-                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, A, B, D, falsecolor, devicebox);
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, B, C, D, falsecolor, devicebox);
               } else {
                 getVectorNormalToTriangle(A, B, D, normal);
                     g = absdot(half_direction, normal);
                 A.col = g * 0.5 + 0.5;
                 B.col = g * 0.5 + 0.5;
                 D.col = g * 0.5 + 0.5;
-                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, A, B, D, falsecolor, devicebox);
                 getVectorNormalToTriangle(B, C, D, normal);
                     g = absdot(half_direction, normal);
                 B.col = g * 0.5 + 0.5;
                 D.col = g * 0.5 + 0.5;
                 C.col = g * 0.5 + 0.5;
-                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, B, C, D, falsecolor, devicebox);
               }
             }
           }

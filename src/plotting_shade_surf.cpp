@@ -50,8 +50,9 @@ namespace lib
     Guard<BaseGDL> g; // to get rid of it when out
 	PLFLT xratio, yratio, zratio, trans[3];
 	PLINT nx, ny;
-    // for GDL-ONLY (test) "PATTERN" keyword
-    DByteGDL* pattern=NULL;
+    // for GDL-ONLY (test) "TEXTURE_IMAGE" keyword
+    DByteGDL* texture_or_pattern=NULL;
+    bool is_texture=false;
     bool zAxis=true;
     DLong zaxis_value=0;
 
@@ -168,14 +169,21 @@ namespace lib
 //        }
       }
       
-      //pattern (GDl only, for fun)
-      static int xPatternIx = e->KeywordIx("PATTERN");
-      if (e->KeywordPresent(xPatternIx)) {
-        pattern = e->GetKWAs<DByteGDL>(xPatternIx);
-        if (pattern->EquivalentRank() != 2 && pattern->EquivalentRank() != 3) e->Throw("Pattern dimensions must be 2 or 3");
-        if (pattern->EquivalentRank() == 3 && pattern->Dim(0) != 3) e->Throw("Pattern dimensions must be MxN or 3xMxN.");
+      //TEXTURE_IMAGE  (GDl only, but as in SURFACE function)
+      static int TextureIx = e->KeywordIx("TEXTURE_IMAGE");
+      //PATTERN  (GDl only, but as in POLYFILL procedure)
+      static int patternIx = e->KeywordIx("PATTERN");
+      if (e->KeywordPresent(TextureIx) && e->KeywordPresent(patternIx)) e->Throw("PATTERN and TEXTURE_IMAGE are mutually exclusive.");
+      if (e->KeywordPresent(TextureIx)) {
+        is_texture=true;
+        texture_or_pattern = e->GetKWAs<DByteGDL>(TextureIx);
+        if (texture_or_pattern->EquivalentRank() != 2 && texture_or_pattern->EquivalentRank() != 3) e->Throw("Texture dimensions must be 2 or 3");
+        if (texture_or_pattern->EquivalentRank() == 3 && texture_or_pattern->Dim(0) != 3) e->Throw("Texture dimensions must be MxN or 3xMxN.");
+      } else if (e->KeywordPresent(patternIx)) {
+        texture_or_pattern = e->GetKWAs<DByteGDL>(patternIx);
+        if (texture_or_pattern->EquivalentRank() != 2 && texture_or_pattern->EquivalentRank() != 3) e->Throw("Pattern dimensions must be 2 or 3");
+        if (texture_or_pattern->EquivalentRank() == 3 && texture_or_pattern->Dim(0) != 3) e->Throw("Pattern dimensions must be MxN or 3xMxN.");
       }
-
       GetMinMaxVal ( xVal, &xStart, &xEnd );
       GetMinMaxVal ( yVal, &yStart, &yEnd );
       //XRANGE and YRANGE overrides all that, but  Start/End should be recomputed accordingly
@@ -387,12 +395,12 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         // pattern (GDL only, amusing)
         SizeT npx, npy, pattrue = false;
         unsigned char* pat = NULL;
-        if (pattern) {
-          pattrue = (pattern->EquivalentRank() == 3); //permit to have 2d-subsets [0,*,*] of 3D arrays (jpeg images etc)
-          bool rankok = (pattern->EquivalentRank() == pattern->Rank());
-          npx = (pattrue) ? pattern->Dim(1) : pattern->Dim(0);
-          npy = (pattrue) ? pattern->Dim(2) : pattern->Dim(1);
-          pat = (unsigned char*) pattern->DataAddr();
+        if (texture_or_pattern) {
+          pattrue = (texture_or_pattern->EquivalentRank() == 3); //permit to have 2d-subsets [0,*,*] of 3D arrays (jpeg images etc)
+          bool rankok = (texture_or_pattern->EquivalentRank() == texture_or_pattern->Rank());
+          npx = (pattrue) ? texture_or_pattern->Dim(1) : texture_or_pattern->Dim(0);
+          npy = (pattrue) ? texture_or_pattern->Dim(2) : texture_or_pattern->Dim(1);
+          pat = (unsigned char*) texture_or_pattern->DataAddr();
           if (!rankok) pattrue = false;
         }
         // bitmap as work area, 24 bits
@@ -403,7 +411,7 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         // initialize devicebox to 'impossible' values
         DLong devicebox[4] = {npixx + 1, -1, npixy + 1, -1}; //needs initializing here
 
-        shadeSurface(bitmap, zbuff, pat, npx, npy, pattrue, npixx, npixy, (PLFLT*) xVal->DataAddr(), (PLFLT*) yVal->DataAddr(),
+        shadeSurface(bitmap, zbuff, pat, npx, npy, pattrue, is_texture, npixx, npixy, (PLFLT*) xVal->DataAddr(), (PLFLT*) yVal->DataAddr(),
             map, xEl, yEl, !doShade, Current3DMatrix, shadevals, devicebox);
         //devicebox is xmin,xmax,ymin,ymax, convert to offx,xsize, offy,ysize:
         devicebox[1]=devicebox[1]-devicebox[0]+1;

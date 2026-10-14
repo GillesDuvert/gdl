@@ -867,7 +867,7 @@ void LibInit()
       "ZTICK_GET", "YTICK_GET", "XTICK_GET",
       "ZTITLE", "YTITLE", "XTITLE",
       //3D KW
-      "ZVALUE","T3D", "SAVE", "SKIRT", "ZAXIS", "CHANNEL",  "SHADES", "IMAGE", "PIXELS", "PATTERN", KLISTEND
+      "ZVALUE","T3D", "SAVE", "SKIRT", "ZAXIS", "CHANNEL",  "SHADES", "IMAGE", "PIXELS", "TEXTURE_IMAGE", "PATTERN", KLISTEND
     };
   new DLibPro(lib::shade_surf,string("SHADE_SURF"),3,shade_surfKey);
 
