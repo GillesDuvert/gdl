@@ -309,8 +309,6 @@ namespace lib
       //SHADE_SURF IGNORES the CLIP/NOCLIP stuff --- check by yourself.
 //      if (gdlTestClipValidity(e, actStream)) return true; //note clip meaning is normal
       const COORDSYS coordinateSystem = DATA;
-      SelfConvertToNormXYZ(xStart, xLog, yStart, yLog, zStart, zLog, coordinateSystem); 
-      SelfConvertToNormXYZ(xEnd, xLog, yEnd, yLog, zEnd, zLog, coordinateSystem);
       if (hasMinVal) ConvertToNormZ(1, &minVal, zLog, coordinateSystem);
       if (hasMaxVal) ConvertToNormZ(1, &maxVal, zLog, coordinateSystem);
       //WARNING Following sets coordinateSystem=NORM!
