@@ -45,7 +45,6 @@ namespace lib
     PLFLT alt = 30.0;
     PLFLT az = 30.0;
     PLFLT ay = 0;
-    bool below=false;
     DDouble* Current3DMatrix;
     DDoubleGDL* gdlBox3d;
     Guard<BaseGDL> g; // to get rid of it when out
@@ -94,17 +93,14 @@ namespace lib
 	// a sub-array like: a=RANDOMU(seed, 3,4,5) & (this procedure name), a[1,*,*]
 	// should be OK ...
 	    if ( (e->GetNumericArrayParDefined ( 0 ))->EquivalentRank ( )!=2 ) e->Throw ( "Array must have 2 dimensions: "+e->GetParString ( 0 ) );
-    }
-
-    if ( nParam ( )==1) {
-        BaseGDL* p0 = e->GetNumericArrayParDefined(0)->Transpose(NULL);
-        p0_guard.Init(p0); // delete upon exit
-
+      }
+      BaseGDL* p0 = e->GetNumericArrayParDefined(0);
+      if ( nParam ( )==1) {
         zVal = static_cast<DDoubleGDL*> (p0->Convert2(GDL_DOUBLE, BaseGDL::COPY));
         zval_guard.Init(zVal); // delete upon exit
 
-        xEl = zVal->Dim(1);
-        yEl = zVal->Dim(0);
+        xEl = zVal->Dim(0);
+        yEl = zVal->Dim(1);
 
         xVal = new DDoubleGDL(dimension(xEl), BaseGDL::INDGEN);
         xval_guard.Init(xVal); // delete upon exit
@@ -113,9 +109,6 @@ namespace lib
         yval_guard.Init(yVal); // delete upon exit
         if (yLog) yVal->Inc();
       } else {
-        BaseGDL* p0 = e->GetNumericArrayParDefined(0)->Transpose(NULL);
-        p0_guard.Init(p0); // delete upon exit
-
         zVal = static_cast<DDoubleGDL*> (p0->Convert2(GDL_DOUBLE, BaseGDL::COPY));
         zval_guard.Init(zVal); // delete upon exit
 
@@ -131,12 +124,12 @@ namespace lib
           //filter out incompatible 1D dimensions
         if (xVal->Rank() == 1) {
           xEl = xVal->Dim(0);
-          if (xEl != zVal->Dim(1))
+          if (xEl != zVal->Dim(0))
             e->Throw("X, Y, or Z array dimensions are incompatible.");
         }
         if (yVal->Rank() == 1) {
           yEl = yVal->Dim(0);
-          if (yEl != zVal->Dim(0))
+          if (yEl != zVal->Dim(1))
             e->Throw("X, Y, or Z array dimensions are incompatible.");
         }
           //filter out incompatible 2D dimensions
@@ -144,14 +137,14 @@ namespace lib
           //plplot is unable to handle such subtetlies, better to throw?
           e->Throw("Sorry, plplot cannot handle 2D X coordinates in its 3D plots.");
           xEl = xVal->Dim(0);
-          if ((xVal->Dim(0) != zVal->Dim(1))&&(xVal->Dim(1) != zVal->Dim(0)))
+          if ((xVal->Dim(0) != zVal->Dim(0))&&(xVal->Dim(1) != zVal->Dim(1)))
             e->Throw("X, Y, or Z array dimensions are incompatible.");
         }
         if (yVal->Rank() == 2) {
         //plplot is unable to handle such subtetlies, better to throw?
           e->Throw("Sorry, plplot cannot handle 2D Y coordinates in its 3D plots.");
           yEl = yVal->Dim(1);
-          if ((yVal->Dim(0) != zVal->Dim(1))&&(yVal->Dim(1) != zVal->Dim(0)))
+          if ((yVal->Dim(0) != zVal->Dim(0))&&(yVal->Dim(1) != zVal->Dim(1)))
             e->Throw("X, Y, or Z array dimensions are incompatible.");
         }
 
@@ -264,8 +257,6 @@ namespace lib
       gdlSetPlotCharsize(e, actStream);
       zValue=gdlSetViewPortAndWorldCoordinates(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue);
 
-		//save region info
-	 PLFLT* save_region = gdlGetRegion();
 		
       // Deal with T3D options -- either present and we have to deduce az and alt contained in it,
       // or absent and we have to compute !P.T from az and alt.
@@ -282,15 +273,8 @@ namespace lib
         static int AXIx=e->KeywordIx("AX");
         e->AssureFloatScalarKWIfPresent(AXIx, alt_change);
         alt=alt_change;
-          alt=atan2(sin(alt * GDL_PI/180.0), cos(alt * GDL_PI/180.0)) * 180.0/GDL_PI;
-          alt=fmod((alt+360),360.0);
-          if (alt > 90 && alt <= 270) {
-            az+=180.;
-            if (alt > 180) {below=true; alt-=180; alt*=-1;} else alt=180-alt;
-          } else if (alt > 270) {
-            below=true;
-            alt=-(360.-alt);
-        }
+        alt=atan2(sin(alt * GDL_PI/180.0), cos(alt * GDL_PI/180.0)) * 180.0/GDL_PI;
+        alt=fmod((alt+360),360.0);
 		//Compute special transformation matrix for the BOX and give it to the driver. Subpage info is important
 		gdlBox3d = gdlDefinePlplotRotationMatrix(az, alt, scale, saveT3d);
 		//now that 3D matrix is OK, we pass in 'No Sub'. The plot will be scaled ans offsetted to the size of the actual subpage or position
@@ -306,7 +290,9 @@ namespace lib
         gdlStartSpecial3DDriverTransform(actStream,T3DForAXes);
       } else {
         //just ask for P.T3D transform with the driver:
-        bool ok=gdlInterpretT3DMatrixAsPlplotRotationMatrix(az, alt, ay, scale, axisExchangeCode, below);
+        //ignore bool below
+        bool below_ignored;
+        bool ok=gdlInterpretT3DMatrixAsPlplotRotationMatrix(az, alt, ay, scale, axisExchangeCode, below_ignored);
         if (!ok) Warning ( "SHADE_SURF: Illegal 3D transformation." );
         gdlStartT3DMatrixDriverTransform(actStream, zValue);
 
@@ -430,24 +416,19 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
 
         if (doShade) decomposed = actStream->ForceColorMap1Ramp(0.0);
         else decomposed = actStream->ForceColorMap1Ramp(0.33);
-        //position of light Source. Plplot does not use only the direction of the beam but the position of the illuminating
-        //source. And its illumination looks strange. We try to make the ill. source a bit far in the good direction.
-        PLFLT sun[3];
-        sun[0] = lightSourceUnitVector[0];
-        sun[1] = lightSourceUnitVector[1];
-        sun[2] = lightSourceUnitVector[2];
-        if (below) sun[2] *= -1;
-        actStream->lightsource(sun[0], sun[1], sun[2]);
+        //position of light Source.
+        actStream->lightsource(lightSourceUnitVector[0], lightSourceUnitVector[1], lightSourceUnitVector[2]);
         actStream->shadinglimits(shadinglimits[0], shadinglimits[1]);
 
-        //use of intermediate map for correct handling of blanking values and nans.
+        //use of intermediate map for correct handling of blanking values and nans. It ALSO serves to rotate map by 90 degrees,
+        //to orient the array correctly.
         PLFLT* map = (PLFLT*) malloc(xEl * yEl * sizeof(PLFLT));
-        for (SizeT k = 0; k < xEl * yEl; ++k) { //plplot does not like NaNs and any other terribly large gradient!
+        for (SizeT k = 0; k < zVal->N_Elements(); ++k) { //plplot does not like NaNs and any other terribly large gradient!
           PLFLT v = (*zVal)[k];
-          if (!isfinite(v)) v = minVal;
+          if (!isfinite(v)) { v = minVal; continue;}
           if (hasMinVal && v < minVal) v = minVal;
           if (hasMaxVal && v > maxVal) v = maxVal;
-          map[k] = (below) ? 1 - v : v;
+          map[k] = v;
         }
 
         PLFLT* save_region = gdlGetRegion(); 
