@@ -4240,21 +4240,21 @@ NoTitlesAccepted:
     return false; //should be OK
   }
 
-  static void T3DTransformCoordinates(const SizeT n, PLFLT *x, PLFLT *y , PLFLT *z, const PLFLT* T) {
-    for (SizeT i=0; i< n; ++i) {
-    PLFLT xx, yy, zz, ww;
-      xx = x[i] * T[0] + y[i] * T[1] + z[i] * T[2] + T[3];
-      yy = x[i] * T[4] + y[i] * T[5] + z[i] * T[6] + T[7];
-      zz = x[i] * T[8] + y[i] * T[9] + z[i] * T[10] + T[11];
-      ww = x[i] * T[12] + y[i] * T[13] + z[i] * T[14] + T[15];
-      xx /= ww;
-      yy /= ww;
-      zz /= ww;
-      x[i] = xx;
-      y[i] = yy;
-      z[i] = zz;
-    }
-}
+//  static void T3DTransformCoordinates(const SizeT n, PLFLT *x, PLFLT *y , PLFLT *z, const PLFLT* T) {
+//    for (SizeT i=0; i< n; ++i) {
+//    PLFLT xx, yy, zz, ww;
+//      xx = x[i] * T[0] + y[i] * T[1] + z[i] * T[2] + T[3];
+//      yy = x[i] * T[4] + y[i] * T[5] + z[i] * T[6] + T[7];
+//      zz = x[i] * T[8] + y[i] * T[9] + z[i] * T[10] + T[11];
+//      ww = x[i] * T[12] + y[i] * T[13] + z[i] * T[14] + T[15];
+//      xx /= ww;
+//      yy /= ww;
+//      zz /= ww;
+//      x[i] = xx;
+//      y[i] = yy;
+//      z[i] = zz;
+//    }
+//}
    static void T3DTransformCoordinates(plVertex &V, const PLFLT* T) {
     PLFLT xx, yy, zz, ww;
       xx = V.x * T[0] + V.y * T[1] + V.z * T[2] + T[3];
@@ -4268,29 +4268,29 @@ NoTitlesAccepted:
       V.y = yy;
       V.z = zz;
 }
- static void T3DTransformXYZ(const SizeT n, PLFLT *v, const PLFLT* T) {
-    for (SizeT i=0; i< n*3; i+=3) {
-    PLFLT xx, yy, zz, ww;
-      xx = v[i] * T[0] + v[i+1] * T[1] + v[i+2] * T[2] + T[3];
-      yy = v[i] * T[4] + v[i+1] * T[5] + v[i+2] * T[6] + T[7];
-      zz = v[i] * T[8] + v[i+1] * T[9] + v[i+2] * T[10] + T[11];
-      ww = v[i] * T[12] + v[i+1] * T[13] + v[i+2] * T[14] + T[15];
-      xx /= ww;
-      yy /= ww;
-      zz /= ww;
-      v[i] = xx;
-      v[i+1] = yy;
-      v[i+2] = zz;
-    }
-  }
+// static void T3DTransformXYZ(const SizeT n, PLFLT *v, const PLFLT* T) {
+//    for (SizeT i=0; i< n*3; i+=3) {
+//    PLFLT xx, yy, zz, ww;
+//      xx = v[i] * T[0] + v[i+1] * T[1] + v[i+2] * T[2] + T[3];
+//      yy = v[i] * T[4] + v[i+1] * T[5] + v[i+2] * T[6] + T[7];
+//      zz = v[i] * T[8] + v[i+1] * T[9] + v[i+2] * T[10] + T[11];
+//      ww = v[i] * T[12] + v[i+1] * T[13] + v[i+2] * T[14] + T[15];
+//      xx /= ww;
+//      yy /= ww;
+//      zz /= ww;
+//      v[i] = xx;
+//      v[i+1] = yy;
+//      v[i+2] = zz;
+//    }
+//  }
   
-  float edge_function(const plVertex a, const plVertex b, const plVertex c) {
+  float edge_function(const plVertex &a, const plVertex &b, const plVertex &c) {
     return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
   }
 
   void shade_triangle(unsigned char* mem, DInt* zbuff, const unsigned char* pattern, const SizeT patx, 
       const SizeT paty, const bool pattrue, const SizeT M, const SizeT N, 
-      const plVertex A, const plVertex B, const plVertex C, const bool falseColor, PLINT* devicebox) {
+      const plVertex &A, const plVertex &B, const plVertex &C, const bool falseColor, PLINT* devicebox) {
     float area = edge_function(A, B, C);
     if (area == 0.0f) return; // Degenerate triangle
 
@@ -4403,7 +4403,15 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
   dot/=magy;
   return dot;
 }
-
+inline PLFLT absdot( const PLFLT* x, const PLFLT* y) {
+  PLFLT dot=x[0]*y[0];
+  for (int i = 1; i < 3; ++i) dot += x[i]  * y[i];
+  PLFLT magx=length(x);
+  PLFLT magy=length(y);
+  dot/=magx;
+  dot/=magy;
+  return fabs(dot);
+}
   inline void normalize(EnvT* e, DDouble* dlight) {
     // normalize: this is a direction, not a vector
     PLFLT mag = dlight[0] * dlight[0];
@@ -4530,7 +4538,10 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
    
   }
 // shade a 2 function z=f(x,y) using a zbuffer (provided or not), a simple gouraud-blinn-phong shading, colors or passed pattern (image)
-  void shadeSurface(unsigned char* bitmap, DInt* zbuffer, const unsigned char* pattern, const SizeT npatx, const SizeT npaty, const bool pattrue, const PLINT M, const PLINT N, const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox) {
+  void shadeSurface(unsigned char* bitmap, DInt* zbuffer, const unsigned char* pattern, 
+      const SizeT npatx, const SizeT npaty, const bool pattrue, const PLINT M, const PLINT N, 
+      const PLFLT* x, const PLFLT* y, const PLFLT* zp, const SizeT nx, const SizeT ny, 
+      const PLINT decomposed, const DDouble* T, const PLINT* shademap, PLINT* devicebox) {
     static PLFLT* lightsource = get_lightsource();
     static PLINT* shadinglimits = get_shadeLimits();
     static PLINT* doesGouraud = get_gouraud();
@@ -4561,10 +4572,10 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
       zbuffer = (short*) malloc(M * N * sizeof (short));
       for (SizeT i = 0; i < M * N; ++i) zbuffer[i] = -32765;
     }
-// create all triangles and pass them to shade_triangle. If not falsecolor, bother to create a map of average surface normal for each vertex points
-//   A-->B       A-->B 
-//   | / | then  | \ |  i.e; ABD BCD, ACD ABC  makes each pixel i,i get 4 symmetrical values for "normals" than can be averaged.
-//   D<--C       D<--C 
+// create 2 triangles and pass them to shade_triangle.
+//   A-->B 
+//   | / |  i.e; 2 triangles ABD BCD 
+//   D<--C 
 
     //used in Blinn-Phong "sort of" shading
     PLFLT view[3]={0,0,1};
@@ -4576,82 +4587,82 @@ inline PLFLT dot( const PLFLT* x, const PLFLT* y) {
 
     plVertex A,B,C,D;
     PLFLT normal[3];
-		int i1, j1, iA, iB, iC, iD;
-		for (int j = 0; j < ny - 1; ++j) {
-			j1 = j + 1;
-			for (int i = 0; i < nx - 1; ++i) {
-				i1 = i + 1;
-                iA = j*nx+i;
-                A.x = x[i];
-                A.y = y[j];
-                A.i = i;
-                A.j = j;
-                A.z = zp[iA];
-                iC = j1*nx+ i1;
-                C.x = x[i1];
-                C.y = y[j1];
-                C.i = i1;
-                C.j = j1;
-                C.z = zp[iC];
-                iD = j1*nx+ i;
-                D.x = x[i];
-                D.y = y[j1];
-                D.i = i;
-                D.j = j1;
-                D.z = zp[iD];
-                iB = j*nx+ i1;
-                B.x = x[i1];
-                B.y = y[j];
-                B.i = i1;
-                B.j = j;
-                B.z = zp[iB];
+    int i1, j1, iA, iB, iC, iD;
+    for (int j = 0; j < ny - 1; ++j) {
+        j1 = j + 1;
+        for (int i = 0; i < nx - 1; ++i) {
+            i1 = i + 1;
+            iA = j*nx+i;
+            A.x = x[i];
+            A.y = y[j];
+            A.i = i;
+            A.j = j;
+            A.z = zp[iA];
+            iB = j*nx+ i1;
+            B.x = x[i1];
+            B.y = y[j];
+            B.i = i1;
+            B.j = j;
+            B.z = zp[iB];
+            iC = j1*nx+ i1;
+            C.x = x[i1];
+            C.y = y[j1];
+            C.i = i1;
+            C.j = j1;
+            C.z = zp[iC];
+            iD = j1*nx+ i;
+            D.x = x[i];
+            D.y = y[j1];
+            D.i = i;
+            D.j = j1;
+            D.z = zp[iD];
 
-                T3DTransformCoordinates(A, T);
-                T3DTransformCoordinates(B, T);
-                T3DTransformCoordinates(C, T);
-                T3DTransformCoordinates(D, T);
-                if (falsecolor) {
-                  if (shademap!=NULL){
-                    A.col = ( shademap[iA] & 0xFF ) /255.;
-                    B.col = ( shademap[iB] & 0xFF ) /255.;
-                    C.col = ( shademap[iC] & 0xFF ) /255.;
-                    D.col = ( shademap[iD] & 0xFF ) /255.;
-                  } else {
-                    static bool notseen=true;
-                    if (notseen) {notseen=false; std::cerr<<"WARNING invalid shade map, please report!"<<std::endl;}
-                    A.col = 0.5;
-                    B.col = 0.5;
-                    C.col = 0.5;
-                    D.col = 0.5;
-                  }
-                   shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
-                   shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
-                } else {
-                  PLFLT g;
-                  if (usesGouraudMethod) {
-                    A.col = dot(half_direction, &gouraud[3*iA]);  
-                    B.col = dot(half_direction, &gouraud[3*iB]);  
-                    C.col = dot(half_direction, &gouraud[3*iC]);  
-                    D.col = dot(half_direction, &gouraud[3*iD]);  
-                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
-                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
-                } else {
-                    getVectorNormalToTriangle(A, B, D, normal);
-                    g = dot(half_direction, normal);
-                    A.col = g * 0.5 + 0.5;
-                    B.col = g * 0.5 + 0.5;
-                    D.col = g * 0.5 + 0.5;
-                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
-                    getVectorNormalToTriangle(B, C, D, normal);
-                    g = dot(half_direction, normal);
-                    B.col = g * 0.5 + 0.5;
-                    D.col = g * 0.5 + 0.5;
-                    C.col = g * 0.5 + 0.5;
-                    shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
-                  }
-                }
-			      }
-		        }
+            T3DTransformCoordinates(A, T);
+            T3DTransformCoordinates(B, T);
+            T3DTransformCoordinates(C, T);
+            T3DTransformCoordinates(D, T);
+            if (falsecolor) {
+              if (shademap!=NULL){
+                A.col = ( shademap[iA] & 0xFF ) /255.;
+                B.col = ( shademap[iB] & 0xFF ) /255.;
+                C.col = ( shademap[iC] & 0xFF ) /255.;
+                D.col = ( shademap[iD] & 0xFF ) /255.;
+              } else {
+                static bool notseen=true;
+                if (notseen) {notseen=false; std::cerr<<"WARNING invalid shade map, please report!"<<std::endl;}
+                A.col = 0.5;
+                B.col = 0.5;
+                C.col = 0.5;
+                D.col = 0.5;
+              }
+              shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
+              shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
+            } else {
+              PLFLT g;
+              if (usesGouraudMethod) {
+                A.col = absdot(half_direction, &gouraud[3*iA]);  
+                B.col = absdot(half_direction, &gouraud[3*iB]);  
+                C.col = absdot(half_direction, &gouraud[3*iC]);  
+                D.col = absdot(half_direction, &gouraud[3*iD]);  
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
+              } else {
+                getVectorNormalToTriangle(A, B, D, normal);
+                    g = absdot(half_direction, normal);
+                A.col = g * 0.5 + 0.5;
+                B.col = g * 0.5 + 0.5;
+                D.col = g * 0.5 + 0.5;
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, A, B, D, falsecolor, devicebox);
+                getVectorNormalToTriangle(B, C, D, normal);
+                    g = absdot(half_direction, normal);
+                B.col = g * 0.5 + 0.5;
+                D.col = g * 0.5 + 0.5;
+                C.col = g * 0.5 + 0.5;
+                shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, M, N, B, C, D, falsecolor, devicebox);
+              }
+            }
+          }
+        }
 
 		if (usesGouraudMethod) free(gouraud);
         if (eraseZbuf) free(zbuffer);
