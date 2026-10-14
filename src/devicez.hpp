@@ -26,8 +26,8 @@ class DeviceZ: public GraphicsDevice
 {
   GDLZStream*     actStream;
 
-  char*  memBuffer;
-  DInt*  zBuffer;
+  char*  memBuffer=NULL;;
+  DInt*  zBuffer=NULL;
   SizeT  memM;
   SizeT  memN;
   int    decomposed;

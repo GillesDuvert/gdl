@@ -52,6 +52,8 @@ namespace lib
 	PLINT nx, ny;
     // for GDL-ONLY (test) "PATTERN" keyword
     DByteGDL* pattern=NULL;
+    bool zAxis=true;
+    DLong zaxis_value=0;
 
  private:
     bool handle_args (EnvT* e)
@@ -238,9 +240,7 @@ namespace lib
     {
       static int savet3dIx = e->KeywordIx("SAVE");
       bool saveT3d = e->KeywordSet(savet3dIx);
-	  bool zAxis=true;
 	  static int zaxisIx = e->KeywordIx("ZAXIS");
-	  DLong zaxis_value=0;
       if (e->GetKW(zaxisIx) != NULL) {
         e->AssureLongScalarKWIfPresent(zaxisIx, zaxis_value);
 		if (zaxis_value > 4) zaxis_value=0;
@@ -294,25 +294,16 @@ namespace lib
         bool below_ignored;
         bool ok=gdlInterpretT3DMatrixAsPlplotRotationMatrix(az, alt, ay, scale, axisExchangeCode, below_ignored);
         if (!ok) Warning ( "SHADE_SURF: Illegal 3D transformation." );
-        gdlStartT3DMatrixDriverTransform(actStream, zValue);
 
         DStructGDL* pStruct = SysVar::P(); //MUST NOT BE STATIC, due to .reset
         static unsigned tTag = pStruct->Desc()->TagIndex("T");
         //make a copy for internal use
         gdlBox3d = static_cast<DDoubleGDL*>(pStruct->GetTag(tTag, 0)->Dup());
+		actStream->NoSub();
       }
       Current3DMatrix=static_cast<DDouble*>(gdlBox3d->DataAddr());
       g.Reset(gdlBox3d);
 
-      // We could have kept the old code where the box was written by plplot's box3(), but it would not be compatible with the rest of the eventual other (over)plots
-      //Draw axes with normal color!
-      //Should draw 3d mesh before axes
-      gdlSetGraphicsForegroundColorFromKw ( e, actStream ); //COLOR
-      //write OUR box using our 3D PLESC tricks:
-      gdlBox3(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue, zAxis, zaxis_value);
-       //reset driver to 2D plotting routines, further 3D is just adding an image.
-      gdlStop3DDriverTransform(actStream); 
-      
       //we now pass EVERYTHING in normalized coordinates w/o clipping and set up a transformation to have plplot mesh correct on the 2D vpor.
       //however we need to check that clip values are OK to reproduce IDL's behaviour (no plot at all):
       //SHADE_SURF IGNORES the CLIP/NOCLIP stuff --- check by yourself.
@@ -326,58 +317,6 @@ namespace lib
       COORDSYS coordinateSystem2 = DATA;
       SelfConvertToNormXY(xVal, xLog, yVal, yLog, coordinateSystem2); //always DATA for PLOT X,Y values
 	  ConvertToNormZ(xEl*yEl, (DDouble*) zVal->DataAddr(), zLog, coordinateSystem);
-// the mapping between data 3-d and world 3-d coordinates is given by:
-//
-//   x = xmin   =>   wx = -0.5*basex
-//   x = xmax   =>   wx =  0.5*basex
-//   y = ymin   =>   wy = -0.5*basey
-//   y = ymax   =>   wy =  0.5*basey
-//   z = zmin   =>   wz =  0.0
-//   z = zmax   =>   wz =  height
-      
-//Due to a bug in plplot, shading (here) and surface (in plotting_surface) do not behave similarly WRT the vpor and wind.
-//This is the good version for shade_surf, shifting the shaded surface by som amount in the 3DDriverTransform of the driver, not the plplot library.     
-//      actStream->vpor(0,1,0,1);
-//	  actStream->wind(-0.5 / scale[0], 0.5 / scale[0], -0.5 / scale[1], 0.5 / scale[1]); //mandatory: to center in (0,0,0) for 3D Matrix rotation.
-//	  PLFLT shift=0;
-//
-//      
-      
-      
-      
-//	  if (below) {
-//		  actStream->w3d(1,1,1,0,1,0,1,0,1, -alt, az);
-//			DDouble xp = 0;
-//			DDouble yp1 = 0;
-//			DDouble yp2 = 0;
-//			Matrix3DTransformXYZval(0, 0, 0, &xp, &yp1, Current3DMatrix);
-//			Matrix3DTransformXYZval(0, 0, 0.5, &xp, &yp2, Current3DMatrix);
-//			shift=1 - (yp1 - yp2);
-//			gdlShiftYaxisUsing3DDriverTransform(actStream, shift, true);
-//		} else {
-//		  actStream->w3d(1,1,1,0,1,0,1,0,1, alt, az); //mandatory: in order to have shades plotted correctly, z must go from 0 to 1, not -0.5 to 0.5
-//		  //as the code in plplot prevents negative "normalized" values.
-//		  // To insure this (and shade_surf) to work in all cases, we must rely on the 3DDriverTransform, once again, to shift the [0,1] plot in [-0.5, 0.5]
-//		  // 
-//		  //compute vertical displacement of point [0,0,0] in projected coordinates between zv=0 and zv=0.5
-//			DDouble xp = 0;
-//			DDouble yp1 = 0;
-//			DDouble yp2 = 0;
-//			Matrix3DTransformXYZval(0, 0, 0, &xp, &yp1,Current3DMatrix);
-//			Matrix3DTransformXYZval(0, 0, 0.5, &xp, &yp2,Current3DMatrix);
-//			shift=yp1 - yp2;
-//			gdlShiftYaxisUsing3DDriverTransform(actStream, shift, false);
-//	  }
-//	  if (!doT3d) { //use a special matrix to shift and scale into current subpage
-//		gdlMakeSubpageRotationMatrix2d(gdlBox3d, xratio, yratio, zratio, trans, shift, below);
-//		GDL_3DTRANSFORMDEVICE T3DForAXes;
-//		for (int i = 0; i < 16; ++i)T3DForAXes.T[i] = (*gdlBox3d)[i];
-//		T3DForAXes.zValue = (std::isfinite(zValue)) ? zValue : 0;
-//		gdlStartSpecial3DDriverTransform(actStream, T3DForAXes);
-//	    //restore region info
-//		gdlStoreXAxisRegion(actStream, save_region);
-//		gdlStoreYAxisRegion(actStream, save_region);
-//	  }
 		return false;
       }
 
@@ -498,8 +437,22 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
       }
     } 
 
-    virtual void post_call (EnvT*, GDLGStream* actStream) 
-    {
+    virtual void post_call (EnvT* e, GDLGStream* actStream) 
+{
+      //draw axes after 3d
+      if (!doT3d) {
+        GDL_3DTRANSFORMDEVICE T3DForAXes;
+        for (int i = 0; i < 16; ++i)T3DForAXes.T[i] = (*gdlBox3d)[i];
+        T3DForAXes.zValue = (std::isfinite(zValue)) ? zValue : 0;
+        gdlStartSpecial3DDriverTransform(actStream, T3DForAXes);
+      } else {
+        gdlStartT3DMatrixDriverTransform(actStream, zValue);
+      }
+      //Draw axes with normal color!
+      gdlSetGraphicsForegroundColorFromKw(e, actStream); //COLOR
+      //write OUR box using our 3D PLESC tricks:
+      gdlBox3(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue, zAxis, zaxis_value);
+      //reset driver to 2D plotting routines, further 3D is just adding an image.
       gdlStop3DDriverTransform(actStream); 
       actStream->lsty(1);//reset linestyle
       actStream->sizeChar(1.0);
