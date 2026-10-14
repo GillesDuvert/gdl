@@ -33,8 +33,9 @@ class DeviceZ: public GraphicsDevice
   int    decomposed;
 
   void ResetZbuffer() {
-  for( SizeT i=0; i<memM*memN; ++i)
-      zBuffer[ i] = -32765;
+	  if (zBuffer) {
+         for( SizeT i=0; i<memM*memN; ++i)  zBuffer[ i] = -32765;
+	  }
   }
   
   void DeleteStream()
