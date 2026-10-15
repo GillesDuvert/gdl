@@ -4568,8 +4568,8 @@ inline PLFLT absdot( const PLFLT* x, const PLFLT* y) {
     static PLFLT* lightsource = get_lightsource();
     static PLINT* shadinglimits = get_shadeLimits();
     static PLINT* doesGouraud = get_gouraud();
-    PLFLT shadeFact = shadinglimits[1] - shadinglimits[0];
-    PLFLT shadeBase = shadinglimits[0];
+    PLFLT factor = (PLFLT)(shadinglimits[1] - shadinglimits[0])/255.;
+    PLFLT baseIndex = (PLFLT)(shadinglimits[0])/255.;
     assert(M>0);
     assert(N>0);
     bool usesGouraudMethod = (decomposed && doesGouraud[0]==1);
@@ -4663,24 +4663,24 @@ inline PLFLT absdot( const PLFLT* x, const PLFLT* y) {
             } else {
               PLFLT g;
               if (usesGouraudMethod) {
-                A.col = absdot(half_direction, &gouraud[3*iA]);  
-                B.col = absdot(half_direction, &gouraud[3*iB]);  
-                C.col = absdot(half_direction, &gouraud[3*iC]);  
-                D.col = absdot(half_direction, &gouraud[3*iD]);  
+                A.col = baseIndex+factor*absdot(half_direction, &gouraud[3*iA]);  
+                B.col = baseIndex+factor*absdot(half_direction, &gouraud[3*iB]);  
+                C.col = baseIndex+factor*absdot(half_direction, &gouraud[3*iC]);  
+                D.col = baseIndex+factor*absdot(half_direction, &gouraud[3*iD]);
                 shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, A, B, D, falsecolor, devicebox);
                 shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, B, C, D, falsecolor, devicebox);
               } else {
                 getVectorNormalToTriangle(A, B, D, normal);
-                    g = absdot(half_direction, normal);
-                A.col = g * 0.5 + 0.5;
-                B.col = g * 0.5 + 0.5;
-                D.col = g * 0.5 + 0.5;
+                    g = baseIndex+factor*absdot(half_direction, normal);
+                A.col = g;
+                B.col = g;
+                D.col = g;
                 shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, A, B, D, falsecolor, devicebox);
                 getVectorNormalToTriangle(B, C, D, normal);
-                    g = absdot(half_direction, normal);
-                B.col = g * 0.5 + 0.5;
-                D.col = g * 0.5 + 0.5;
-                C.col = g * 0.5 + 0.5;
+                    g = baseIndex+factor*absdot(half_direction, normal);
+                B.col = g;
+                D.col = g;
+                C.col = g;
                 shade_triangle(bitmap, zbuffer, pattern, npatx, npaty, pattrue, isTexture, M, N, B, C, D, falsecolor, devicebox);
               }
             }
