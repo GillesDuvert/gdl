@@ -43,7 +43,7 @@ class DeviceZ: public GraphicsDevice
     // note: the plplot documentation says that the user has to
     //       free this buffer, but plplot does it itself.
     //       even worse: it does it with 'free'
-    delete actStream;
+    if (actStream) delete actStream;
 	actStream = NULL;
     if (memBuffer) delete[] memBuffer;
     memBuffer =  NULL;
@@ -56,25 +56,19 @@ class DeviceZ: public GraphicsDevice
   {
     DeleteStream();
 
-    DLongGDL* pMulti = SysVar::GetPMulti();
-    DLong nx = (*pMulti)[ 1];
-    DLong ny = (*pMulti)[ 2];
-
-    if( nx <= 0) nx = 1;
-    if( ny <= 0) ny = 1;
-
     DLong& actX = (*static_cast<DLongGDL*>( dStruct->GetTag( xSTag, 0)))[0];
     DLong& actY = (*static_cast<DLongGDL*>( dStruct->GetTag( ySTag, 0)))[0];
 
     // always allocate the buffer with creating a new stream
-    actStream = new GDLZStream( nx, ny);
 	memM=actX;
 	memN=actY;
-	SizeT buffersize = memM * memN * 5;//3 planes for 24 bits + 1 UInt plane for zBuffer
-    memBuffer = (char*) calloc( sizeof( char), buffersize); 
-	zBuffer=(DInt*) &memBuffer[ memM * memN * 3]; //pointer 
-    // make it known to plplot
-    plsmem( actX, actY, memBuffer);
+    actStream = new GDLZStream( memM, memN);
+	SizeT buffersize = memM * memN * 3;//3 planes for 24 bits
+    memBuffer = (char*) calloc(buffersize,  sizeof( char)); 
+	zBuffer=(DInt*) calloc( memM * memN,  sizeof(DInt)); //pointer 
+    ResetZbuffer();
+	// make it known to plplot
+    plsmem( actX, actY, memBuffer, zBuffer);
 
     // no pause on destruction
     actStream->spause( false);
@@ -89,7 +83,7 @@ class DeviceZ: public GraphicsDevice
     actStream->SetColorMap0( r, g, b, ctSize); 
     actStream->SetColorMap1( r, g, b, ctSize); 
     
-    actStream->spage(Z_DPI, Z_DPI, nx, ny, 0, 0 );
+    actStream->spage(Z_DPI, Z_DPI, memM, memN, 0, 0 );
 
     actStream->Init();
     // need to be called initially. permit to fix things
@@ -177,7 +171,12 @@ public:
 
   void ClearStream( DLong bColor)
   {
-    for( SizeT i=0; i< memM*memN* 3; ++i)  memBuffer[i] = bColor;
+    if( actStream == NULL) 
+      {
+	if( !open) return;
+	InitStream();
+	}
+	for( SizeT i=0; i< memM*memN* 3; ++i)  memBuffer[i] = bColor;
   }
 
   DInt GetPixelDepth() { return 24;}  
@@ -185,8 +184,6 @@ public:
   bool SetPixelDepth(DInt value) {
    static int displayed=0;
    if (!displayed) {displayed=1; cerr<<"Pixel Depth changes ignored in GDL, stays at 24."<<endl;}
-   //this command should nevertheless reset Zbuffer:
-   ResetZbuffer();  
    return true;
   }
   
@@ -203,7 +200,13 @@ public:
     return decomposed;  
   }
   virtual bool ZBuffering( bool yes) final                  {
-	  ResetZbuffer(); 
+	  if (!yes) {
+		  ResetZbuffer(); 
+		  plsc->dev_zbuffering=0;
+		  ClearStream(0);
+	  } else {
+		  plsc->dev_zbuffering=1;
+	  }
 	  return true;
   }
 };
