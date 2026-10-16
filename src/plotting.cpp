@@ -4031,11 +4031,16 @@ NoTitlesAccepted:
   }
 
   void gdlBox(EnvT *e, GDLGStream *a, DDouble xStart, DDouble xEnd, bool xLog, DDouble yStart, DDouble yEnd, bool yLog) {
+    //always stop zbuffering, we draw axes.
+    a->stopZbuffering();
     gdlAxis(e, a, XAXIS, xStart, xEnd, xLog);
     gdlAxis(e, a, YAXIS, yStart, yEnd, yLog);
+    a->startZbuffering();
   }
 
   void gdlBox3(EnvT *e, GDLGStream *a, DDouble xStart, DDouble xEnd, bool xLog, DDouble yStart, DDouble yEnd, bool yLog, DDouble zStart, DDouble zEnd, bool zLog, DDouble zValue, bool zAxis, DLong zaxis_value) {
+    //always stop zbuffering, we draw axes.
+    a->stopZbuffering();
     gdlAxis(e, a, XAXIS, xStart, xEnd, xLog, 1); //only Bottom
     gdlAxis(e, a, YAXIS, yStart, yEnd, yLog, 1); //only left
 	
@@ -4084,7 +4089,7 @@ NoTitlesAccepted:
         gdlExchange3DDriverTransform(a);
         gdlAxis(e, a, ZAXIS, zStart, zEnd, zLog, modifierCode);
       }
-
+    a->startZbuffering();
     //restore (normally not useful?)
     gdlExchange3DDriverTransform(a);
     gdlSetZto3DDriverTransform(a, zValue);
@@ -4646,10 +4651,10 @@ inline PLFLT absdot( const PLFLT* x, const PLFLT* y) {
             T3DTransformCoordinates(D, T);
             if (falsecolor) {
               if (shademap!=NULL){
-                A.col = ( shademap[iA] & 0xFF ) /255.;
-                B.col = ( shademap[iB] & 0xFF ) /255.;
-                C.col = ( shademap[iC] & 0xFF ) /255.;
-                D.col = ( shademap[iD] & 0xFF ) /255.;
+                A.col = fabs(shademap[iA]/255.);
+                B.col = fabs(shademap[iB]/255.);
+                C.col = fabs(shademap[iC]/255.);
+                D.col = fabs(shademap[iD]/255.);
               } else {
                 static bool notseen=true;
                 if (notseen) {notseen=false; std::cerr<<"WARNING invalid shade map, please report!"<<std::endl;}

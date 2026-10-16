@@ -381,7 +381,16 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         DLong npixy = (DLong) ((save_region[3] - save_region[1]) * actStream->yPageSize());
         DLong pixx0 = save_region[0] * actStream->xPageSize();
         DLong pixy0 = save_region[1] * actStream->yPageSize();
-
+        
+        // device has a zbuffer, it covers the whole area, so we use the whole page and not the region:
+        //z-buffer, may be the device Z buffer. Otherwise shadeSurface will create its own.
+        DInt* zbuff = actStream->GetZbuffer();
+        if (zbuff) { // reconsider npixx etc:
+          pixx0=0;
+          pixy0=0;
+          npixx=(DLong) actStream->xPageSize();
+          npixy=(DLong) actStream->yPageSize();
+        }
         // scalable pixel device
         if (scalable) {
           DLong referenceSize = MIN(512, MAX(npixx,npixy));
@@ -406,8 +415,6 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         // bitmap as work area, 24 bits
         unsigned char* bitmap = (unsigned char*) malloc(npixx * npixy * 3);
         memset(bitmap, 0, npixx * npixy* 3);
-        //z-buffer, may be the device Z buffer. Otherwise shadeSurface will create its own.
-        DInt* zbuff = actStream->GetZbuffer(pixx0, pixy0, npixx, npixy);
         // initialize devicebox to 'impossible' values
         DLong devicebox[4] = {npixx + 1, -1, npixy + 1, -1}; //needs initializing here
 

@@ -664,6 +664,7 @@ typedef struct
     PLFLT domxmi, domxma, domymi, domyma;
     PLFLT zzscl, ranmi, ranma;
     PLFLT cxx, cxy, cyx, cyy, cyz, czx, czy, czz;
+	PLFLT zvalue;
 
 // Variables for keeping track of windows on a page.
 

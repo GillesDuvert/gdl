@@ -47,7 +47,7 @@ public:
   void GetGeometry( long& xSize, long& ySize);
   unsigned long GetWindowDepth();
   virtual DByteGDL* GetBitmapData(int xoff, int yoff, int nx, int ny) final;
-  virtual DInt* GetZbuffer(int xoff, int yoff, int nx, int ny) {return (DInt*) pls->dev_data;}
+  virtual DInt* GetZbuffer() {if (plsc->dev_zbuffering) return (DInt*) pls->dev_data; return NULL;}
 //to be written. Needed by same needs as for X11
 //  bool SetGraphicsFunction(long value );
 };

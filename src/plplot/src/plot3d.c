@@ -276,21 +276,6 @@ static void
 shade_triangle( PLFLT x0, PLFLT y0, PLFLT z0,
                 PLFLT x1, PLFLT y1, PLFLT z1,
                 PLFLT x2, PLFLT y2, PLFLT z2, PLFLT* passed_color ) {
-	if (plsc->dev_zbuffering) {
-		PLFLT x[3], y[3], z[3];
-		x[0] = x0; x[1] = x1; x[2] = x2;
-		y[0] = y0; y[1] = y1; y[2] = y2;
-		z[0] = z0; z[1] = z1; z[2] = z2;
-		plVertex v[3];
-		for (int i = 0; i < 3; i++) {
-			v[i].x  = x[i];
-			v[i].y  = y[i];
-			v[i].z  = z[i];
-			v[i].col=passed_color[i];
-		}
-		plP_fillz(v[0], v[1], v[2], falsecolor);
-	    return;
-	}
 	int   i;
     // arrays for interface to core functions
     short u[6], v[6];

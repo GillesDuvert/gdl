@@ -385,11 +385,6 @@ plP_polyline( short *x, short *y, PLINT npts )
 // something in software
 
 static int foo;
-void
-plP_fillz(plVertex v1, plVertex v2, plVertex v3, PLINT falsecolor)
-{
-	grfillz(v1,v2,v3, falsecolor);
-}
 
 void
 plP_fill( short *x, short *y, PLINT npts )
@@ -650,22 +645,6 @@ grfill(short *x, short *y, PLINT npts) {
 	if (!plsc->stream_closed) {
 		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
 				PLESC_FILL_POLYGON, NULL);
-	}
-	plrestore_locale(save_locale);
-}
-
-static void
-grfillz(plVertex v1, plVertex v2, plVertex v3, PLINT falsecolor) {
-	char * save_locale;
-	plsc->dev_vertex1 = v1;
-	plsc->dev_vertex2 = v2;
-	plsc->dev_vertex3 = v3;
-	plsc->dev_vertex_falsecolor = falsecolor;
-
-	save_locale = plsave_set_locale();
-	if (!plsc->stream_closed) {
-		(*plsc->dispatch_table->pl_esc)((struct PLStream_struct *) plsc,
-				PLESC_FILL_VERTEX, NULL);
 	}
 	plrestore_locale(save_locale);
 }
@@ -2382,27 +2361,27 @@ c_plgdev( char *p_dev )
 //
 
 void
-c_plsmem( PLINT maxx, PLINT maxy, void *plotmem)
+c_plsmem( PLINT maxx, PLINT maxy, void *plotmem, void* zbuffer)
 {
     plsc->dev           = plotmem;
 	plsc->dev_zbuffering=1;
     plsc->dev_mem_alpha = 0;
-    plP_setphy( 0, maxx-1, 0, maxy-1 );
+    plP_setphy( 0, maxx, 0, maxy );
 	unsigned char* data=(unsigned char*)plotmem;
-	plsc->dev_data      = (void*)&data[maxx*maxy*3];
+	plsc->dev_data  = zbuffer;
 }
 
 // Same as plsmem, but the buffer is (Y, X, RGBA)
 
 void
-c_plsmema( PLINT maxx, PLINT maxy, void *plotmem)
+c_plsmema( PLINT maxx, PLINT maxy, void *plotmem, void* zbuffer)
 {
     plsc->dev           = plotmem;
 	plsc->dev_zbuffering=1;
     plsc->dev_mem_alpha = 1;
     plP_setphy( 0, maxx-1, 0, maxy-1 );
 	unsigned char* data=(unsigned char*)plotmem;
-	plsc->dev_data      = (void*)&data[maxx*maxy*3];
+	plsc->dev_data = zbuffer;
 }
 
 // Get the current stream pointer

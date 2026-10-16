@@ -308,7 +308,6 @@ typedef PLINT ( *PLDEFINED_callback )( PLFLT x, PLFLT y );
 #define PLESC_APPEND_BUFFER             40 // append the given byte string to the buffer
 #define PLESC_FLUSH_REMAINING_BUFFER    41 // flush the remaining buffer e.g. after new data was appended
 #define PLESC_FILL_PATH                 42 // fill multiple polygon
-#define PLESC_FILL_VERTEX               43 // z-buffer gouraud shade triangle pased as vertexes
 
 // image operations
 #define ZEROW2B                         1
@@ -1528,12 +1527,12 @@ c_plsmaj( PLFLT def, PLFLT scale );
 // Set the RGB memory area to be plotted (with the 'mem' or 'memcairo' drivers)
 
 PLDLLIMPEXP void
-c_plsmem( PLINT maxx, PLINT maxy, PLPointer plotmem );
+c_plsmem( PLINT maxx, PLINT maxy, PLPointer plotmem, PLPointer zbuffer );
 
 // Set the RGBA memory area to be plotted (with the 'memcairo' driver)
 
 PLDLLIMPEXP void
-c_plsmema( PLINT maxx, PLINT maxy, PLPointer plotmem);
+c_plsmema( PLINT maxx, PLINT maxy, PLPointer plotmem, PLPointer zbuffer);
 
 // Set up lengths of minor tick marks.
 
