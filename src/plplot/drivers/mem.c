@@ -222,7 +222,7 @@ plD_line_mem_3D(PLStream *pls, short x1a, short y1a, short x2a, short y2a) {
 	zfy = zy1;
 
 
-	if (pls->dev_zbuffering) {
+	if (Status3D == 1 && pls->dev_zbuffering) {
         idx = 3 * (M * y1 + x1);
 		idzx = M * (N-y1) + x1;
 		pz = Get3DTransformedZ(zx1, zy1); //non-projected

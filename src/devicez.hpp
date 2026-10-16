@@ -200,12 +200,14 @@ public:
     return decomposed;  
   }
   virtual bool ZBuffering( bool yes) final                  {
-	  if (!yes) {
+	  PLINT value=yes?1:0;
+	  if (plsc->dev_zbuffering==value) return true;
+		ClearStream(0);
+	  if (yes) {
+		  plsc->dev_zbuffering=1;
+	  } else {
 		  ResetZbuffer(); 
 		  plsc->dev_zbuffering=0;
-		  ClearStream(0);
-	  } else {
-		  plsc->dev_zbuffering=1;
 	  }
 	  return true;
   }
