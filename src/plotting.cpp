@@ -3195,8 +3195,26 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
     return (nozero == 1);
   }
 
+   //check if the current plot will erase or not the page (if noerase flag or !P tag is set)
 
-  //advance to next plot unless the noerase flag is set
+bool gdlIsNoEraseActive(EnvT *e, GDLGStream *a)
+{
+    bool noErase = false;
+    static unsigned pNoeEraseTag = SysVar::P()->Desc()->TagIndex("NOERASE");
+    static unsigned pRegionTag = SysVar::P()->Desc()->TagIndex("REGION");
+    static unsigned pPositionTag = SysVar::P()->Desc()->TagIndex("POSITION");
+   DStructGDL* pStruct = SysVar::P(); //MUST NOT BE STATIC, due to .reset 
+      DLong LnoErase = (*static_cast<DLongGDL*>(pStruct->GetTag(pNoeEraseTag, 0)))[0];
+      noErase = (LnoErase == 1);
+      int NOERASEIx = e->KeywordIx("NOERASE");
+
+      if (e->KeywordSet(NOERASEIx)) {
+        noErase = true;
+      }
+      return noErase;
+}
+
+ //advance to next plot unless the noerase flag or !P tag is set
 
   void gdlNextPlotHandlingNoEraseOption(EnvT *e, GDLGStream *a) {
     bool noErase = false;

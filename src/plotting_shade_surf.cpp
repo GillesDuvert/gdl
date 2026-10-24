@@ -256,7 +256,7 @@ namespace lib
 	  if (zaxis_value < 0) zAxis = false;
 
       // background BEFORE next plot since it is the only place plplot may redraw the background...
-      gdlSetGraphicsBackgroundColorFromKw ( e, actStream );
+      if (!gdlIsNoEraseActive(e, actStream)) gdlSetGraphicsBackgroundColorFromKw ( e, actStream );
       //start a plot
       gdlNextPlotHandlingNoEraseOption(e, actStream);     //NOERASE
 
@@ -391,15 +391,16 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           npixx=(DLong) actStream->xPageSize();
           npixy=(DLong) actStream->yPageSize();
         }
-        // scalable pixel device
-        if (scalable) {
-          DLong referenceSize = MIN(512, MAX(npixx,npixy));
-          float aspect=(float)npixy/(float)npixx;
-          if (aspect > 1) referenceSize=ceil((float)referenceSize/aspect); 
-          if (donewsize) e->AssureLongScalarKW(pixelsIx, referenceSize);
-          npixx=referenceSize;
-          npixy=referenceSize*aspect;
-        }
+        // will not work for ps and svg until their respective PaintImage is able to pass also the desired image size
+//        // scalable pixel device
+//        if (scalable) {
+//          DLong referenceSize = MIN(512, MAX(npixx,npixy));
+//          float aspect=(float)npixy/(float)npixx;
+//          if (aspect > 1) referenceSize=ceil((float)referenceSize/aspect); 
+//          if (donewsize) e->AssureLongScalarKW(pixelsIx, referenceSize);
+//          npixx=referenceSize;
+//          npixy=referenceSize*aspect;
+//        }
 
         // pattern (GDL only, amusing)
         SizeT npx, npy, pattrue = false;
@@ -413,8 +414,14 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           if (!rankok) pattrue = false;
         }
         // bitmap as work area, 24 bits
-        unsigned char* bitmap = (unsigned char*) malloc(npixx * npixy * 3);
-        memset(bitmap, 0, npixx * npixy* 3);
+        DByteGDL* bitmapgdl;
+        if (scalable) {
+          bitmapgdl=new DByteGDL(dimension(npixx * npixy * 3),BaseGDL::ZERO);
+          bitmapgdl->Dec(); // i.e., 255
+        } else { //will preserve background and possibly be better than IDL in noerase mode.
+          bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0, pixy0, npixx, npixy));
+        }
+        unsigned char* bitmap = static_cast<unsigned char*> (bitmapgdl->DataAddr());
         // initialize devicebox to 'impossible' values
         DLong devicebox[4] = {npixx + 1, -1, npixy + 1, -1}; //needs initializing here
 
@@ -444,7 +451,7 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           }
           free(subset);
         }
-        free(bitmap);
+        GDLDelete(bitmapgdl);
         free(map);
         if (decomposed > 0) GraphicsDevice::GetDevice()->Decomposed(true);
       }

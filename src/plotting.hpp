@@ -413,7 +413,8 @@ namespace lib {
   // function declared static (local to each function using it) to avoid messing the NOERASEIx index which is not the same.
 
   void gdlNextPlotHandlingNoEraseOption(EnvT *e, GDLGStream *a);
-
+   //check if the current plot will erase or not the page (if noerase flag or !P tag is set)
+  bool gdlIsNoEraseActive(EnvT *e, GDLGStream *a);
   //handling of Z bounds is not complete IMHO.
 
   inline void CheckMargin(GDLGStream* actStream,
