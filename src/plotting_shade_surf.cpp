@@ -375,7 +375,8 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           if (hasMaxVal && v > maxVal) v = maxVal;
           map[k] = v;
         }
-
+        // image dimensions: N by M
+        DLong M,N;
         PLFLT* save_region = gdlGetRegion(); 
         DLong npixx = (DLong) ((save_region[2] - save_region[0]) * actStream->xPageSize());
         DLong npixy = (DLong) ((save_region[3] - save_region[1]) * actStream->yPageSize());
@@ -391,15 +392,17 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
           npixx=(DLong) actStream->xPageSize();
           npixy=(DLong) actStream->yPageSize();
         }
-         //will not work for ps and svg until their respective PaintImage is able to pass also the desired image size
-        // scalable pixel device
+        // scalable pixel device: M,N is not npixx,npixy
         if (scalable) {
           DLong referenceSize = MIN(512, MAX(npixx,npixy));
           float aspect=(float)npixy/(float)npixx;
           if (aspect > 1) referenceSize=ceil((float)referenceSize/aspect); 
           if (donewsize) e->AssureLongScalarKW(pixelsIx, referenceSize);
-          npixx=referenceSize;
-          npixy=referenceSize*aspect;
+          M=referenceSize;
+          N=referenceSize*aspect;
+        } else {
+          M=npixx;
+          N=npixy;
         }
 
         // pattern (GDL only, amusing)
@@ -415,40 +418,53 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
         }
         // bitmap as work area, 24 bits
         DByteGDL* bitmapgdl;
+        // scalable pixels: establish a linear correspondence between pixels and device coordinates
+        DFloat sc_xinc=1, sc_yinc=1;
         if (scalable) {
-          bitmapgdl=new DByteGDL(dimension(npixx * npixy * 3),BaseGDL::ZERO);
+          sc_xinc=(DFloat)(npixx)/M;
+          sc_yinc=(DFloat)(npixy)/N;
+          bitmapgdl=new DByteGDL(dimension(M * N * 3),BaseGDL::ZERO);
           bitmapgdl->Dec(); // i.e., 255
         } else { //will preserve background and possibly be better than IDL in noerase mode.
-          bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0, pixy0, npixx, npixy));
+          bitmapgdl = static_cast<DByteGDL*> (actStream->GetBitmapData(pixx0, pixy0, M, N));
         }
         unsigned char* bitmap = static_cast<unsigned char*> (bitmapgdl->DataAddr());
         // initialize devicebox to 'impossible' values
         DLong devicebox[4] = {npixx + 1, -1, npixy + 1, -1}; //needs initializing here
 
-        shadeSurface(bitmap, zbuff, pat, npx, npy, pattrue, is_texture, npixx, npixy, (PLFLT*) xVal->DataAddr(), (PLFLT*) yVal->DataAddr(),
+        shadeSurface(bitmap, zbuff, pat, npx, npy, pattrue, is_texture, M, N, (PLFLT*) xVal->DataAddr(), (PLFLT*) yVal->DataAddr(),
             map, xEl, yEl, !doShade, Current3DMatrix, shadevals, devicebox);
         //devicebox is xmin,xmax,ymin,ymax, convert to offx,xsize, offy,ysize:
         devicebox[1]=devicebox[1]-devicebox[0]+1;
         devicebox[3]=devicebox[3]-devicebox[2]+1;
         //if devicebox is wrong, just do nothing:
-        if (devicebox[0] >= 0 && devicebox[1] <= npixx && devicebox[2] >= 0 && devicebox[3] <= npixy) {
+        if (devicebox[0] >= 0 && devicebox[1] <= M && devicebox[2] >= 0 && devicebox[3] <= N) {
           devicebox[1]=MAX(2,devicebox[1]);
           devicebox[3]=MAX(2,devicebox[3]); //e.g. "SHADE_SURF, a, ax=0, AZ=20,zv=1,/save,image=b"
           //pass only devicebox subset to whatever needs it, with correct offsets
           unsigned char* subset = (unsigned char*) malloc(devicebox[1] * devicebox[3] * 3);
           for (int j = 0; j < devicebox[3]; ++j) for (int i = 0; i < devicebox[1]; ++i) {
-              int ref = 3 * (npixx * (j + devicebox[2]) + i + devicebox[0]);
+              int ref = 3 * (M * (j + devicebox[2]) + i + devicebox[0]);
               int dest = 3 * (devicebox[1] * j + i);
               subset[dest++] = bitmap[ref++];
               subset[dest++] = bitmap[ref++];
               subset[dest] = bitmap[ref];
-          }
-          if (!nodata && !actStream->PaintImage(subset, devicebox[1], devicebox[3], devicebox, 1, 0)) e->Throw("device does not support Paint");
+            }
           if (return_image) {
-            DByteGDL* image = new DByteGDL(dimension( devicebox[1], devicebox[3]), BaseGDL::NOZERO);
-            for (SizeT i=0; i<devicebox[1]*devicebox[3]; ++i) (*image)[i]=subset[3*i];
-            e->SetKW(imageIx,image);
+            DByteGDL* image = new DByteGDL(dimension(devicebox[1], devicebox[3]), BaseGDL::NOZERO);
+            for (SizeT i = 0; i < devicebox[1] * devicebox[3]; ++i) (*image)[i] = subset[3 * i];
+            e->SetKW(imageIx, image);
           }
+          M=devicebox[1];
+          N=devicebox[3];
+          //scalable pixels: get a devicebox based on npixx, npixy
+          if (scalable) {
+            devicebox[0]*=sc_xinc;
+            devicebox[2]*=sc_yinc;
+            devicebox[1]*=sc_xinc;
+            devicebox[3]*=sc_yinc;
+          }
+          if (!nodata && !actStream->PaintImage(subset, M, N, devicebox, 1, 0)) e->Throw("device does not support Paint");
           free(subset);
         }
         GDLDelete(bitmapgdl);
