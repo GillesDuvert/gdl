@@ -110,16 +110,8 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
       x1*=plsc->aspori;
       x2*=plsc->aspori;
   } else {
-    pls->bytecnt += fprintf(pls->OutFile, "%d translate 270 rotate\n",plsc->phyxlen );
-  }
-  dev->llx = MIN(dev->llx, x1);
-  dev->lly = MIN(dev->lly, y1);
-  dev->urx = MAX(dev->urx, x1);
-  dev->ury = MAX(dev->ury, y1);
-  dev->llx = MIN(dev->llx, x2);
-  dev->lly = MIN(dev->lly, y2);
-  dev->urx = MAX(dev->urx, x2);
-  dev->ury = MAX(dev->ury, y2);
+    pls->bytecnt += fprintf(pls->OutFile, "0 %d translate 270 rotate\n",plsc->phyxlen );
+   }
   
   pls->bytecnt += fprintf(pls->OutFile, "%d %d translate %d %d scale\n", x1, y1, x2, y2 );
 #define LINEWIDTH 80
@@ -172,6 +164,18 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
     }
   }
  pls->bytecnt += fprintf(pls->OutFile, "\ngrestore\n%%EndObject: Image\n       ");
-  return true;
+   if (!portrait) {
+    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x1, &y1);
+    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x2, &y2);
+   }
+    dev->llx = MIN(dev->llx, x1);
+    dev->lly = MIN(dev->lly, y1);
+    dev->urx = MAX(dev->urx, x1);
+    dev->ury = MAX(dev->ury, y1);
+    dev->llx = MIN(dev->llx, x2);
+    dev->lly = MIN(dev->lly, y2);
+    dev->urx = MAX(dev->urx, x2);
+    dev->ury = MAX(dev->ury, y2);
+    return true;
 #undef LINEWIDTH
 }
