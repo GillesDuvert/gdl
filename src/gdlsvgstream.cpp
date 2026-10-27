@@ -263,9 +263,22 @@ std::string GDLSVGStream::svg_to_png64(int width,int height,
    unlink(filename);
    return tmpstr;
 }
+//copy of SVG struct defined in svg.c
+typedef struct
+{
+    short textClipping;
+    int   which_clip;
+    int   canvasXSize;
+    int   canvasYSize;
+    PLFLT scale;
+    int   svgIndent;
+    FILE  *svgFile;
+} SVG;
+
 bool  GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
 		   DLong trueColorOrder, DLong channel, DLong Mode) {
   c_plflush();
+  SVG* aStream = (SVG *) pls->dev;
   if (channel > 0) {
     cerr << "TV+SVG device: Value of CHANNEL (use TRUE instead) is out of allowed range. (FIXME!)" << endl;
     return false;
@@ -274,14 +287,14 @@ bool  GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *
     cerr << "TV+SVG device: True Color images must be [3,*,*] only. (FIXME!)" << endl;
     return false;
   }
-  pls->bytecnt += fprintf(pls->OutFile,"<image preserveAspectRatio=\"none\" x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" xlink:href=\"data:image/svg;base64,",
-          pos[0],pos[2],pos[1],pos[3]);
+  double x1=(double) pos[0] /aStream->scale;
+  double x2=(double) pos[1] / aStream->scale;
+  double y1=(double) pos[2] / aStream->scale;
+  double y2=(double) pos[3] / aStream->scale;
+  pls->bytecnt += fprintf(pls->OutFile,"<image preserveAspectRatio=\"none\" x=\"%.2f\" y=\"%.2f\" width=\"%.2f\" height=\"%.2f\" xlink:href=\"data:image/svg;base64,",
+          x1,y1,x2,y2);
   int error;
   std::string ret ;      
-  // do we need rotation handling? 
-//  if ( pls->diorot == 1.0 ) {
-//  } else {
-//  }
   if ( channel == 0 ) {
     if ( trueColorOrder == 0 ) { //indexed value 0->255: image
       ret = GDLSVGStream::svg_to_png64( nx, ny, idata, 8, 1 ,PNG_COLOR_TYPE_PALETTE, &error );

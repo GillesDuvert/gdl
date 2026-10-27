@@ -456,27 +456,9 @@ void GDLGStream::NoSub()
 
 // default is a wrapper for gpage(). Is overriden by, e.g., X driver.
 void GDLGStream::GetGeometry( long& xSize, long& ySize)
-{
-  if (GDL_DEBUG_PLSTREAM) fprintf(stderr,"GDLGStream::GetGeometry()\n");
-  PLFLT xp; PLFLT yp; 
-  PLINT xleng; PLINT yleng;
-  PLINT plxoff; PLINT plyoff;
-  plstream::gpage( xp, yp, xleng, yleng, plxoff, plyoff); //for X-Window, wrapper give sizes from X11, not plplot which seems bugged.
-  // for PostScript, Page size is FIXED (720x540) and GDLPSStream::GetGeometry replies correctly
-  
-//since the page sizes for PS and EPS images are processed by GDL after plplot finishes 
-//its work, gpage will not output correct sizes 
-  xSize = xleng;
-  ySize = yleng;
-  if (xSize<1.0||ySize<1) //plplot gives back crazy values! z-buffer for example!
-  {
-    PLFLT xmin,xmax,ymin,ymax;
-    plstream::gspa(xmin,xmax,ymin,ymax); //subpage in mm
-    xSize=min(1.0,xmax-xmin);
-    ySize=min(1.0,ymax-ymin);
-  }
-  if (GDL_DEBUG_PLSTREAM) fprintf(stderr,"    found (%ld %ld)\n", xSize, ySize);
-
+{  
+  xSize=pls->phyxma;
+  ySize=pls->phyyma;
 }
 
 void GDLGStream::setSymbolSize( PLFLT scale )

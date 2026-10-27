@@ -66,7 +66,7 @@ void image_compress(unsigned char *idata, PLINT size, long bpp)
 }
 //use A85p compressor from bmp2eps package (https://www.mjr19.org.uk/sw/bmp2eps/)
 #include "snippets/A85p.c"
-//We need a copy of PSDev (defined in driver ps.c) as it will be modified by us below (to avoid polluting the BBox with our 2 "invisible points" inserted to get the transformation corrdinates (below).
+//We need a copy of PSDev (defined in driver ps.c) 
 typedef struct
 {
     PLFLT pxlx, pxly;
@@ -92,42 +92,36 @@ typedef struct
 } PSDev;
 bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
         DLong trueColorOrder, DLong channel, DLong Mode) {
-  if (firstTime){
-    PSDev *dev = (PSDev *) pls->dev;
-	int llx,lly,urx,ury;
-	llx=dev->llx; lly=dev->lly; urx=dev->urx; ury=dev->ury; //save BBox
-    pls->bytecnt += fprintf(pls->OutFile, "\n%%Introspection code by GDL to insure exact positioning of images.\n");
-    firstTime=false;
-    this->vpor(0, 1, 0, 1); //ALL PAGE
-    this->wind(0, 1, 0, 1); //ALL PAGE
-    this->ptex(0,0,0,0,0," "); //put a blank at 0,0 wherever it is on the plot
-    this->Flush();
-    pls->bytecnt += fprintf(pls->OutFile, "\ncurrentpoint /YMIN exch def /XMIN exch def\n");
-    this->ptex(1,1,0,0,0," "); //put a blank at 1,1 wherever it is on the plot
-    this->Flush();
-//autotest whether PS was rotated + define good sizes.
-    pls->bytecnt += fprintf(pls->OutFile, "\ncurrentpoint /YMAX exch def /XMAX exch def\n");
-    pls->bytecnt += fprintf(pls->OutFile, "YMAX YMIN lt /LAND exch def \n");
-    pls->bytecnt += fprintf(pls->OutFile, "LAND { YMAX /YMAX YMIN def /YMIN exch def /ROT 270 def} {/ROT 0 def} ifelse\n");
-    pls->bytecnt += fprintf(pls->OutFile, "XMAX XMIN sub /XRANGE exch def YMAX YMIN sub /YRANGE exch def\n");
-    pls->bytecnt += fprintf(pls->OutFile, "LAND {/X0 XMIN def /Y0 YMAX def /RX YRANGE def /RY XRANGE def}"
-    "{/X0 XMIN def /Y0 YMIN def /RX XRANGE def /RY YRANGE def} ifelse\n");
-	dev->llx=llx; dev->lly=lly; dev->urx=urx; dev->ury=ury; //restore ps driver internal BBox
-  }
   //need to : check position in file Ok; update bounding box values: IDL does not take into account images ?
   //test black and white:
   bool bw = (((*static_cast<DLongGDL*> (SysVar::D()->GetTag(SysVar::D()->Desc()->TagIndex("FLAGS"), 0)))[0] & 16) == 0); 
-  long xs, ys;
-  GDLPSStream::GetGeometry(xs, ys);
-  SizeT nelem;
   if (channel > 0) {
     cerr << "TV: Value of CHANNEL (use TRUE instead) is out of allowed range." << endl;
     return false;
   } 
   
-  pls->bytecnt += fprintf(pls->OutFile, "\n%%BeginObject: Image\n S gsave\nX0 Y0 translate ROT rotate RX RY scale\n");
-  pls->bytecnt += fprintf(pls->OutFile, "%d %ld div %d %ld div translate\n", pos[0], xs, pos[2], ys);
-  pls->bytecnt += fprintf(pls->OutFile, "%d %ld div %d %ld div scale\n", pos[1], xs, pos[3], ys);
+  PSDev *dev = (PSDev *) pls->dev;
+  PLINT x1 = pos[0], y1 = pos[2];
+  PLINT x2 = pos[1], y2 = pos[3];
+  pls->bytecnt += fprintf(pls->OutFile, "\n%%BeginObject: Image\ngsave\n");
+  if (portrait) {
+      y1/=plsc->aspori;
+      y2/=plsc->aspori;
+      x1*=plsc->aspori;
+      x2*=plsc->aspori;
+  } else {
+    pls->bytecnt += fprintf(pls->OutFile, "%d translate 270 rotate\n",plsc->phyxlen );
+  }
+  dev->llx = MIN(dev->llx, x1);
+  dev->lly = MIN(dev->lly, y1);
+  dev->urx = MAX(dev->urx, x1);
+  dev->ury = MAX(dev->ury, y1);
+  dev->llx = MIN(dev->llx, x2);
+  dev->lly = MIN(dev->lly, y2);
+  dev->urx = MAX(dev->urx, x2);
+  dev->ury = MAX(dev->ury, y2);
+  
+  pls->bytecnt += fprintf(pls->OutFile, "%d %d translate %d %d scale\n", x1, y1, x2, y2 );
 #define LINEWIDTH 80
 
   if (trueColorOrder == 0) { 
@@ -177,7 +171,7 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
         cerr<<"you should not get here!"<<endl;
     }
   }
-  pls->bytecnt += fprintf(pls->OutFile, "\ngrestore\n%%EndObject: Image\n       ");
+ pls->bytecnt += fprintf(pls->OutFile, "\ngrestore\n%%EndObject: Image\n       ");
   return true;
 #undef LINEWIDTH
 }
