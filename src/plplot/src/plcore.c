@@ -89,9 +89,6 @@
 
 #include <errno.h>
 
-int
-text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
-
 //--------------------------------------------------------------------------
 // Driver Interface
 //
@@ -446,45 +443,6 @@ plP_pathfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly  )
 	grpathfill( x, y, npts, npoly );
 }
 
-
-// Account for driver ability to draw text itself
-//
-// #define DEBUG_TEXT
-//
-
-//--------------------------------------------------------------------------
-//  int text2num( char *text, char end, PLUNICODE *num)
-//       char *text - pointer to the text to be parsed
-//       char end   - end character (i.e. ')' or ']' to stop parsing
-//       PLUNICODE *num - pointer to an PLUNICODE to store the value
-//
-//    Function takes a string, which can be either hex or decimal,
-//    and converts it into an PLUNICODE, stopping at either a null,
-//    or the character pointed to by 'end'. This implementation using
-//    the C library strtoul replaces the original brain-dead version
-//    and should be more robust to invalid control strings.
-//--------------------------------------------------------------------------
-
-int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num )
-{
-    char *endptr;
-    // This special base logic required to _avoid_ interpretation of
-    // numbers with leading zeroes as octal numbers if base = 0.
-    int base = 10;
-    if ( !strncmp( text, "0x", 2 ) || !strncmp( text, "0X", 2 ) )
-        base = 16;
-
-    *num = (PLUNICODE) strtoul( text, &endptr, base );
-
-    if ( end != endptr[0] )
-    {
-        char msgbuf[BUFFER2_SIZE];
-        snprintf( msgbuf, BUFFER2_SIZE, "text2num: for base = %d, strtoul found invalid non-numeric character \"%c\" detected in string \"%s\" when looking for \"%c\" ", base, *endptr, text, end );
-        plwarn( msgbuf );
-    }
-
-    return (int) ( endptr - text );
-}
 
 void
 plP_text( PLINT base, PLFLT just, PLFLT *xform, PLINT x, PLINT y,

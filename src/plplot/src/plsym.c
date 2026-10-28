@@ -46,8 +46,6 @@
 #define NEED_PLDEBUG
 
 #include "plplotP.h"
-#include <float.h>
-#include <ctype.h>
 #include "hershey_mapping.h"
 // our rasterizer used: the stbtt one, version 1 (2 would be too much ?)
 #define STB_TRUETYPE_IMPLEMENTATION 
@@ -79,21 +77,8 @@ static short int *hersheyFontVectors[NUMBERHERSHEYFONTS]={};
 static stbtt_fontinfo* ttfVectors[MAXTTFONTS]={0};
 static float charHeightCorr[MAXTTFONTS]={0};
 static int   charDescent[MAXTTFONTS]={0};
-static short int   *fntlkup;
-static long   *fntindx;
-static signed char *fntbffr;
 static short int   numberfonts, numberchars;
-static long   indxleng;
 
-static short       fontloaded = 0;
-
-#define STLEN       250
-
-//static PLUNICODE symbol_buffer[PLMAXSTR];
-static signed char xygrid[STLEN];
-
-int hershey2unicode( int in );
-int text2num( PLCHAR_VECTOR text, char end, PLUNICODE *num );
 
 // Static function prototypes
 
@@ -376,10 +361,9 @@ PLUNICODE oldifont = ifont;
 	// TrueType fonts need a special correction as their size is all different.
 	// The correction itself depends on the size of the hershey fonts, all this is quite relative
 	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
-/*
- * seems to be ok.
-	if (plsc->use_unicode) ht*=0.2 ; //charHeightCorr[ifont];
-*/
+
+	if (plsc->use_unicode) ht*=charHeightCorr[ifont]; //4 for 4 pix/mm
+
 	dscale = 0.05 * ht;
 	scale = dscale;
 	static const PLFLT scales[2] = {(1 - 0.56), (1 - 0.7)};
@@ -558,7 +542,12 @@ plhershey( short *vects, int len, PLFLT * const xform,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
 	if (vects[0] == -1) return;
-	
+
+	PLFLT conv1=xpmm * xform[0];
+	PLFLT conv2=xpmm * xform[1];
+	PLFLT conv3=ypmm * xform[2];
+	PLFLT conv4=xpmm * xform[3];
+
 	PLINT lx, ly;
     PLINT penup;
     PLFLT x, y;
@@ -581,8 +570,8 @@ plhershey( short *vects, int len, PLFLT * const xform,
         penup = ((vects[i] & 16384) != 0);
 		x = *p_xorg + cx * scale;
 		y = *p_yorg + cy * scale;
-		lx = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
-		ly = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+		lx = refx + ROUND(conv1 * x + conv2 * y);
+		ly = refy + ROUND(conv3 * x + conv4 * y);
         if ( penup  == 1)
         {
             if ( l )
@@ -618,6 +607,12 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
 
 	if (len == 0) return;
+
+	PLFLT conv1 = xpmm * xform[0];
+	PLFLT conv2 = xpmm * xform[1];
+	PLFLT conv3 = ypmm * xform[2];
+	PLFLT conv4 = xpmm * xform[3];
+
 	PLINT lx, ly;
     PLFLT x, y;
     PLINT cx, cy;
@@ -665,8 +660,8 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
         cx = vects[i].x, cy = vects[i].y + descent;
 		x = *p_xorg + cx * scale;
 		y = *p_yorg + cy * scale;
-		lx = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
-		ly = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+		lx = refx + ROUND(conv1 * x + conv2 * y);
+		ly = refy + ROUND(conv3 * x + conv4 * y);
         switch (vects[i].type) {
             case STBTT_vmove:
 				if (l!=0) { //not for the start
@@ -692,8 +687,8 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
 				cx = vects[i].cx, cy = vects[i].cy +  descent;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
-				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
-				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+				llx[l] = refx + ROUND(conv1 * x + conv2 * y);
+				lly[l] = refy + ROUND(conv3 * x + conv4 * y);
 				l++; n++;
 				llx[l] = lx;
 				lly[l] = ly;
@@ -705,14 +700,14 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
 				cx = vects[i].cx, cy = vects[i].cy +  descent;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
-				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
-				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+				llx[l] = refx + ROUND(conv1 * x + conv2 * y);
+				lly[l] = refy + ROUND(conv3 * x + conv4 * y);
 				l++; n++;
 				cx = vects[i].cx1, cy = vects[i].cy1 +  descent;
 		        x = *p_xorg + cx * scale;
 		        y = *p_yorg + cy * scale;
-				llx[l] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
-				lly[l] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+				llx[l] = refx + ROUND(conv1 * x + conv2 * y);
+				lly[l] = refy + ROUND(conv3 * x + conv4 * y);
 				l++; n++;
 				llx[l] = lx;
 				lly[l] = ly;
@@ -746,6 +741,12 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 	PLINT cx,cy;
 	float x,y;
 	if (len == 0) return;
+
+	PLFLT conv1 = xpmm * xform[0];
+	PLFLT conv2 = xpmm * xform[1];
+	PLFLT conv3 = ypmm * xform[2];
+	PLFLT conv4 = xpmm * xform[3];
+
 	int winding_count = 0;
 	int *winding_lengths = NULL;
 	stbtt__point *windings = stbtt_FlattenCurves(vects, len, 0.35f / scale, &winding_lengths, &winding_count, userdata);
@@ -761,8 +762,8 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 			cy = windings[i].y +  descent;
 			x = *p_xorg + cx * scale;
 			y = *p_yorg + cy * scale;
-			llx[i] = refx + ROUND(xpmm * (xform[0] * x + xform[1] * y));
-			lly[i] = refy + ROUND(ypmm * (xform[2] * x + xform[3] * y));
+			llx[i] = refx + ROUND(conv1 * x + conv2 * y);
+			lly[i] = refy + ROUND(conv3 * x + conv4 * y);
 		}
 		plP_fill(llx, lly, n);
 		free(llx);
@@ -1155,7 +1156,7 @@ void c_ttFontLoad(const char* fontName) {
 	float averheight = (float) (y1 - y0);
 	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
 	float aspectratiooffont = averheight / (float) (x1 - x0);
-	charHeightCorr[n] = 4. / averheight; //value found experimentally (?)
+	charHeightCorr[n] =  stbtt_ScaleForPixelHeight(info, 32); // 4 pixels // 4. / averheight; //value found experimentally (?)
 	int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);
 	charDescent[n] = 2.5*descent; //value found experimentally (?)
@@ -1202,7 +1203,7 @@ void c_ttFontLoadFromPath(const char* fontPath, const char* fontName) {
 	float averheight = (float) (y1 - y0);
 	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
 	float aspectratiooffont = averheight / (float) (x1 - x0);
-	charHeightCorr[n] = 4. / averheight; //value found experimentally (?)
+	charHeightCorr[n] =  stbtt_ScaleForPixelHeight(info, 32); // 4 pixels // 4. / averheight; //value found experimentally (?)
 	int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);
 	charDescent[n] = 2.5*descent; //value found experimentally (?)
