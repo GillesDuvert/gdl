@@ -362,7 +362,7 @@ PLUNICODE oldifont = ifont;
 	// The correction itself depends on the size of the hershey fonts, all this is quite relative
 	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
 
-	if (plsc->use_unicode) ht*=charHeightCorr[ifont]; //4 for 4 pix/mm
+//	if (plsc->use_unicode) ht*=charHeightCorr[ifont]; //4 for 4 pix/mm
 
 	dscale = 0.05 * ht;
 	scale = dscale;
@@ -487,10 +487,10 @@ redo:				if (plsc->use_unicode) {
 					stbtt_vertex *vertices;
 					int nvecs = stbtt_GetGlyphShape(ttfVectors[ifont], glyph, &vertices);
 					if (plsc->dev_alt_unicode) {
-					plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale,
+					plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*=charHeightCorr[ifont],
 							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width, ttfVectors[ifont]->userdata);
 					} else {
-					plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale,
+					plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*charHeightCorr[ifont],
 							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
 					}
 
@@ -605,7 +605,6 @@ static void
 plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform, 
         PLINT refx, PLINT refy, PLFLT scale, PLFLT xpmm, PLFLT ypmm,
         PLFLT *p_xorg, PLFLT *p_yorg, PLFLT width) {
-
 	if (len == 0) return;
 
 	PLFLT conv1 = xpmm * xform[0];
