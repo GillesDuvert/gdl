@@ -19,7 +19,10 @@
 #include "dinterpreter.hpp"
 #include "plotting.hpp"
 #include "math_utl.hpp"
-
+//#include "ofxContourPlot/src/ListContour.h"
+//#include "ofxContourPlot/src/ofxContourPlot.h"
+#include "ofxContourPlot/src/ofxContourPlot.cpp"
+#include "ofxContourPlot/src/ListContour.cpp"
 #define LABELOFFSET 0.003
 #define LABELSPACING 0.4
 
@@ -48,8 +51,29 @@ namespace lib {
     if (yLog && y <= 0) return 0;
     return 1;
   }
-  
-  class contour_call : public plotting_routine_call {
+  static PLFLT ** map;
+
+  double fieldFunction(double x, double y) {
+  int i=x;
+  int j=y;
+  double dx = (x - i);
+  double dy = (y - j);
+  double ab = map[i][j] * (1 - dx) + map[i+1][j] * dx;
+  double cd = map[i][j+1] * (1 - dx) + map[i+1][j+1] * dx;
+  return ab * (1 - dy) + cd * dy;
+}
+void drawContour(int i, double *x, double *y){
+//  std::cerr<<"npoi="<<i<<", ";
+//  for (auto j=0;j<i;++j) std::cerr<<x[j]<<","<<y[j]<<"\n";
+//  plfill( i, x, y );
+  plline( i, x, y );
+}
+void fillContour(int i, double *x, double *y){
+//  std::cerr<<"npoi="<<i<<", ";
+//  for (auto j=0;j<i;++j) std::cerr<<x[j]<<","<<y[j]<<"\n";
+  plfill( i, x, y );
+}
+class contour_call : public plotting_routine_call {
     DDoubleGDL *zVal, *yVal, *xVal;
     Guard<BaseGDL> xval_guard, yval_guard, zval_guard, p0_guard;
     DDoubleGDL *yValIrregularCase, *xValIrregularCase;
@@ -70,6 +94,7 @@ namespace lib {
     DDouble zValue;
     bool hasMinVal, hasMaxVal;
     bool recordPath;
+    CListContour contouring;
 
     //PATH_XY etc: use actStream->stransform with a crafted recording function per level [lev-maxmax].
     //disentangle positive and negative contours with their rotation signature.
@@ -331,7 +356,7 @@ namespace lib {
         if (doT3d) gdlStop3DDriverTransform(actStream);
       }
 
-      if (gdlSwitchToClippedNormalizedCoordinates(e, actStream)) return true; //normal clip meaning
+//      if (gdlSwitchToClippedNormalizedCoordinates(e, actStream)) return true; //normal clip meaning
 
       return false;
     }
@@ -460,7 +485,6 @@ namespace lib {
         //this program makes either filled regions with plshades() [but plshades hates Nans!] or contours with plcont,
         //which needs Nans to avoid blanked regions. The idea is to mark unwanted regions with Nans for plcont, and
         //with a blanking value (minmin) for plshade. Eventually one could use a zdefined() function testing on top of it.
-        PLFLT ** map;
 
         if (irregular) {
           //x-y ranges:
@@ -546,6 +570,25 @@ namespace lib {
           }
         }
 
+        // define the input function for the contour plot
+        contouring.SetFieldFcn(fieldFunction);
+        double plimits[4]={0,double(xEl-2),0,double(yEl-2)};
+        contouring.SetLimits(plimits);
+        // define the function that will draw the contour-plot
+        //      contouring.SetDrawFcn(drawPlot);
+        // sampling size of input function
+        contouring.SetFirstGrid(xEl,yEl);
+        // this is the drawing resolution of the plot generated
+        contouring.SetSecondaryGrid(5*xEl,5*yEl);
+        // set the number of contour planes 
+        int numPlanes = nlevel;
+        std::vector<double> vIso(numPlanes);
+        for (unsigned int i = 0; i < vIso.size(); i++) {
+          vIso[i] = clevel[i];
+        }
+        contouring.SetPlanes(vIso);
+        contouring.Generate();
+        
         //Good place for conversion to normed values
         COORDSYS coordinateSystem = DATA;
         SelfConvertToNormXY(xVal, xLog, yVal, yLog, coordinateSystem); //DATA
@@ -691,23 +734,27 @@ namespace lib {
               //the background
               actStream->psty(0);
               gdlSetGraphicsForegroundColorFromBackgroundKw(e,actStream); //patterns written on background, not transparents!
-              actStream->shade(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
-                clevel[i], maxmax,
-                1,  0, //color + background
-                static_cast<PLFLT> ((*thick)[i % thick->N_Elements()]),
-                0, 0, 0, 0,
-                (PLCALLBACK::fill), (oneDim),
-                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+
+              contouring.PlotContour(i, drawContour);
+              
+//                actStream->shade(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
+//                clevel[i], maxmax,
+//                1,  0, //color + background
+//                static_cast<PLFLT> ((*thick)[i % thick->N_Elements()]),
+//                0, 0, 0, 0,
+//                (PLCALLBACK::fill), (oneDim),
+//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
               //the pattern, now
               gdlSetGraphicsForegroundColorFromKw ( e, actStream );
               actStream->pat(1, &ori, &spa);
-              actStream->shade(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
-                clevel[i], maxmax,
-                (docolors) ? 1 : 0, (docolors) ? value : 255,
-                static_cast<PLFLT> ((*thick)[i % thick->N_Elements()]),
-                0, 0, 0, 0,
-                (PLCALLBACK::fill), (oneDim),
-                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+              contouring.PlotContour(i, fillContour);
+//              actStream->shade(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
+//                clevel[i], maxmax,
+//                (docolors) ? 1 : 0, (docolors) ? value : 255,
+//                static_cast<PLFLT> ((*thick)[i % thick->N_Elements()]),
+//                0, 0, 0, 0,
+//                (PLCALLBACK::fill), (oneDim),
+//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
               actStream->psty(0);
             }
             //            if (docolors) gdlSetGraphicsForegroundColorFromKw( e, actStream );
@@ -719,37 +766,42 @@ namespace lib {
               gdlStartT3DMatrixDriverTransform(actStream, (clevel[i] - cmin) / (cmax - cmin));
 
               value = static_cast<PLFLT> (i) / nlevel;
-              actStream->shade(map, xEl, yEl, isLog ? doIt : NULL,
-                xStart, xEnd, yStart, yEnd,
-                clevel[i], maxmax,
-                1, value,
-                0, 0, 0, 0, 0,
-                PLCALLBACK::fill, (oneDim), //Onedim is accelerator since rectangles are kept rectangles see plplot doc
-                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+              contouring.PlotContour(i, fillContour);
+//              actStream->shade(map, xEl, yEl, isLog ? doIt : NULL,
+//                xStart, xEnd, yStart, yEnd,
+//                clevel[i], maxmax,
+//                1, value,
+//                0, 0, 0, 0, 0,
+//                PLCALLBACK::fill, (oneDim), //Onedim is accelerator since rectangles are kept rectangles see plplot doc
+//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
             }
           } else { //every other case of fill 
             // note that plshades is not protected against 1 level (color formula is
             // "shade_color = color_min + i / (PLFLT) ( nlevel - 2 ) * color_range;"
             // meaning that nlevel=xx must be xx>=2 for plshades to work!)
-            if (nlevel > 2 && !(docolors)) { //acceleration with shades when no c_colors are given. use continuous table1, decomposed or not.
+//            if (nlevel > 2 && !(docolors)) {
+//              contouring.PlotContour(i, fillContour);              
+              //acceleration with shades when no c_colors are given. use continuous table1, decomposed or not.
               //acceleration is most sensible when a (x,y) transform (rotate, stretch) is in place since plplot does not recompute the map.
-              actStream->shades(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
-                clevel, nlevel, 1, 0, 0, PLCALLBACK::fill, (oneDim),
-                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2),
-                (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
-            } else { //fill with colors defined with c_colors or n<=2
+//              actStream->shades(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
+//                clevel, nlevel, 1, 0, 0, PLCALLBACK::fill, (oneDim),
+//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2),
+//                (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+//            } else { //fill with colors defined with c_colors or n<=2
               for (SizeT i = 0; i < nlevel; ++i) {
                 value = static_cast<PLFLT> (i) / nlevel;
-                actStream->shade(map, xEl, yEl, isLog ? doIt : NULL,
-                  xStart, xEnd, yStart, yEnd,
-                  clevel[i], maxmax,
-                  1, value,
-                  0, 0, 0, 0, 0,
-                  PLCALLBACK::fill, (oneDim), //Onedim is accelerator since rectangles are kept rectangles see plplot doc
-                  (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+                actStream->col1(value);
+              contouring.PlotContour(i, fillContour);              
+//                
+//                actStream->shade(map, xEl, yEl, isLog ? doIt : NULL,
+//                  xStart, xEnd, yStart, yEnd,
+//                  clevel[i], maxmax,
+//                  1, value,
+//                  0, 0, 0, 0, 0,
+//                  PLCALLBACK::fill, (oneDim), //Onedim is accelerator since rectangles are kept rectangles see plplot doc
+//                  (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
               }
             }
-          }
         } else { //no fill = contours . use normal pen procedures.
           if (!docolors) gdlSetGraphicsForegroundColorFromKw(e, actStream);
           DFloat referencePenThickness;
@@ -770,18 +822,21 @@ namespace lib {
               if (label_thick < referencePenThickness) { //one pass with (current) thick without labels, over with (smaller) label+contour.
                 //else (lables thicker than contours) impossible with plplot...
                 actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING, 0);
-                actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
-                  (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2); //thick contours, no label
+              contouring.PlotContour(i, drawContour);    
+//              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
+//                  (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2); //thick contours, no label
                 actStream->Thick(label_thick);
               }
               actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING * sqrt(label_size), (PLINT) (*labels)[i]);
-              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
-                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+              contouring.PlotContour(i, drawContour);    
+//              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
+//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
               if (!dothick) gdlSetPenThickness(e, actStream);
             } else {
               actStream->setcontlabelparam(0,0,0,0);
-              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
-                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+              contouring.PlotContour(i, drawContour);    
+//              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
+//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
             }
           }
           //          if (docolors) gdlSetGraphicsForegroundColorFromKw ( e, actStream );
@@ -801,7 +856,7 @@ namespace lib {
         actStream->Free2dGrid(map, xEl, yEl);
       }
 
-      //restore color for boxes
+    //restore color for boxes
       gdlSetGraphicsForegroundColorFromKw(e, actStream); //COLOR
       //reset driver to 2D plotting routines in all cases
       gdlStop3DDriverTransform(actStream);
@@ -815,7 +870,7 @@ namespace lib {
       actStream->setcontlabelparam(0,0,0,0);
       actStream->lsty(1); //reset linestyle
       actStream->sizeChar(1.0);
-    }
+   }
 
   }; // contour_call class
 
