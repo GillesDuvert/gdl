@@ -1715,20 +1715,6 @@ c_plsym_remove( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
 PLDLLIMPEXP void
 c_plszax( PLINT digmax, PLINT digits );
 
-// Set the format for date / time labels for current stream.
-
-PLDLLIMPEXP void
-c_pltimefmt( PLCHAR_VECTOR fmt );
-
-// Sets the edges of the viewport with the given aspect ratio, leaving
-// room for labels.
-
-PLDLLIMPEXP void
-c_plvasp( PLFLT aspect );
-
-// Creates the largest viewport of the specified aspect ratio that fits
-// within the specified normalized subpage coordinates.
-
 // simple arrow plotter.
 
 PLDLLIMPEXP void
@@ -2088,10 +2074,6 @@ plTranslateCursor( PLGraphicsIn *gin );
 
 PLDLLIMPEXP void
 plsdevdata( PLPointer data );
-
-// Set format for date / time labels. - reported from pltime.c
-PLDLLIMPEXP void
-c_pltimefmt( PLCHAR_VECTOR fmt );
 
 #ifdef __cplusplus
 }

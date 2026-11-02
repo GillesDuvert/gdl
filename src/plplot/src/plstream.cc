@@ -1110,14 +1110,14 @@ void plstream::styl( PLINT nms, const PLINT *mark, const PLINT *space )
     plstyl( nms, mark, space );
 }
 
-// Sets the edges of the viewport to the specified absolute coordinates
-
-void plstream::svpa( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
-{
-    set_stream();
-
-    plsvpa( xmin, xmax, ymin, ymax );
-}
+//// Sets the edges of the viewport to the specified absolute coordinates
+//
+//void plstream::svpa( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
+//{
+//    set_stream();
+//
+//    plsvpa( xmin, xmax, ymin, ymax );
+//}
 
 // Set x axis labeling parameters
 
@@ -1155,35 +1155,35 @@ void plstream::szax( PLINT digmax, PLINT digits )
     plszax( digmax, digits );
 }
 
-// Set the format for date / time labels
+//// Set the format for date / time labels
+//
+//void plstream::timefmt( const char *fmt )
+//{
+//    set_stream();
+//
+//    pltimefmt( fmt );
+//}
 
-void plstream::timefmt( const char *fmt )
-{
-    set_stream();
-
-    pltimefmt( fmt );
-}
-
-// Sets the edges of the viewport with the given aspect ratio, leaving
-// room for labels.
-
-void plstream::vasp( PLFLT aspect )
-{
-    set_stream();
-
-    plvasp( aspect );
-}
-
-// Creates the largest viewport of the specified aspect ratio that fits
-// within the specified normalized subpage coordinates.
-
-void plstream::vpas( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-                     PLFLT aspect )
-{
-    set_stream();
-
-    plvpas( xmin, xmax, ymin, ymax, aspect );
-}
+//// Sets the edges of the viewport with the given aspect ratio, leaving
+//// room for labels.
+//
+//void plstream::vasp( PLFLT aspect )
+//{
+//    set_stream();
+//
+//    plvasp( aspect );
+//}
+//
+//// Creates the largest viewport of the specified aspect ratio that fits
+//// within the specified normalized subpage coordinates.
+//
+//void plstream::vpas( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
+//                     PLFLT aspect )
+//{
+//    set_stream();
+//
+//    plvpas( xmin, xmax, ymin, ymax, aspect );
+//}
 
 // Creates a viewport with the specified normalized subpage coordinates.
 

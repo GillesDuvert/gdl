@@ -100,6 +100,7 @@ c_plvpor( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
     plsc->level = 2;
 }
 
+/*
 //--------------------------------------------------------------------------
 // void plvpas()
 //
@@ -169,7 +170,9 @@ c_plvpas( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax, PLFLT aspect )
 
     plsvpa( vpxmin, vpxmax, vpymin, vpymax );
 }
+*/
 
+/*
 //--------------------------------------------------------------------------
 // void plvasp()
 //
@@ -221,6 +224,7 @@ c_plvasp( PLFLT aspect )
 
     plsvpa( vpxmin, vpxmax, vpymin, vpymax );
 }
+*/
 
 //--------------------------------------------------------------------------
 // void plsvpa()
@@ -229,6 +233,7 @@ c_plvasp( PLFLT aspect )
 // (mm), measured with respect to the current subpage boundaries.
 //--------------------------------------------------------------------------
 
+/*
 void
 c_plsvpa( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
 {
@@ -268,3 +273,4 @@ c_plsvpa( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
 
     plsc->level = 2;
 }
+*/

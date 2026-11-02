@@ -1512,8 +1512,10 @@ c_plinit( void )
     if ( plsc->zdigmax == 0 )
         plsc->zdigmax = 3;
 
+/*
     if ( plsc->timefmt == NULL )
         c_pltimefmt( "%c" );
+*/
 
 // Switch to graphics mode and set color and arrow style
 
@@ -2870,6 +2872,7 @@ c_plstransform( PLTRANSFORM_callback coordinate_transform, PLPointer coordinate_
     plsc->coordinate_transform_data = coordinate_transform_data;
 }
 // Set format for date / time labels. - reported from pltime.c
+/*
 void
 c_pltimefmt( PLCHAR_VECTOR fmt )
 {
@@ -2879,3 +2882,4 @@ c_pltimefmt( PLCHAR_VECTOR fmt )
     plsc->timefmt = (char *) malloc( (size_t) ( strlen( fmt ) + 1 ) );
     strcpy( plsc->timefmt, fmt );
 }
+*/
