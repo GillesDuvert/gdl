@@ -1110,24 +1110,6 @@ void plstream::styl( PLINT nms, const PLINT *mark, const PLINT *space )
     plstyl( nms, mark, space );
 }
 
-//// Sets the edges of the viewport to the specified absolute coordinates
-//
-//void plstream::svpa( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax )
-//{
-//    set_stream();
-//
-//    plsvpa( xmin, xmax, ymin, ymax );
-//}
-
-// Set x axis labeling parameters
-
-void plstream::sxax( PLINT digmax, PLINT digits )
-{
-    set_stream();
-
-    plsxax( digmax, digits );
-}
-
 // Set inferior X window
 
 void plstream::sxwin( PLINT window_id )
