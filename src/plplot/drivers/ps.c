@@ -69,8 +69,6 @@ static void fill_path( PLStream *pls );
 static void ps_dispatch_init_helper( PLDispatchTable *pdt,
                                      const char *menustr, const char *devnam,
                                      int type, int seq, plD_init_fp init );
-#define OUTBUF_LEN    128
-static char   outbuf[OUTBUF_LEN];
 static int    color;
 static int    epsf = 1;
 
@@ -350,10 +348,11 @@ ps_init( PLStream *pls )
 // Macro definitions of common instructions, to keep output small
 
     fprintf( OF, "/M {moveto} def\n" );
+    fprintf( OF, "/R {rlineto} def\n" );
     fprintf( OF, "/D {lineto} def\n" );
     fprintf( OF, "/A {0.5 0 360 arc} def\n" );
     fprintf( OF, "/S {stroke} def\n" );
-    fprintf( OF, "/Z {stroke newpath} def\n" );
+    fprintf( OF, "/Z {newpath} def\n" );
     // Modify to use fill and stroke for better output with
     // anti-aliasing
     //fprintf(OF, "/F {fill} def\n");
@@ -363,11 +362,11 @@ ps_init( PLStream *pls )
         fprintf( OF, "/F {closepath gsave fill grestore 0.1 setlinewidth stroke} def \n" );
 	fprintf( OF, "/N {newpath} def\n" );
     fprintf( OF, "/C {setrgbcolor} def\n" );
-    fprintf( OF, "/CU {curveto} def\n" );
+    fprintf( OF, "/H {rcurveto} def\n" );
     fprintf( OF, "/G {setgray} def\n" );
 // try to make linewidth more like IDL
     fprintf( OF, "/W { XScale YScale add 2 div div 2 div setlinewidth} def %% note: IDL scale is fixed to 0.028346 \n" );
-    fprintf( OF, "/R {rotate} def\n" );
+    fprintf( OF, "/RO {rotate} def\n" );
     fprintf( OF, "/SW {stringwidth 2 index mul exch 2 index mul exch rmoveto pop} bind def\n" );
     fprintf( OF, "/B {Z %d %d M %d %d D %d %d D %d %d D %d %d closepath} def\n",
         0, 0, 0, PSY, PSX, PSY, PSX, 0, 0, 0 );
@@ -448,78 +447,100 @@ static void SelfTransform3DPSL(int *xs, int *ys)
 //--------------------------------------------------------------------------
 
 void
-plD_line_ps_3D(PLStream *pls, short x1a, short y1a, short x2a, short y2a)
-{
-  PSDev *dev = (PSDev *) pls->dev;
-  PLINT x1 = x1a, y1 = y1a, x2 = x2a, y2 = y2a;
+plD_line_ps_3D(PLStream *pls, short x1a, short y1a, short x2a, short y2a) {
+	PSDev *dev = (PSDev *) pls->dev;
+	PLINT x1 = x1a, y1 = y1a, x2 = x2a, y2 = y2a;
 
-if ( !pls->portrait )
-{
-    // 3D convert on normalized values
-    
-    SelfTransform3DPSL(&x1, &y1);
-    SelfTransform3DPSL(&x2, &y2);
-}
-  
-  // Rotate by 90 degrees
+	if (!pls->portrait) {
+		// 3D convert on normalized values
 
-  plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x1, &y1);
-  plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x2, &y2);
+		SelfTransform3DPSL(&x1, &y1);
+		SelfTransform3DPSL(&x2, &y2);
+	}
 
-if ( pls->portrait )
-{
-  // 3D convert on normalized values
-  SelfTransform3DPSP(&x1, &y1);
-  SelfTransform3DPSP(&x2, &y2);
-}
-  if (x1 == dev->xold && y1 == dev->yold && dev->ptcnt < 40) {
-    if (pls->linepos > (LINELENGTH-12)) {
-      putc('\n', OF);
-      pls->linepos = 0;
-    } else
-      putc(' ', OF);
+	// Rotate by 90 degrees
 
-    snprintf(outbuf, OUTBUF_LEN, "%d %d D", x2, y2);
-    dev->ptcnt++;
-    pls->linepos += 12;
-  } else {
-    fprintf(OF, " Z\n");
-    pls->linepos = 0;
+	plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x1, &y1);
+	plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x2, &y2);
 
-    if (x1 == x2 && y1 == y2) // must be a single dot, draw a circle
-      snprintf(outbuf, OUTBUF_LEN, "%d %d A", x1, y1);
-    else
-      snprintf(outbuf, OUTBUF_LEN, "%d %d M %d %d D", x1, y1, x2, y2);
-    dev->llx = MIN(dev->llx, x1);
-    dev->lly = MIN(dev->lly, y1);
-    dev->urx = MAX(dev->urx, x1);
-    dev->ury = MAX(dev->ury, y1);
-    dev->ptcnt = 1;
-    pls->linepos += 24;
-  }
-  dev->llx = MIN(dev->llx, x2);
-  dev->lly = MIN(dev->lly, y2);
-  dev->urx = MAX(dev->urx, x2);
-  dev->ury = MAX(dev->ury, y2);
+	if (pls->portrait) {
+		// 3D convert on normalized values
+		SelfTransform3DPSP(&x1, &y1);
+		SelfTransform3DPSP(&x2, &y2);
+	}
 
-  fprintf(OF, "%s", outbuf);
-  pls->bytecnt += 1 + (PLINT) strlen(outbuf);
-  dev->xold = x2;
-  dev->yold = y2;
+	if (pls->linepos > (LINELENGTH)) {
+		fputc('\n', OF);
+		pls->linepos = 0;
+	} 
+	if (x1 == x2 && y1 == y2) // must be a single dot, draw a circle
+		pls->linepos +=fprintf(OF, "%d %d A S ", x1, y1);
+	else
+		pls->linepos +=fprintf(OF, "%d %d M %d %d D S ", x1, y1, x2, y2);
+	dev->llx = MIN(dev->llx, x1);
+	dev->lly = MIN(dev->lly, y1);
+	dev->urx = MAX(dev->urx, x1);
+	dev->ury = MAX(dev->ury, y1);
+	dev->llx = MIN(dev->llx, x2);
+	dev->lly = MIN(dev->lly, y2);
+	dev->urx = MAX(dev->urx, x2);
+	dev->ury = MAX(dev->ury, y2);
+	dev->xold = PL_UNDEFINED;
+	dev->yold = PL_UNDEFINED;
+	if (pls->linepos > (LINELENGTH)) {
+		fputc('\n', OF);
+		pls->linepos = 0;
+	}
 }
 //--------------------------------------------------------------------------
 // plD_polyline_ps()
 //
 // Draw a polyline in the current color, 3D enabled.
 //--------------------------------------------------------------------------
-
 void
-plD_polyline_ps_3D(PLStream *pls, short *xa, short *ya, PLINT npts)
-{
- PLINT i;
+plD_polyline_ps_3D(PLStream *pls, short *xa, short *ya, PLINT npts) {
+	PLINT i;
+	PSDev * dev = (PSDev *) pls->dev;
+	PLINT x = xa[0], y = ya[0];
 
-  for (i = 0; i < npts - 1; i++)
-    plD_line_ps_3D(pls, xa[i], ya[i], xa[i + 1], ya[i + 1]);
+	if (!pls->portrait) SelfTransform3DPSL(&x, &y);
+	plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x, &y);
+	if (pls->portrait)  SelfTransform3DPSP(&x, &y);
+
+	if (pls->linepos > LINELENGTH) {
+		fputc('\n', OF);
+		pls->linepos = 0;
+	}
+
+	pls->linepos +=fprintf(OF, "%d %d M ", x, y);
+	dev->llx = MIN(dev->llx, x);
+	dev->lly = MIN(dev->lly, y);
+	dev->urx = MAX(dev->urx, x);
+	dev->ury = MAX(dev->ury, y);
+	dev->xold = x;
+	dev->yold = y;
+
+	for (i = 1; i < npts ; i++) {
+		x = xa[i];
+		y = ya[i];
+		if (!pls->portrait) SelfTransform3DPSL(&x, &y);
+		plRotPhy(ORIENTATION, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x, &y);
+		if (pls->portrait)  SelfTransform3DPSP(&x, &y);
+		pls->linepos +=fprintf(OF, "%i %i R ", x - dev->xold, y - dev->yold);
+		dev->llx = MIN(dev->llx, x);
+		dev->lly = MIN(dev->lly, y);
+		dev->urx = MAX(dev->urx, x);
+		dev->ury = MAX(dev->ury, y);
+		dev->xold = x;
+		dev->yold = y;
+		if (pls->linepos > (LINELENGTH)) {
+			pls->linepos +=fputc('\n', OF);
+			pls->linepos = 0;
+		}
+	}
+	dev->xold = PL_UNDEFINED;
+	dev->yold = PL_UNDEFINED;	
+	pls->linepos +=fprintf(OF, "S ");
 }
 
 //--------------------------------------------------------------------------
@@ -531,7 +552,7 @@ plD_polyline_ps_3D(PLStream *pls, short *xa, short *ya, PLINT npts)
 void
 plD_eop_ps( PLStream *pls )
 {
-    fprintf( OF, " S\neop\n" );
+    fprintf( OF, "\neop\n" );
 }
 
 //--------------------------------------------------------------------------
@@ -650,7 +671,7 @@ plD_state_ps( PLStream *pls, PLINT op )
     float width = pls->width*DEF_WIDTH;
     if (width < MIN_WIDTH) width = MIN_WIDTH;
     if (width > MAX_WIDTH) width = MAX_WIDTH;
-        fprintf( OF, " S\n%f W", width );
+        pls->linepos += fprintf( OF, " %f W ", width );
 
         dev->xold = PL_UNDEFINED;
         dev->yold = PL_UNDEFINED;
@@ -659,10 +680,10 @@ plD_state_ps( PLStream *pls, PLINT op )
     case PLSTATE_COLOR0:
         if ( !pls->color )
         {
-            fprintf( OF, " S\n%.4f G", ( pls->icol0 ? 0.0 : 1.0 ) );
+            pls->linepos += fprintf( OF, " %.4f G ", ( pls->icol0 ? 0.0 : 1.0 ) );
             // Reinitialize current point location.
             if ( dev->xold != PL_UNDEFINED && dev->yold != PL_UNDEFINED )
-                fprintf( OF, " %d %d M \n", (int) dev->xold, (int) dev->yold );
+                pls->linepos += fprintf( OF, " %d %d M \n", (int) dev->xold, (int) dev->yold );
             break;
         }
     // else fallthrough
@@ -673,16 +694,16 @@ plD_state_ps( PLStream *pls, PLINT op )
             PLFLT g = ( (PLFLT) pls->curcolor.g ) / 255.0;
             PLFLT b = ( (PLFLT) pls->curcolor.b ) / 255.0;
 
-            fprintf( OF, " S\n%.4f %.4f %.4f C", r, g, b );
+            pls->linepos += fprintf( OF, " %.4f %.4f %.4f C ", r, g, b );
         }
         else
         {
             PLFLT r = ( (PLFLT) pls->curcolor.r ) / 255.0;
-            fprintf( OF, " S\n%.4f G", 1.0 - r );
+            pls->linepos += fprintf( OF, " %.4f G ", 1.0 - r );
         }
         // Reinitialize current point location.
         if ( dev->xold != PL_UNDEFINED && dev->yold != PL_UNDEFINED )
-            fprintf( OF, " %d %d M \n", (int) dev->xold, (int) dev->yold );
+            pls->linepos += fprintf( OF, " %d %d M \n", (int) dev->xold, (int) dev->yold );
         break;
     }
 }
@@ -726,7 +747,7 @@ fill_polygon( PLStream *pls) {
 	PLINT n, ix, iy;
 	PLINT x, y;
 
-	fprintf(OF, " Z\n");//newpath
+	pls->linepos += fprintf(OF, " Z ");//newpath
 
     if (!pls->portrait) {
 		for (n = 0, ix = 0, iy = 0; n < pls->dev_npts; n++) {
@@ -751,43 +772,39 @@ fill_polygon( PLStream *pls) {
 			pls->dev_y[iy++]=y;
 		}
 	}
-	for (n = 0, ix = 0, iy = 0; n < pls->dev_npts; n++) {
 		// First time through start with a x y moveto
-			x = pls->dev_x[ix++];
-			y = pls->dev_y[iy++];
-
-		if (n == 0) {
-			snprintf(outbuf, OUTBUF_LEN, "N %d %d M", x, y);
-			dev->llx = MIN(dev->llx, x);
-			dev->lly = MIN(dev->lly, y);
-			dev->urx = MAX(dev->urx, x);
-			dev->ury = MAX(dev->ury, y);
-			fprintf(OF, "%s", outbuf);
-			pls->bytecnt += (PLINT) strlen(outbuf);
-			continue;
-		}
-
-		if (pls->linepos > (LINELENGTH - 21)) {
-			putc('\n', OF);
-			pls->linepos = 0;
-		} else
-			putc(' ', OF);
-
-		pls->bytecnt++;
-
-		snprintf(outbuf, OUTBUF_LEN, "%d %d D", x, y);
+		x = pls->dev_x[0];
+		y = pls->dev_y[0];
+		pls->linepos += fprintf(OF, "N %d %d M ", x, y);
 		dev->llx = MIN(dev->llx, x);
 		dev->lly = MIN(dev->lly, y);
 		dev->urx = MAX(dev->urx, x);
 		dev->ury = MAX(dev->ury, y);
-
-		fprintf(OF, "%s", outbuf);
-		pls->bytecnt += (PLINT) strlen(outbuf);
-		pls->linepos += 21;
+		dev->xold = x;
+		dev->yold = y;
+	
+		for (n = 1, ix = 1, iy = 1; n < pls->dev_npts; n++) {
+		if (pls->linepos > LINELENGTH) {
+			fputc('\n', OF);
+			pls->linepos = 0;
+		} 
+		x = pls->dev_x[ix++];
+		y = pls->dev_y[iy++];
+        pls->linepos +=fprintf(OF, "%i %i R ", x - dev->xold, y - dev->yold);
+		dev->llx = MIN(dev->llx, x);
+		dev->lly = MIN(dev->lly, y);
+		dev->urx = MAX(dev->urx, x);
+		dev->ury = MAX(dev->ury, y);
+		dev->xold = x;
+	    dev->yold = y;
 	}
 	dev->xold = PL_UNDEFINED;
 	dev->yold = PL_UNDEFINED;
-	fprintf(OF, " F ");
+	pls->linepos += fprintf(OF, " F ");
+		if (pls->linepos > LINELENGTH) {
+			putc('\n', OF);
+			pls->linepos = 0;
+		} 
 }
 //--------------------------------------------------------------------------
 // FillPath()
@@ -797,93 +814,103 @@ fill_polygon( PLStream *pls) {
 
 void FillPath(PLStream *pls) {
 	PSDev *dev = (PSDev *) pls->dev;
-    fprintf( OF, " Z\n" ); //stroke newpath
-	PLINT x,y;
-	PLINT x1,y1;
-	PLINT x2,y2;
-   for (int i = 0; i < pls->dev_npath; ++i) {
-    PLINT* xx = pls->dev_pathx[i];
-    PLINT* yy = pls->dev_pathy[i];
-	x=xx[0]; y=yy[0];
+	pls->linepos =0; fprintf(OF, " Z\n"); //stroke newpath
+	PLINT x, y;
+	PLINT x1, y1;
+	PLINT x2, y2;
+	for (int i = 0; i < pls->dev_npath; ++i) {
+		PLINT* xx = pls->dev_pathx[i];
+		PLINT* yy = pls->dev_pathy[i];
+		x = xx[0];
+		y = yy[0];
 
-	// start path with a x y moveto
+		// start path with a x y moveto
 
-	snprintf(outbuf, OUTBUF_LEN, "%d %d M", x, y); //xy moveto : define new path
-	dev->llx = MIN(dev->llx, x);
-	dev->lly = MIN(dev->lly, y);
-	dev->urx = MAX(dev->urx, x);
-	dev->ury = MAX(dev->ury, y);
-	fprintf(OF, "%s", outbuf);
-	pls->bytecnt += (PLINT) strlen(outbuf);
+		pls->linepos += fprintf(OF, "%d %d M ", x, y); //xy moveto : define new path
+		dev->xold = x;
+		dev->yold = y;
+		dev->llx = MIN(dev->llx, x);
+		dev->lly = MIN(dev->lly, y);
+		dev->urx = MAX(dev->urx, x);
+		dev->ury = MAX(dev->ury, y);
 
-	if (pls->linepos > (LINELENGTH - 21)) {
-		putc('\n', OF);
-		pls->linepos = 0;
-	} else
-		putc(' ', OF);	
-	pls->bytecnt++;
-    for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
-		switch (xx[j]) {
-        case -1: //line
-			x=xx[j+1]; y=yy[j+1];
-			snprintf(outbuf, OUTBUF_LEN, "%d %d D", x, y); //x y lineto
-			dev->llx = MIN(dev->llx, x);
-			dev->lly = MIN(dev->lly, y);
-			dev->urx = MAX(dev->urx, x);
-			dev->ury = MAX(dev->ury, y);
-          j++;
-          break;
-        case -2:
-			x=xx[j+1]; y=yy[j+1];
-			x1=xx[j+2]; y1=yy[j+2];
-			snprintf(outbuf, OUTBUF_LEN, "%d %d %d %d %d %d CU", x, y, x1, y1, x1, y1); //x1 y1 x2 y2 x3 y3 curveto
-			dev->llx = MIN(dev->llx, x);
-			dev->lly = MIN(dev->lly, y);
-			dev->urx = MAX(dev->urx, x);
-			dev->ury = MAX(dev->ury, y);
-			dev->llx = MIN(dev->llx, x1);
-			dev->lly = MIN(dev->lly, y1);
-			dev->urx = MAX(dev->urx, x1);
-			dev->ury = MAX(dev->ury, y1);
-            j+=2;
-          break;
-        case -3:
-			x=xx[j+1]; y=yy[j+1];
-			x1=xx[j+2]; y1=yy[j+2];
-			x1=xx[j+3]; y1=yy[j+3];
-			snprintf(outbuf, OUTBUF_LEN, "%d %d %d %d %d %d CU", x, y, x1, y1, x2, y2); //x1 y1 x2 y2 x3 y3 curveto
-			dev->llx = MIN(dev->llx, x);
-			dev->lly = MIN(dev->lly, y);
-			dev->urx = MAX(dev->urx, x);
-			dev->ury = MAX(dev->ury, y);
-			dev->llx = MIN(dev->llx, x1);
-			dev->lly = MIN(dev->lly, y1);
-			dev->urx = MAX(dev->urx, x1);
-			dev->ury = MAX(dev->ury, y1);
-			dev->llx = MIN(dev->llx, x2);
-			dev->lly = MIN(dev->lly, y2);
-			dev->urx = MAX(dev->urx, x2);
-			dev->ury = MAX(dev->ury, y2);
-          j+=3;
-          break;
-          break;
-        default:
-          printf("should not happen in FillPolygons(%d), please report!\n",xx[j]);
-			}
-			fprintf(OF, "%s", outbuf);
-			pls->bytecnt += (PLINT) strlen(outbuf);
-			pls->linepos += 21;
-		    if (pls->linepos > (LINELENGTH - 21)) {
-				putc('\n', OF);
-				pls->linepos = 0;
-			} else
-				putc(' ', OF);
-			pls->bytecnt++;
+		if (pls->linepos > LINELENGTH) {
+			fputc('\n', OF);
+			pls->linepos = 0;
 		}
-   }
+		for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
+			switch (xx[j]) {
+				case -1: //line
+					x = xx[j + 1];
+					y = yy[j + 1];
+					pls->linepos += fprintf(OF, "%d %d R ", x-dev->xold, y-dev->yold); //x y lineto
+					dev->llx = MIN(dev->llx, x);
+					dev->lly = MIN(dev->lly, y);
+					dev->urx = MAX(dev->urx, x);
+					dev->ury = MAX(dev->ury, y);
+					dev->xold = x;
+					dev->yold = y;
+					j++;
+					break;
+				case -2:
+					x = xx[j + 1];
+					y = yy[j + 1];
+					x1 = xx[j + 2];
+					y1 = yy[j + 2];
+					pls->linepos += fprintf(OF, "%d %d %d %d %d %d H ", x-dev->xold, y-dev->yold, x1-dev->xold, y1-dev->yold, x1-dev->xold, y1-dev->yold); //x1 y1 x2 y2 x3 y3 curveto
+					dev->llx = MIN(dev->llx, x);
+					dev->lly = MIN(dev->lly, y);
+					dev->urx = MAX(dev->urx, x);
+					dev->ury = MAX(dev->ury, y);
+					dev->llx = MIN(dev->llx, x1);
+					dev->lly = MIN(dev->lly, y1);
+					dev->urx = MAX(dev->urx, x1);
+					dev->ury = MAX(dev->ury, y1);
+					j += 2;
+					dev->xold = x1;
+					dev->yold = y1;
+					break;
+				case -3:
+					x = xx[j + 1];
+					y = yy[j + 1];
+					x1 = xx[j + 2];
+					y1 = yy[j + 2];
+					x2 = xx[j + 3];
+					y2 = yy[j + 3];
+					pls->linepos += fprintf(OF, "%d %d %d %d %d %d H ", x-dev->xold, y-dev->yold, x1-dev->xold, y1-dev->yold, x2-dev->xold, y2-dev->yold); //x1 y1 x2 y2 x3 y3 curveto
+					dev->llx = MIN(dev->llx, x);
+					dev->lly = MIN(dev->lly, y);
+					dev->urx = MAX(dev->urx, x);
+					dev->ury = MAX(dev->ury, y);
+					dev->llx = MIN(dev->llx, x1);
+					dev->lly = MIN(dev->lly, y1);
+					dev->urx = MAX(dev->urx, x1);
+					dev->ury = MAX(dev->ury, y1);
+					dev->llx = MIN(dev->llx, x2);
+					dev->lly = MIN(dev->lly, y2);
+					dev->urx = MAX(dev->urx, x2);
+					dev->ury = MAX(dev->ury, y2);
+					j += 3;
+					dev->xold = x2;
+					dev->yold = y2;
+					break;
+					break;
+				default:
+					printf("should not happen in FillPolygons(%d), please report!\n", xx[j]);
+			}
+			if (pls->linepos > LINELENGTH) {
+				fputc('\n', OF);
+				pls->linepos = 0;
+			}
+		}
+	}
 	dev->xold = PL_UNDEFINED;
 	dev->yold = PL_UNDEFINED;
-	fprintf(OF, " F ");	
+	pls->linepos += fprintf(OF, " F ");
+		if (pls->linepos > LINELENGTH) {
+			putc('\n', OF);
+			pls->linepos = 0;
+		} 
 }
 //--------------------------------------------------------------------------
 // fill_path()
