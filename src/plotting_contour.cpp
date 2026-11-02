@@ -25,7 +25,7 @@
 #include "ofxContourPlot/src/ListContour.cpp"
 #define LABELOFFSET 0.003
 #define LABELSPACING 0.4
-
+#define OVERSAMPLING 16
 // sometime after 10/14 the tr0,tr1 moved from plstream:: to plcallback::
 
 #define PLCALLBACK plcallback
@@ -52,17 +52,40 @@ namespace lib {
     return 1;
   }
   static PLFLT ** map;
-
-  double fieldFunction(double x, double y) {
-  int i=x;
-  int j=y;
+  static SizeT M,N;
+  // for contours, close contours here on map limits, using a different sampling
+  double fieldFunctionForFill(double x, double y) {
+  if (x < 0) return -1000.; if (x > M-1) return -1000.;
+  if (y < 0) return -1000.; if (y > N-1) return -1000.;
+  int i=x; if (i>=M-1) i=M-2;
+  int j=y; if (i>=N-1) i=N-2;
+  double A=map[i][j];
+  double B=map[i+1][j];
+  double C=map[i][j+1];
+  double D=map[i+1][j+1];
   double dx = (x - i);
   double dy = (y - j);
-  double ab = map[i][j] * (1 - dx) + map[i+1][j] * dx;
-  double cd = map[i][j+1] * (1 - dx) + map[i+1][j+1] * dx;
-  return ab * (1 - dy) + cd * dy;
-}
-void drawContour(int i, double *x, double *y){
+  double ab = A * (1 - dx) + B * dx;
+  double cd = C * (1 - dx) + D * dx;
+  double ret=ab * (1 - dy) + cd * dy;
+  return ret;
+  }
+  double fieldFunctionForContour(double x, double y) {
+  int i=x; if (i>=M-1) i=M-2;
+  int j=y; if (i>=N-1) i=N-2;
+  double A=map[i][j];
+  double B=map[i+1][j];
+  double C=map[i][j+1];
+  double D=map[i+1][j+1];
+  double dx = (x - i);
+  double dy = (y - j);
+  double ab = A * (1 - dx) + B * dx;
+  double cd = C * (1 - dx) + D * dx;
+  double ret=ab * (1 - dy) + cd * dy;
+  return ret;
+  }
+  
+  void drawContour(int i, double *x, double *y){
 //  std::cerr<<"npoi="<<i<<", ";
 //  for (auto j=0;j<i;++j) std::cerr<<x[j]<<","<<y[j]<<"\n";
 //  plfill( i, x, y );
@@ -72,8 +95,19 @@ void fillContour(int i, double *x, double *y){
 //  std::cerr<<"npoi="<<i<<", ";
 //  for (auto j=0;j<i;++j) std::cerr<<x[j]<<","<<y[j]<<"\n";
   plfill( i, x, y );
-}
-class contour_call : public plotting_routine_call {
+  }
+
+  void drawPlot(int i, int j, int h, int k, int l) {
+    PLFLT x[2], y[2];
+    x[0] = j;
+    x[1] = k;
+    y[0] = h;
+    y[1] = l;
+    plline(2, x, y);
+    //  std::cerr<<i<<","<<j<<","<<h<<","<<k<<","<<l<<std::endl;
+  }
+  
+  class contour_call : public plotting_routine_call {
     DDoubleGDL *zVal, *yVal, *xVal;
     Guard<BaseGDL> xval_guard, yval_guard, zval_guard, p0_guard;
     DDoubleGDL *yValIrregularCase, *xValIrregularCase;
@@ -95,6 +129,7 @@ class contour_call : public plotting_routine_call {
     bool hasMinVal, hasMaxVal;
     bool recordPath;
     CListContour contouring;
+//    CContour contouring;
 
     //PATH_XY etc: use actStream->stransform with a crafted recording function per level [lev-maxmax].
     //disentangle positive and negative contours with their rotation signature.
@@ -363,9 +398,6 @@ class contour_call : public plotting_routine_call {
 
   private:
 
-// FOR AN UNKNOWN REASON OPTIMZING THIS TOO MUCH PREVENTS Basic_Contour_Plot of test_coyote to pass!!! FIXME!
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
     void applyGraphics(EnvT* e, GDLGStream* actStream) {
       static int nodataIx = e->KeywordIx("NODATA");
       if (e->KeywordSet(nodataIx)) return; //will perform post_call
@@ -477,6 +509,12 @@ class contour_call : public plotting_routine_call {
       if (e->KeywordSet(C_CHARTHICK)) e->AssureFloatScalarKWIfPresent(C_CHARTHICK, label_thick);
       actStream->setcontlabelformat(4, 3);
 
+      bool scalable=actStream->HasScalablePixels();
+      // get a hint of possible sampling sizes based on actual size on device (in device coordinates)
+      PLFLT* save_region = gdlGetRegion(); 
+      DLong xsize = (DLong) ((save_region[2] - save_region[0]) * actStream->xPageSize());
+      DLong ysize = (DLong) ((save_region[3] - save_region[1]) * actStream->yPageSize());
+
       // PLOT ONLY IF NODATA=0
       if (!nodata) {
 
@@ -489,9 +527,6 @@ class contour_call : public plotting_routine_call {
         if (irregular) {
           //x-y ranges:
           DDouble xmin, xmax, ymin, ymax;
-          long xsize, ysize;
-          actStream->GetGeometry(xsize, ysize);
-
           //if projection active, convert pairs
           SelfProjectXY(xValIrregularCase, yValIrregularCase);
           SizeT nEl=xValIrregularCase->N_Elements();
@@ -570,16 +605,30 @@ class contour_call : public plotting_routine_call {
           }
         }
 
-        // define the input function for the contour plot
-        contouring.SetFieldFcn(fieldFunction);
-        double plimits[4]={0,double(xEl-2),0,double(yEl-2)};
-        contouring.SetLimits(plimits);
+        DLong multx=OVERSAMPLING;
+        DLong multy=OVERSAMPLING;
+        // very bad c++: will pass map and its dimensions without object.
+        M=xEl; N=yEl;
+        // define the input function for the contour plot. No need to oversample more than the number of output pixels/2.
+        if (xEl*multx > xsize/2) {float c=(float)xsize/(float)(2*multx*xEl); multx=MAX(2, c*multx); }
+        if (yEl*multy > ysize/2) {float c=(float)ysize/(float)(2*multy*yEl); multy=MAX(2, c*multy); }
+        if (fill) {
+          contouring.SetFieldFcn(fieldFunctionForFill);
+          double plimits[4]={-1,double(xEl),-1,double(yEl)};
+          contouring.SetLimits(plimits);
+          contouring.SetFirstGrid(xEl+1,yEl+1);
+          contouring.SetSecondaryGrid(multx*(xEl+1),multy*(yEl+1));
+        } else {
+          contouring.SetFieldFcn(fieldFunctionForContour);
+          double plimits[4]={0,double(xEl-1),0,double(yEl-1)};
+          contouring.SetLimits(plimits);
+          contouring.SetFirstGrid(xEl-1,yEl-1);
+          contouring.SetSecondaryGrid(multx*(xEl-1),multy*(yEl-1));
+        }
         // define the function that will draw the contour-plot
-        //      contouring.SetDrawFcn(drawPlot);
+        contouring.SetDrawFcn(drawPlot);
         // sampling size of input function
-        contouring.SetFirstGrid(xEl,yEl);
         // this is the drawing resolution of the plot generated
-        contouring.SetSecondaryGrid(5*xEl,5*yEl);
         // set the number of contour planes 
         int numPlanes = nlevel;
         std::vector<double> vIso(numPlanes);
@@ -588,7 +637,6 @@ class contour_call : public plotting_routine_call {
         }
         contouring.SetPlanes(vIso);
         contouring.Generate();
-        
         //Good place for conversion to normed values
         COORDSYS coordinateSystem = DATA;
         SelfConvertToNormXY(xVal, xLog, yVal, yLog, coordinateSystem); //DATA
@@ -597,44 +645,6 @@ class contour_call : public plotting_routine_call {
           gdlStartT3DMatrixDriverTransform(actStream, zValue); //call for driver to perform special transform for all further drawing. No further 3D case as everyting is handled by the driver.
           doT3d = false;
         } // else we have to do it ourselves for each contour
-
-        // provision for 2 types of grids.
-        PLcGrid cgrid1; // X and Y independent deformation
-        PLFLT* xg1;
-        PLFLT* yg1;
-        PLcGrid2 cgrid2; // Dependent X Y (e.g., rotation)
-        bool tidyGrid1WorldData = false;
-        bool tidyGrid2WorldData = false;
-        bool oneDim = true;
-        bool rank1 = (xVal->Rank() == 1 && yVal->Rank() == 1);
-        // the Grids:
-        // 1 DIM X & Y
-        if (rank1) {
-          oneDim = true;
-          xg1 = new PLFLT[xEl];
-          yg1 = new PLFLT[yEl];
-          cgrid1.xg = xg1;
-          cgrid1.yg = yg1;
-          cgrid1.nx = xEl;
-          cgrid1.ny = yEl;
-          for (SizeT i = 0; i < xEl; i++) cgrid1.xg[i] = (*xVal)[i];
-          for (SizeT i = 0; i < yEl; i++) cgrid1.yg[i] = (*yVal)[i];
-          tidyGrid1WorldData = true;
-        } else //rank 2
-        {
-          oneDim = false;
-          actStream->Alloc2dGrid(&cgrid2.xg, xEl, yEl);
-          actStream->Alloc2dGrid(&cgrid2.yg, xEl, yEl);
-          tidyGrid2WorldData = true;
-          cgrid2.nx = xEl;
-          cgrid2.ny = yEl;
-          for (SizeT i = 0; i < xEl; i++) {
-            for (SizeT j = 0; j < yEl; j++) {
-              cgrid2.xg[i][j] = (*xVal)[j * (xEl) + i];
-              cgrid2.yg[i][j] = (*yVal)[j * (xEl) + i];
-            }
-          }
-        }
 
         //Colors.
         DStructGDL* pStruct = SysVar::P(); //MUST NOT BE STATIC, due to .reset 
@@ -675,8 +685,7 @@ class contour_call : public plotting_routine_call {
         if (e->GetKW(C_LABELS) != NULL) {
           labels = e->GetKWAs<DLongGDL>(C_LABELS);
           dolabels = true;
-        } else //every other level
-        {
+        } else { //every other level
           labels = new DLongGDL(dimension(nlevel), BaseGDL::ZERO);
           labels_guard.Init(labels);
           (*labels)[0]=1;
@@ -735,71 +744,25 @@ class contour_call : public plotting_routine_call {
               actStream->psty(0);
               gdlSetGraphicsForegroundColorFromBackgroundKw(e,actStream); //patterns written on background, not transparents!
 
-              contouring.PlotContour(i, drawContour);
-              
-//                actStream->shade(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
-//                clevel[i], maxmax,
-//                1,  0, //color + background
-//                static_cast<PLFLT> ((*thick)[i % thick->N_Elements()]),
-//                0, 0, 0, 0,
-//                (PLCALLBACK::fill), (oneDim),
-//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+              contouring.PlotContour(i, fillContour);
               //the pattern, now
               gdlSetGraphicsForegroundColorFromKw ( e, actStream );
               actStream->pat(1, &ori, &spa);
               contouring.PlotContour(i, fillContour);
-//              actStream->shade(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
-//                clevel[i], maxmax,
-//                (docolors) ? 1 : 0, (docolors) ? value : 255,
-//                static_cast<PLFLT> ((*thick)[i % thick->N_Elements()]),
-//                0, 0, 0, 0,
-//                (PLCALLBACK::fill), (oneDim),
-//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
               actStream->psty(0);
             }
-            //            if (docolors) gdlSetGraphicsForegroundColorFromKw( e, actStream );
-            //            if (dothick) gdlSetPenThickness(e, actStream);
-            //            if (dostyle) gdlLineStyle(actStream, 0);
           }//end FILL with equispaced lines
           else if (doT3d) { //contours will be filled with solid color and displaced in Z according to their value
             for (SizeT i = 0; i < nlevel; ++i) {
               gdlStartT3DMatrixDriverTransform(actStream, (clevel[i] - cmin) / (cmax - cmin));
-
               value = static_cast<PLFLT> (i) / nlevel;
               contouring.PlotContour(i, fillContour);
-//              actStream->shade(map, xEl, yEl, isLog ? doIt : NULL,
-//                xStart, xEnd, yStart, yEnd,
-//                clevel[i], maxmax,
-//                1, value,
-//                0, 0, 0, 0, 0,
-//                PLCALLBACK::fill, (oneDim), //Onedim is accelerator since rectangles are kept rectangles see plplot doc
-//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
             }
-          } else { //every other case of fill 
-            // note that plshades is not protected against 1 level (color formula is
-            // "shade_color = color_min + i / (PLFLT) ( nlevel - 2 ) * color_range;"
-            // meaning that nlevel=xx must be xx>=2 for plshades to work!)
-//            if (nlevel > 2 && !(docolors)) {
-//              contouring.PlotContour(i, fillContour);              
-              //acceleration with shades when no c_colors are given. use continuous table1, decomposed or not.
-              //acceleration is most sensible when a (x,y) transform (rotate, stretch) is in place since plplot does not recompute the map.
-//              actStream->shades(map, xEl, yEl, isLog ? doIt : NULL, xStart, xEnd, yStart, yEnd,
-//                clevel, nlevel, 1, 0, 0, PLCALLBACK::fill, (oneDim),
-//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2),
-//                (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
-//            } else { //fill with colors defined with c_colors or n<=2
+          } else { 
               for (SizeT i = 0; i < nlevel; ++i) {
                 value = static_cast<PLFLT> (i) / nlevel;
                 actStream->col1(value);
-              contouring.PlotContour(i, fillContour);              
-//                
-//                actStream->shade(map, xEl, yEl, isLog ? doIt : NULL,
-//                  xStart, xEnd, yStart, yEnd,
-//                  clevel[i], maxmax,
-//                  1, value,
-//                  0, 0, 0, 0, 0,
-//                  PLCALLBACK::fill, (oneDim), //Onedim is accelerator since rectangles are kept rectangles see plplot doc
-//                  (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
+                contouring.PlotContour(i, fillContour);              
               }
             }
         } else { //no fill = contours . use normal pen procedures.
@@ -819,40 +782,20 @@ class contour_call : public plotting_routine_call {
             }
             if (dostyle) gdlLineStyle(actStream, (*style)[i % style->N_Elements()]);
             if (dolabels && i < labels->N_Elements()) {
-              if (label_thick < referencePenThickness) { //one pass with (current) thick without labels, over with (smaller) label+contour.
-                //else (lables thicker than contours) impossible with plplot...
+              if (label_thick < referencePenThickness) { 
                 actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING, 0);
-              contouring.PlotContour(i, drawContour);    
-//              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
-//                  (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2); //thick contours, no label
+                contouring.PlotContour(i, drawContour);    
                 actStream->Thick(label_thick);
               }
               actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING * sqrt(label_size), (PLINT) (*labels)[i]);
               contouring.PlotContour(i, drawContour);    
-//              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
-//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
               if (!dothick) gdlSetPenThickness(e, actStream);
             } else {
               actStream->setcontlabelparam(0,0,0,0);
               contouring.PlotContour(i, drawContour);    
-//              actStream->cont(map, xEl, yEl, 1, xEl, 1, yEl, &(clevel[i]), 1,
-//                (oneDim) ? (PLCALLBACK::tr1) : (PLCALLBACK::tr2), (oneDim) ? (void *) &cgrid1 : (void *) &cgrid2);
             }
           }
-          //          if (docolors) gdlSetGraphicsForegroundColorFromKw ( e, actStream );
-          //          if (dothick) gdlSetPenThickness(e, actStream);
-          //          if (dostyle) gdlLineStyle(actStream, 0);
         }
-        if (tidyGrid2WorldData) {
-          actStream->Free2dGrid(cgrid2.xg, xEl, yEl);
-          actStream->Free2dGrid(cgrid2.yg, xEl, yEl);
-        }
-        if (tidyGrid1WorldData) {
-          delete[] xg1;
-          delete[] yg1;
-        }
-
-//        if (do_free_grid) 
         actStream->Free2dGrid(map, xEl, yEl);
       }
 
@@ -861,9 +804,8 @@ class contour_call : public plotting_routine_call {
       //reset driver to 2D plotting routines in all cases
       gdlStop3DDriverTransform(actStream);
     }
-#pragma GCC pop_options
 
-  private:
+private:
 
     virtual void post_call(EnvT*, GDLGStream * actStream) {
       if (recordPath) actStream->stransform(NULL, NULL);
