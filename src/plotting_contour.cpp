@@ -49,7 +49,7 @@ namespace lib {
     if (yLog && y <= 0) return 0;
     return 1;
   }
-  static PLFLT ** map;
+  static PLFLT * contourable;
   static SizeT M,N;
   // for contours, close contours here on map limits, using a different sampling
   double fieldFunctionForFill(double x, double y) {
@@ -57,10 +57,10 @@ namespace lib {
   if (y < 0) return -1000.; if (y > N-1) return -1000.;
   int i=x; if (i>=M-1) i=M-2;
   int j=y; if (i>=N-1) i=N-2;
-  double A=map[i][j];
-  double B=map[i+1][j];
-  double C=map[i][j+1];
-  double D=map[i+1][j+1];
+  double A=contourable[i+M*j];
+  double B=contourable[i+1+M*j];
+  double C=contourable[i+M*(j+1)];
+  double D=contourable[i+1+M*(j+1)];
   double dx = (x - i);
   double dy = (y - j);
   double ab = A * (1 - dx) + B * dx;
@@ -71,10 +71,10 @@ namespace lib {
   double fieldFunctionForContour(double x, double y) {
   int i=x; if (i>=M-1) i=M-2;
   int j=y; if (i>=N-1) i=N-2;
-  double A=map[i][j];
-  double B=map[i+1][j];
-  double C=map[i][j+1];
-  double D=map[i+1][j+1];
+  double A=contourable[i+M*j];
+  double B=contourable[i+1+M*j];
+  double C=contourable[i+M*(j+1)];
+  double D=contourable[i+1+M*(j+1)];
   double dx = (x - i);
   double dy = (y - j);
   double ab = A * (1 - dx) + B * dx;
@@ -129,8 +129,6 @@ void fillContour(int i, double *x, double *y){
     CListContour contouring;
 //    CContour contouring;
 
-    //PATH_XY etc: use actStream->stransform with a crafted recording function per level [lev-maxmax].
-    //disentangle positive and negative contours with their rotation signature.
   private:
 
     bool handle_args(EnvT* e) {
@@ -411,8 +409,6 @@ void fillContour(int i, double *x, double *y){
       static int pathxyIx = e->KeywordIx("PATH_XY");
       recordPath = (e->KeywordSet(pathinfoIx) || e->KeywordSet(pathxyIx));
       if (recordPath) {
-        //recordPath--> use actStream->stransform(myrecordingfunction, &data);
-        //       actStream->stransform(myrecordingfunction, NULL);
         Warning("PATH_INFO, PATH_XY not yet supported, (FIXME)");
         recordPath = false;
       }
@@ -502,10 +498,9 @@ void fillContour(int i, double *x, double *y){
       // should be: DFloat label_size=.75*actStream->charScale(); however IDL doc false (?).
       DFloat label_size = 0.9; //IDL behaviour, IDL doc is false, label of contours is not 3/4 of !P.CHARSIZE or CHARSIZE
       if (e->KeywordSet(C_CHARSIZE)) e->AssureFloatScalarKWIfPresent(C_CHARSIZE, label_size);
-      // set up after:      actStream->setcontlabelparam ( LABELOFFSET, (PLFLT) label_size, LABELSPACING, (label)?1:0 );
       DFloat label_thick = 1;
       if (e->KeywordSet(C_CHARTHICK)) e->AssureFloatScalarKWIfPresent(C_CHARTHICK, label_thick);
-      actStream->setcontlabelformat(4, 3);
+//      actStream->setcontlabelformat(4, 3);
 
       bool scalable=actStream->HasScalablePixels();
       // get a hint of possible sampling sizes based on actual size on device (in device coordinates)
@@ -517,7 +512,7 @@ void fillContour(int i, double *x, double *y){
       if (!nodata) {
 
         //here every postion XYZ must be in NORMalized coordinates to follow convention above.
-        //use of intermediate map for correct handling of blanking values and nans. We take advantage of the fact that
+        //use of intermediate contourable for correct handling of blanking values and nans. We take advantage of the fact that
         //this program makes either filled regions with plshades() [but plshades hates Nans!] or contours with plcont,
         //which needs Nans to avoid blanked regions. The idea is to mark unwanted regions with Nans for plcont, and
         //with a blanking value (minmin) for plshade. Eventually one could use a zdefined() function testing on top of it.
@@ -551,7 +546,7 @@ void fillContour(int i, double *x, double *y){
             zVal=newzVal;
             nEl=finalSize;
           }
-          // find a good compromise for default size of gridded map...
+          // find a good compromise for default size of gridded contourable...
           ixEl = max(51.0, 2 * sqrt((double) nEl) + 1); //preferably odd
           iyEl = max(51.0, 2 * sqrt((double) nEl) + 1);
           ixEl = ixEl < xsize ? ixEl : xsize; //no more than pixels on screen!
@@ -560,7 +555,6 @@ void fillContour(int i, double *x, double *y){
           yVal = new DDoubleGDL(dimension(iyEl), BaseGDL::NOZERO);
           for (SizeT i = 0; i < ixEl; ++i) (*xVal)[i] = xmin + i * (xmax - xmin) / ixEl;
           for (SizeT i = 0; i < iyEl; ++i) (*yVal)[i] = ymin + i * (ymax - ymin) / iyEl;
-          actStream->Alloc2dGrid(&map, ixEl, iyEl);
           int griddataIx = e->Interpreter()->GetFunIx("GRIDDATA");
           if (griddataIx < 0) e->Throw("internal error in CONTOUR, please report");
           // GDL magick
@@ -579,49 +573,51 @@ void fillContour(int i, double *x, double *y){
           // make the call
           DDoubleGDL* res = (DDoubleGDL*)BaseGDL::interpreter->call_fun(funList[ griddataIx]->GetTree());
           BaseGDL::interpreter->CallStack().pop_back();
-          for (SizeT j = 0, k = 0; j < iyEl; j++) {
-            for (SizeT i = 0; i < ixEl; i++) {
+          // very bad c++: will pass contourable and its dimensions without object.
+          M=ixEl; N=iyEl;
+          contourable=(PLFLT*)malloc(M*N*sizeof(PLFLT));
+          for (SizeT j = 0, k = 0; j < N; j++) {
+            for (SizeT i = 0; i < M; i++) {
               PLFLT v = (*res)[k++];
               if (!isfinite(v)) v = (fill) ? minmin : d_nan; //note: nan regions could eventually be filled.
               if (hasMinVal && v < minVal) v = (fill) ? minmin : d_nan;
               if (hasMaxVal && v > maxVal) v = (fill) ? maxmax : d_nan;
-              map[i][j] = v;
+              contourable[i+M*j] = v;
             }
           }
-          xEl = ixEl;
-          yEl = iyEl;
         } else {
-          actStream->Alloc2dGrid(&map, xEl, yEl);
-          for (SizeT i = 0, k = 0; i < xEl; i++) {
-            for (SizeT j = 0; j < yEl; j++) {
+          // very bad c++: will pass contourable and its dimensions without object.
+          M=xEl; N=yEl;
+          contourable=(PLFLT*)malloc(M*N*sizeof(PLFLT));
+          for (SizeT j = 0, k = 0; j < N; j++) {
+            for (SizeT i = 0; i < M; i++) {
               PLFLT v = (*zVal)[k++];
               if (!isfinite(v)) v = (fill) ? minmin : d_nan; //note: nan regions could eventually be filled.
               if (hasMinVal && v < minVal) v = (fill) ? minmin : d_nan;
               if (hasMaxVal && v > maxVal) v = (fill) ? maxmax : d_nan;
-              map[i][j] = v;
+              contourable[i+M*j] = v;
             }
           }
         }
 
         DLong multx=OVERSAMPLING;
         DLong multy=OVERSAMPLING;
-        // very bad c++: will pass map and its dimensions without object.
-        M=xEl; N=yEl;
+
         // define the input function for the contour plot. No need to oversample more than the number of output pixels/2.
-        if (xEl*multx > xsize/2) {float c=(float)xsize/(float)(2*multx*xEl); multx=MAX(2, c*multx); }
-        if (yEl*multy > ysize/2) {float c=(float)ysize/(float)(2*multy*yEl); multy=MAX(2, c*multy); }
+        if (M*multx > xsize/2) {float c=(float)xsize/(float)(2*multx*M); multx=MAX(2, c*multx); }
+        if (N*multy > ysize/2) {float c=(float)ysize/(float)(2*multy*N); multy=MAX(2, c*multy); }
         if (fill) {
           contouring.SetFieldFcn(fieldFunctionForFill);
-          double plimits[4]={-1,double(xEl),-1,double(yEl)};
+          double plimits[4]={-1,double(M),-1,double(N)};
           contouring.SetLimits(plimits);
-          contouring.SetFirstGrid(xEl+1,yEl+1);
-          contouring.SetSecondaryGrid(multx*(xEl+1),multy*(yEl+1));
+          contouring.SetFirstGrid(M+1,N+1);
+          contouring.SetSecondaryGrid(multx*(M+1),multy*(N+1));
         } else {
           contouring.SetFieldFcn(fieldFunctionForContour);
-          double plimits[4]={0,double(xEl-1),0,double(yEl-1)};
+          double plimits[4]={0,double(M-1),0,double(N-1)};
           contouring.SetLimits(plimits);
-          contouring.SetFirstGrid(xEl-1,yEl-1);
-          contouring.SetSecondaryGrid(multx*(xEl-1),multy*(yEl-1));
+          contouring.SetFirstGrid(M-1,N-1);
+          contouring.SetSecondaryGrid(multx*(M-1),multy*(N-1));
         }
         // define the function that will draw the contour-plot
         contouring.SetDrawFcn(drawPlot);
@@ -781,20 +777,20 @@ void fillContour(int i, double *x, double *y){
             if (dostyle) gdlLineStyle(actStream, (*style)[i % style->N_Elements()]);
             if (dolabels && i < labels->N_Elements()) {
               if (label_thick < referencePenThickness) { 
-                actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING, 0);
+//                actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING, 0);
                 contouring.PlotContour(i, drawContour);    
                 actStream->Thick(label_thick);
               }
-              actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING * sqrt(label_size), (PLINT) (*labels)[i]);
+//              actStream->setcontlabelparam(LABELOFFSET, (PLFLT) label_size, LABELSPACING * sqrt(label_size), (PLINT) (*labels)[i]);
               contouring.PlotContour(i, drawContour);    
               if (!dothick) gdlSetPenThickness(e, actStream);
             } else {
-              actStream->setcontlabelparam(0,0,0,0);
+//              actStream->setcontlabelparam(0,0,0,0);
               contouring.PlotContour(i, drawContour);    
             }
           }
         }
-        actStream->Free2dGrid(map, xEl, yEl);
+        free(contourable);
       }
 
     //restore color for boxes
@@ -806,8 +802,8 @@ void fillContour(int i, double *x, double *y){
 private:
 
     virtual void post_call(EnvT*, GDLGStream * actStream) {
-      if (recordPath) actStream->stransform(NULL, NULL);
-      actStream->setcontlabelparam(0,0,0,0);
+//      if (recordPath) actStream->stransform(NULL, NULL);
+//      actStream->setcontlabelparam(0,0,0,0);
       actStream->lsty(1); //reset linestyle
       actStream->sizeChar(1.0);
    }
