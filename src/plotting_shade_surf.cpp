@@ -361,9 +361,6 @@ void applyGraphics(EnvT* e, GDLGStream * actStream) {
 
         if (doShade) decomposed = actStream->ForceColorMap1Ramp(0.0);
         else decomposed = actStream->ForceColorMap1Ramp(0.33);
-        //position of light Source.
-        actStream->lightsource(lightSourceUnitVector[0], lightSourceUnitVector[1], lightSourceUnitVector[2]);
-        actStream->shadinglimits(shadinglimits[0], shadinglimits[1]);
 
         //use of intermediate map for correct handling of blanking values and nans. It ALSO serves to rotate map by 90 degrees,
         //to orient the array correctly.

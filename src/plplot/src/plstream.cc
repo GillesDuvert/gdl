@@ -484,23 +484,6 @@ void plstream::join( PLFLT x1, PLFLT y1, PLFLT x2, PLFLT y2 )
     pljoin( x1, y1, x2, y2 );
 }
 
-// Sets position of the light source
-
-void plstream::lightsource( PLFLT x, PLFLT y, PLFLT z )
-{
-    set_stream();
-
-    pllightsource( x, y, z );
-}
-
-// Sets min and max shading
-
-void plstream::shadinglimits( PLFLT smin, PLFLT smax )
-{
-    set_stream();
-
-    plshadinglimits(smin,smax);
-}
 // Draws line segments connecting a series of points.
 
 void plstream::line( PLINT n, const PLFLT *x, const PLFLT *y )
@@ -556,32 +539,6 @@ void plstream::mtex( const char *side, PLFLT disp, PLFLT pos, PLFLT just,
     set_stream();
 
     plmtex( side, disp, pos, just, text );
-}
-
-// Plots a 3-d shaded representation of the function z[x][y].
-
-void plstream::surf3d( const PLFLT *x, const PLFLT *y, const PLFLT * const *z,
-                       PLINT nx, PLINT ny, PLINT opt,
-                       const PLFLT *clevel, PLINT nlevel, PLINT* shademap )
-{
-    set_stream();
-
-    plsurf3d( x, y, z, nx, ny, opt, clevel, nlevel, shademap );
-}
-
-// Plots a 3-d shaded representation of the function z[x][y] with
-// y index limits
-
-void plstream::surf3dl( const PLFLT *x, const PLFLT *y, const PLFLT * const *z,
-                        PLINT nx, PLINT ny, PLINT opt,
-                        const PLFLT *clevel, PLINT nlevel,
-                        PLINT ixstart, PLINT ixn,
-                        const PLINT *indexymin, const PLINT *indexymax, PLINT* shademap )
-{
-    set_stream();
-
-    plsurf3dl( x, y, z, nx, ny, opt, clevel, nlevel, ixstart, ixn,
-        indexymin, indexymax, shademap );
 }
 
 // Plots a 3-d representation of the function z[x][y].
