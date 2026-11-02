@@ -872,14 +872,12 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
     PLUNICODE     ch, ifont = plsc->ttFontIndex;
 	PLINT ig, j = 0, lentxt = (PLINT) strlen( text );
     unsigned char      test;
-	char esc;
+	static const unsigned char esc=33; //"!"
 
 #define SPACE 32
 	// Initialize parameters.
 
     *length = 0;
-
-    plgesc( &esc );
 
 // Get next character; treat non-printing characters as spaces.
 

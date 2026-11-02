@@ -140,7 +140,9 @@ static int opt_dev_compression( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_dpi( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_drvopt( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_eofill( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
+/*
 static int opt_fam( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
+*/
 static int opt_fbeg( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_fflen( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_finc( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
@@ -469,6 +471,7 @@ static PLOptionTable ploption_table[] = {
         "-ncol1 n",
         "Number of colors to allocate in cmap 1 (upper bound)"
     },
+/*
     {
         "fam",                  // Familying on switch
         opt_fam,
@@ -478,6 +481,8 @@ static PLOptionTable ploption_table[] = {
         "-fam",
         "Create a family of output files"
     },
+*/
+/*
     {
         "fsiz",                 // Family file size
         opt_fsiz,
@@ -487,6 +492,8 @@ static PLOptionTable ploption_table[] = {
         "-fsiz size[kKmMgG]",
         "Output family file size (e.g. -fsiz 0.5G, def MB)"
     },
+*/
+/*
     {
         "fbeg",                 // Family starting member
         opt_fbeg,
@@ -514,6 +521,7 @@ static PLOptionTable ploption_table[] = {
         "-fflen length",
         "Family member number minimum field width"
     },
+*/
     {
         "db",                   // Double buffering on switch
         opt_db,
@@ -595,6 +603,7 @@ static PLOptionTable ploption_table[] = {
         "-dpi dpi",
         "Resolution, in dots per inch (e.g. -dpi 360x360)"
     },
+/*
     {
         "compression",                  // compression
         opt_dev_compression,
@@ -604,6 +613,7 @@ static PLOptionTable ploption_table[] = {
         "-compression num",
         "Sets compression level in supporting devices"
     },
+*/
     {
         "cmap0",
         opt_cmap0,
@@ -2284,6 +2294,7 @@ opt_drvopt( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR opt_arg, void * PL_UNU
     return 0;
 }
 
+/*
 //--------------------------------------------------------------------------
 // opt_fam()
 //
@@ -2304,7 +2315,9 @@ opt_fam( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR PL_UNUSED( opt_arg ), voi
     plsfam( 1, -1, -1 );
     return 0;
 }
+*/
 
+/*
 //--------------------------------------------------------------------------
 // opt_fsiz()
 //
@@ -2371,7 +2384,9 @@ opt_fsiz( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR opt_arg, void * PL_UNUSE
     free( spec );
     return 0;
 }
+*/
 
+/*
 //--------------------------------------------------------------------------
 // opt_fbeg()
 //
@@ -2393,7 +2408,9 @@ opt_fbeg( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR opt_arg, void * PL_UNUSE
 
     return 0;
 }
+*/
 
+/*
 //--------------------------------------------------------------------------
 // opt_finc()
 //
@@ -2415,7 +2432,9 @@ opt_finc( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR opt_arg, void * PL_UNUSE
 
     return 0;
 }
+*/
 
+/*
 //--------------------------------------------------------------------------
 // opt_fflen()
 //
@@ -2437,6 +2456,7 @@ opt_fflen( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR opt_arg, void * PL_UNUS
 
     return 0;
 }
+*/
 
 //--------------------------------------------------------------------------
 // opt_np()
@@ -2807,6 +2827,7 @@ opt_dpi( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR opt_arg, void * PL_UNUSED
     return 0;
 }
 
+/*
 //--------------------------------------------------------------------------
 // opt_dev_compression()
 //
@@ -2835,6 +2856,7 @@ opt_dev_compression( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR opt_arg, void
 
     return 0;
 }
+*/
 
 //--------------------------------------------------------------------------
 // opt_cmap0()

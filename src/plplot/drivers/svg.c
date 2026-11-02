@@ -158,11 +158,13 @@ void plD_init_svg( PLStream *pls )
     if ( !pls->colorset )
         pls->color = 1;
 
+/*
     // Initialize family file info
     plFamInit( pls );
 
     // Prompt for a file name if not already set
     plOpenFile( pls );
+*/
 // Allocate and initialize device-specific data
 
     if ( pls->dev != NULL )
@@ -222,21 +224,8 @@ void plD_init_svg( PLStream *pls )
 
 void plD_bop_svg( PLStream *pls )
 {
-    SVG *aStream;
+    SVG *aStream = pls->dev;
 
-    // Plot familying stuff. Not really understood, just copying gd.c
-    plGetFam( pls );
-// n.b. pls->dev can change because of an indirect call to plD_init_svg
-// from plGetFam if familying is enabled.  Thus, wait to define aStream until
-// now.
-    aStream = pls->dev;
-
-    pls->famadv = 1;
-    pls->page++;
-    if ( svg_family_check( pls ) )
-    {
-        return;
-    }
 
     // write opening svg tag for the new page
 
@@ -326,11 +315,13 @@ void plD_eop_svg( PLStream *pls )
 
 void plD_tidy_svg( PLStream *pls )
 {
+/*
     if ( svg_family_check( pls ) )
     {
         return;
     }
     plCloseFile( pls );
+*/
 }
 
 //--------------------------------------------------------------------------

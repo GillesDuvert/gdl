@@ -169,6 +169,7 @@ plery1( PLFLT x, PLFLT ymin, PLFLT ymax )
     plytik( plP_wcpcx( x ), plP_wcpcy( ymax ), xminor, xminor );
 }
 
+/*
 //--------------------------------------------------------------------------
 // void plerrx()
 //
@@ -210,3 +211,4 @@ c_plerry( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR ymin, PLFLT_VECTOR ymax )
     for ( i = 0; i < n; i++ )
         plery1( x[i], ymin[i], ymax[i] );
 }
+*/

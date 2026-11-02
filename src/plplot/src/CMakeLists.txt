@@ -22,7 +22,6 @@ set(plplot_LIB_SRCS
   plaffine.c
   plargs.c
   plbox.c
-  plcont.c
   plcore.c
   plctrl.c
   plcvt.c
@@ -33,7 +32,6 @@ set(plplot_LIB_SRCS
   plot3d.c
   plpage.c
   plsdef.c
-  plshade.c
   plstdio.c
   plsym.c
   pltick.c

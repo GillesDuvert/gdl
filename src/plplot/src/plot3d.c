@@ -152,8 +152,6 @@ plfmesh( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 // DRAW_LINEY   draw lines parallel to the Y axis
 // DRAW_LINEXY  draw lines parallel to both the X and Y axis
 // MAG_COLOR    draw the mesh with a color dependent of the magnitude
-// BASE_CONT    draw contour plot at bottom xy plane
-// TOP_CONT     draw contour plot at top xy plane (not yet)
 // DRAW_SIDES   draw sides
 //
 // or any bitwise combination, e.g. "MAG_COLOR | DRAW_LINEX"
@@ -384,9 +382,6 @@ plfsurf3d( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 //  and the z values are in the 2-d array z[][].
 //
 //
-// BASE_CONT    draw contour plot at bottom xy plane
-// TOP_CONT     draw contour plot at top xy plane (not implemented)
-// SURF_CONT    draw contour at surface
 // FACETED      each square that makes up the surface is faceted
 // DRAW_SIDES   draw sides
 // MAG_COLOR    the surface is colored according to the value of z;
@@ -474,8 +469,6 @@ plfsurf3dl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp, PLINT nx
     PLINT      ixmin = 0, ixmax = nx, iymin = 0, iymax = ny;
     PLFLT      xx[3], yy[3], zz[3];
     PLFLT      px[4], py[4], pz[4];
-    CONT_LEVEL *cont, *clev;
-    CONT_LINE  *cline;
     int        ct, ix, iy, iftriangle;
     PLINT      color = plsc->icol0;
     PLFLT      width = plsc->width;
@@ -797,8 +790,6 @@ plfplot3dc( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 //  DRAW_LINEY :  Draw lines parallel to y-axis
 //  DRAW_LINEXY:  Draw lines parallel to both axes
 //  MAG_COLOR:    Magnitude coloring of wire frame
-//  BASE_CONT:    Draw contour at bottom xy plane
-//  TOP_CONT:     Draw contour at top xy plane (not yet)
 //  DRAW_SIDES:   Draw sides around the plot
 //  MESH:       Draw the "under" side of the plot
 //
@@ -843,8 +834,6 @@ c_plot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLFLT_MATRIX z,
 //!   - DRAW_LINEY :  Draw lines parallel to y-axis
 //!   - DRAW_LINEXY:  Draw lines parallel to both axes
 //!   - MAG_COLOR:    Magnitude coloring of wire frame
-//!   - BASE_CONT:    Draw contour at bottom xy plane
-//!   - TOP_CONT:     Draw contour at top xy plane (not yet)
 //!   - DRAW_SIDES:   Draw sides around the plot
 //!   - MESH:         Draw the "under" side of the plot
 //! or any bitwise OR'd combination, e.g. "MAG_COLOR | DRAW_LINEX"
@@ -868,7 +857,7 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
     PLFLT width;
     PLFLT xmin, xmax, ymin, ymax, zmin, zmax, zscale;
     PLINT ixmin   = 0, ixmax = nx - 1, iymin = 0, iymax = ny - 1;
-    PLINT clipped = 0, base_cont = 0, side = 0;
+    PLINT clipped = 0, side = 0;
     PLFLT ( *getz )( PLPointer, PLINT, PLINT ) = zops->get;
     PLFLT *_x = NULL, *_y = NULL, **_z = NULL;
     PLFLT_VECTOR x_modified, y_modified;
@@ -1051,7 +1040,7 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 
     // From here on must use x_modified and y_modified rather than
     // x and y.
-    if ( ( opt & BASE_CONT ) || ( opt & TOP_CONT ) || ( opt & MAG_COLOR ) )
+    if ( opt & MAG_COLOR )    // If enabled, use magnitude colored wireframe
     {
         //
         // Don't use the data z value to scale the color, use the z axis
@@ -1067,17 +1056,6 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
         {
             plwarn( "plot3dcl: Maximum and minimum Z values are equal! \"fixing\"..." );
             fc_maxz = fc_minz + 1e-6;
-        }
-    }
-
-    if ( opt & BASE_CONT )    // If enabled, draw the contour at the base.
-    {
-        if ( clevel != NULL && nlevel != 0 )
-        {
-            base_cont = 1;
-            // even if MESH is not set, "set it",
-            // as the base contour can only be done in this case
-            pl3mode = 1;
         }
     }
 
@@ -1178,146 +1156,6 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
         }
     }
 
-    // draw contour at the base. Not 100%! Why?
-
-    if ( base_cont )
-    {
-        #define NPTS 100
-        int np = NPTS, j;
-        CONT_LEVEL *cont, *clev;
-        CONT_LINE *cline;
-
-        PLINT *uu = (PLINT *) malloc( (size_t) NPTS * sizeof ( PLINT ) );
-        PLINT *vv = (PLINT *) malloc( (size_t) NPTS * sizeof ( PLINT ) );
-        // prepare cont_store input
-        PLFLT **zstore;
-        PLcGrid2 cgrid2;
-
-        if ( ( uu == NULL ) || ( vv == NULL ) )
-        {
-            plexit( "c_plot3dcl: Insufficient memory" );
-        }
-
-        cgrid2.nx = nx;
-        cgrid2.ny = ny;
-        plAlloc2dGrid( &cgrid2.xg, nx, ny );
-        plAlloc2dGrid( &cgrid2.yg, nx, ny );
-        plAlloc2dGrid( &zstore, nx, ny );
-
-        for ( i = 0; i < nx; i++ )
-        {
-            for ( j = 0; j < ny; j++ )
-            {
-                cgrid2.xg[i][j] = x_modified[i];
-                cgrid2.yg[i][j] = y_modified[j];
-                zstore[i][j]    = getz( zp, i, j );
-            }
-        }
-
-        pl3upv = 0;
-
-        // Fill cont structure with contours.
-        cont_store( (PLFLT_MATRIX) zstore, nx, ny, 1, nx, 1, ny,
-            clevel, nlevel, pltr2, (void *) &cgrid2, &cont );
-
-        // Free the 2D input arrays to cont_store since not needed any more.
-        plFree2dGrid( zstore, nx, ny );
-        plFree2dGrid( cgrid2.xg, nx, ny );
-        plFree2dGrid( cgrid2.yg, nx, ny );
-
-        // follow the contour levels and lines
-        clev = cont;
-        do  // for each contour level
-        {
-            cline = clev->line;
-            do  // there are several lines that make up each contour
-            {
-                int cx, k, l, m, start, end;
-                PLFLT tx, ty;
-                if ( cline->npts > np )
-                {
-                    np = cline->npts;
-                    if ( ( ( uu = (PLINT *) realloc( uu, (size_t) np * sizeof ( PLINT ) ) ) == NULL ) ||
-                         ( ( vv = (PLINT *) realloc( vv, (size_t) np * sizeof ( PLINT ) ) ) == NULL ) )
-                    {
-                        plexit( "c_plot3dcl: Insufficient memory" );
-                    }
-                }
-
-                // the hidden line plotter plnxtv() only works OK if the x points are in increasing order.
-                // As this does not always happens, the situation must be detected and the line segment
-                // must be reversed before being plotted
-                i = 0;
-                if ( cline->npts > 0 )
-                {
-                    do
-                    {
-						PLFLT col=( clev->level - fc_minz ) / ( fc_maxz - fc_minz ) ;
-						col=MAX(0, MIN(1,col));
-                        plcol1( col );
-                        cx = plP_wcpcx( plP_w3wcx( cline->x[i], cline->y[i], plsc->ranmi ) );
-                        for ( j = i; j < cline->npts; j++ ) // convert to 2D coordinates
-                        {
-                            uu[j] = plP_wcpcx( plP_w3wcx( cline->x[j], cline->y[j], plsc->ranmi ) );
-                            vv[j] = plP_wcpcy( plP_w3wcy( cline->x[j], cline->y[j], plsc->ranmi ) );
-                            if ( uu[j] < cx ) // find turn back point
-                                break;
-                            else
-                                cx = uu[j];
-                        }
-                        plnxtv( &uu[i], &vv[i], NULL, j - i, 0 ); // plot line with increasing x
-
-                        if ( j < cline->npts )                    // line not yet finished,
-                        {
-                            start = j - 1;
-                            for ( i = start; i < cline->npts; i++ ) // search turn forward point
-                            {
-                                uu[i] = plP_wcpcx( plP_w3wcx( cline->x[i], cline->y[i], plsc->ranmi ) );
-                                if ( uu[i] > cx )
-                                    break;
-                                else
-                                    cx = uu[i];
-                            }
-                            end = i - 1;
-
-                            for ( k = 0; k < ( end - start + 1 ) / 2; k++ ) // reverse line segment
-                            {
-                                l           = start + k;
-                                m           = end - k;
-                                tx          = cline->x[l];
-                                ty          = cline->y[l];
-                                cline->x[l] = cline->x[m];
-                                cline->y[l] = cline->y[m];
-                                cline->x[m] = tx;
-                                cline->y[m] = ty;
-                            }
-
-                            // convert to 2D coordinates
-                            for ( j = start; j <= end; j++ )
-                            {
-                                uu[j] = plP_wcpcx( plP_w3wcx( cline->x[j], cline->y[j], plsc->ranmi ) );
-                                vv[j] = plP_wcpcy( plP_w3wcy( cline->x[j], cline->y[j], plsc->ranmi ) );
-                            }
-                            plnxtv( &uu[start], &vv[start], NULL, end - start + 1, 0 ); // and plot it
-
-                            cline->x[end] = cline->x[start];
-                            cline->y[end] = cline->y[start];
-                            i             = end; // restart where it was left
-                        }
-                    } while ( j < cline->npts && i < cline->npts );
-                }
-                cline = cline->next;
-            }
-            while ( cline != NULL );
-            clev = clev->next;
-        }
-        while ( clev != NULL );
-
-        cont_clean_store( cont ); // now release the contour memory
-        pl3upv = 1;
-        free( uu );
-        free( vv );
-    }
 
 // Finish up by drawing sides, background grid (both are optional)
 

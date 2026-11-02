@@ -1517,7 +1517,6 @@ c_plinit( void )
 
 // Switch to graphics mode and set color and arrow style
 
-    plgra();
     plcol0( 1 );
 
     pllsty( 1 );
@@ -1781,101 +1780,6 @@ pl_cpcolor( PLColor *to, PLColor *from )
     to->a = from->a;
 }
 
-//--------------------------------------------------------------------------
-// void plcpstrm
-//
-// Copies state parameters from the reference stream to the current stream.
-// Tell driver interface to map device coordinates unless flags == 1.
-//
-// This function is used for making save files of selected plots (e.g.
-// from the TK driver).  After initializing, you can get a copy of the
-// current plot to the specified device by switching to this stream and
-// issuing a plcpstrm() and a plreplot(), with calls to plbop() and
-// pleop() as appropriate.  The plot buffer must have previously been
-// enabled (done automatically by some display drivers, such as X).
-//--------------------------------------------------------------------------
-
-void
-c_plcpstrm( PLINT iplsr, PLINT flags )
-{
-    int      i;
-    PLStream *plsr;
-
-    plsr = pls[iplsr];
-    if ( plsr == NULL )
-    {
-        fprintf( stderr, "plcpstrm: stream %d not in use\n", (int) iplsr );
-        return;
-    }
-
-// May be debugging
-
-    plsc->debug = plsr->debug;
-
-// Driver interface
-// Transformation must be recalculated in current driver coordinates
-
-    if ( plsr->difilt & PLDI_PLT )
-        plsdiplt( plsr->dipxmin, plsr->dipymin, plsr->dipxmax, plsr->dipymax );
-
-    if ( plsr->difilt & PLDI_DEV )
-        plsdidev( plsr->mar, plsr->aspect, plsr->jx, plsr->jy );
-
-    if ( plsr->difilt & PLDI_ORI )
-        plsdiori( plsr->diorot );
-
-// Map device coordinates
-
-    if ( !( flags & 0x01 ) )
-    {
-        pldebug( "plcpstrm", "mapping parameters: %d %d %d %d %f %f\n",
-            plsr->phyxmi, plsr->phyxma, plsr->phyymi, plsr->phyyma,
-            plsr->xpmm, plsr->ypmm );
-        plsdimap( plsr->phyxmi, plsr->phyxma, plsr->phyymi, plsr->phyyma,
-            plsr->xpmm, plsr->ypmm );
-    }
-
-// current color
-
-    pl_cpcolor( &plsc->curcolor, &plsr->curcolor );
-
-// cmap 0
-
-    plsc->icol0 = plsr->icol0;
-    plsc->ncol0 = plsr->ncol0;
-    if ( plsc->cmap0 != NULL )
-        free( (void *) plsc->cmap0 );
-
-    if ( ( plsc->cmap0 = (PLColor *) calloc( 1, (size_t) plsc->ncol0 * sizeof ( PLColor ) ) ) == NULL )
-    {
-        plexit( "c_plcpstrm: Insufficient memory" );
-    }
-
-    for ( i = 0; i < plsc->ncol0; i++ )
-        pl_cpcolor( &plsc->cmap0[i], &plsr->cmap0[i] );
-
-// cmap 1
-
-    plsc->icol1     = plsr->icol1;
-    plsc->ncol1     = plsr->ncol1;
-    plsc->cmap1_min = plsr->cmap1_min;
-    plsc->cmap1_max = plsr->cmap1_max;
-    if ( plsc->cmap1 != NULL )
-        free( (void *) plsc->cmap1 );
-
-    if ( ( plsc->cmap1 = (PLColor *) calloc( 1, (size_t) plsc->ncol1 * sizeof ( PLColor ) ) ) == NULL )
-    {
-        plexit( "c_plcpstrm: Insufficient memory" );
-    }
-
-    for ( i = 0; i < plsc->ncol1; i++ )
-        pl_cpcolor( &plsc->cmap1[i], &plsr->cmap1[i] );
-
-// Initialize if it hasn't been done yet.
-
-    if ( plsc->level == 0 )
-        plinit();
-}
 
 //--------------------------------------------------------------------------
 // pllib_devinit()
@@ -2563,17 +2467,6 @@ c_plsesc( char esc )
     }
 }
 
-// Get the escape character for text strings.
-
-void
-plgesc( char *p_esc )
-{
-    if ( plsc->esc == '\0' )
-        plsc->esc = '#';
-
-    *p_esc = plsc->esc;
-}
-
 // Get the current library version number
 // Note: you MUST have allocated space for this (80 characters is safe)
 void
@@ -2590,6 +2483,7 @@ plsxwin( PLINT window_id )
     plsc->window_id = window_id;
 }
 
+/*
 //--------------------------------------------------------------------------
 //  These set/get information for family files, and may be called prior
 //  to plinit to set up the necessary parameters.  Arguments:
@@ -2624,6 +2518,7 @@ c_plsfam( PLINT fam, PLINT num, PLINT bmax )
     if ( bmax >= 0 )
         plsc->bytemax = bmax;
 }
+*/
 
 //--------------------------------------------------------------------------
 //  Interface routines for axis labling parameters.
@@ -2859,6 +2754,7 @@ plP_setphy( PLINT xmin, PLINT xmax, PLINT ymin, PLINT ymax )
     plsc->phyylen = ymax - ymin;
 }
 
+/*
 //--------------------------------------------------------------------------
 // void c_plscompression()
 //
@@ -2886,6 +2782,7 @@ c_plgcompression( PLINT *compression )
 {
     *compression = plsc->dev_compression;
 }
+*/
 
 
 //--------------------------------------------------------------------------

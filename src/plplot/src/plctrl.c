@@ -1864,20 +1864,10 @@ finish: plrestore_locale( save_locale );
 void
 plwarn( PLCHAR_VECTOR errormsg )
 {
-    int was_gfx = 0;
-
-    if ( plsc->graphx == 1 )
-    {
-        was_gfx = 1;
-        pltext();
-    }
 
     fprintf( stderr, "\n*** PLPLOT WARNING ***\n" );
     if ( *errormsg != '\0' )
         fprintf( stderr, "%s\n", errormsg );
-
-    if ( was_gfx == 1 )
-        plgra();
 }
 
 //--------------------------------------------------------------------------
@@ -1909,20 +1899,10 @@ plabort( PLCHAR_VECTOR errormsg )
     }
     else
     {
-        int was_gfx = 0;
-
-        if ( plsc->graphx == 1 )
-        {
-            was_gfx = 1;
-            pltext();
-        }
-
         fprintf( stderr, "\n*** PLPLOT ERROR, ABORTING OPERATION ***\n" );
         if ( *errormsg != '\0' )
             fprintf( stderr, "%s, aborting operation\n", errormsg );
 
-        if ( was_gfx == 1 )
-            plgra();
     }
 }
 
@@ -1991,36 +1971,6 @@ plsexit( int ( *handler )( PLCHAR_VECTOR ) )
     exit_handler = handler;
 }
 
-//--------------------------------------------------------------------------
-// void plgra()
-//
-//! Switches to graphics screen.
-//!
-//! Here and in pltext() it's a good idea to return silently if plinit()
-//! hasn't yet been called, since plwarn() calls pltext() and plgra(), and
-//! plwarn() may be called at any time.
-//--------------------------------------------------------------------------
-
-void
-c_plgra( void )
-{
-    if ( plsc->level > 0 )
-        plP_esc( PLESC_GRAPH, NULL );
-}
-
-
-//--------------------------------------------------------------------------
-// void pltext()
-//
-//! Switches to text screen.
-//--------------------------------------------------------------------------
-
-void
-c_pltext( void )
-{
-    if ( plsc->level > 0 )
-        plP_esc( PLESC_TEXT, NULL );
-}
 
 //--------------------------------------------------------------------------
 // void pl_cmd()
@@ -2183,88 +2133,6 @@ done:
     return ( file );
 }
 
-//--------------------------------------------------------------------------
-// PLINR plFindName
-//
-//! Authors: Paul Dubois (LLNL), others?
-//! This function is in the public domain.
-//!
-//! Given a pathname, determine if it is a symbolic link.  If so, continue
-//! searching to the ultimate terminus - there may be more than one link.
-//! Use the error value to determine when the terminus is reached, and to
-//! determine if the pathname really exists.  Then stat it to determine
-//! whether it's executable.  Return 0 for an executable, errno otherwise.
-//! Note that 'p' _must_ have at least one '/' character - it does by
-//! construction in this program.  The contents of the array pointed to by
-//! 'p' are changed to the actual pathname if findname is successful.
-//!
-//! This function is only defined under Unix for now.
-//!
-//! @param p Name of the executable to find.
-//!
-//! @returns 0 if p is found & is an executable.
-//--------------------------------------------------------------------------
-
-#ifdef __unix
-PLINT
-plFindName( char *p )
-{
-    ssize_t     n;
-    char        buf[PLPLOT_MAX_PATH], *cp;
-    struct stat sbuf;
-
-    pldebug( "plFindName", "Trying to find %s\n", p );
-    while ( ( n = readlink( p, buf, PLPLOT_MAX_PATH ) ) > 0 )
-    {
-        pldebug( "plFindName", "Readlink read %d chars at: %s\n", n, p );
-        if ( buf[0] == '/' )
-        {
-            // Link is an absolute path
-
-            strncpy( p, buf, (size_t) n );
-            p[n] = '\0';
-            pldebug( "plFindName", "Link is absolute: %s\n", p );
-        }
-        else
-        {
-            // Link is relative to its directory; make it absolute
-
-            cp = 1 + strrchr( p, '/' );
-            strncpy( cp, buf, (size_t) n );
-            cp[n] = '\0';
-            pldebug( "plFindName",
-                "Link is relative: %s\n\tTotal path:%s\n", cp, p );
-        }
-    }
-
-// This macro not defined on the NEC SX-3
-
-#ifdef SX
-#define S_ISREG( mode )    ( mode & S_IFREG )
-#endif
-
-// SGI machines return ENXIO instead of EINVAL Dubois 11/92
-
-    if ( errno == EINVAL || errno == ENXIO )
-    {
-        pldebug( "plFindName", "%s may be the one...\n", p );
-        if ( ( stat( p, &sbuf ) == 0 ) && S_ISREG( sbuf.st_mode ) )
-        {
-            pldebug( "plFindName", "%s is a regular file\n", p );
-            return ( access( p, X_OK ) );
-        }
-    }
-    pldebug( "plFindName", "%s found but is not executable\n", p );
-    return ( errno ? errno : -1 );
-}
-
-#else
-PLINT
-plFindName( char *p )
-{
-    return 1;
-}
-#endif
 
 //--------------------------------------------------------------------------
 // void plGetName()
@@ -2388,73 +2256,6 @@ plcol_interp( PLStream *pls, PLColor *newcolor, int i, int ncol )
 }
 
 //--------------------------------------------------------------------------
-// plOpenFile()
-//
-//! Opens file for output, prompting if not set.
-//! Prints extra newline at end to make output look better in batch runs.
-//! A file name of "-" indicates output to stdout.
-//!
-//! @param pls A plot stream structure.
-//--------------------------------------------------------------------------
-
-#define MAX_NUM_TRIES    10
-void
-plOpenFile( PLStream *pls )
-{
-    int    i = 0, count = 0;
-    size_t len;
-    char   line[BUFFER_SIZE];
-
-    while ( pls->OutFile == NULL )
-    {
-// Setting pls->FileName = NULL forces creation of a new family member
-// You should also free the memory associated with it if you do this
-
-        if ( pls->family && pls->BaseName != NULL )
-            plP_getmember( pls );
-
-// Prompt if filename still not known
-
-        if ( pls->FileName == NULL )
-        {
-            do
-            {
-                fprintf( stdout, "Enter graphics output file name: " );
-                plio_fgets( line, sizeof ( line ), stdin );
-                len = strlen( line );
-                if ( len )
-                    len--;
-                line[len] = '\0';       // strip new-line
-                count++;                // count zero entries
-            } while ( !len && count < MAX_NUM_TRIES );
-            plP_sfnam( pls, line );
-        }
-
-// If name is "-", send to stdout
-
-        if ( !strcmp( pls->FileName, "-" ) )
-        {
-            pls->OutFile     = stdout;
-            pls->output_type = 1;
-            break;
-        }
-
-// Need this here again, for prompted family initialization
-
-        if ( pls->family && pls->BaseName != NULL )
-            plP_getmember( pls );
-
-        if ( i++ > 10 )
-            plexit( "Too many tries." );
-
-        if ( ( pls->OutFile = fopen( pls->FileName, "wb+" ) ) == NULL )
-            fprintf( stderr, "Can't open %s.\n", pls->FileName );
-        else
-            pldebug( "plOpenFile", "Opened %s\n", pls->FileName );
-    }
-}
-
-//--------------------------------------------------------------------------
 // plCloseFile()
 //
 //! Closes output file unless it is associated with stdout.
@@ -2473,47 +2274,6 @@ plCloseFile( PLStream *pls )
 
         fclose( pls->OutFile );
         pls->OutFile = NULL;
-    }
-}
-
-//--------------------------------------------------------------------------
-// plP_getmember()
-//
-//! Sets up next file member name (in pls->FileName), but does not open it.
-//!
-//! @param pls A plot stream structure.
-//--------------------------------------------------------------------------
-
-void
-plP_getmember( PLStream *pls )
-{
-    char   tmp[BUFFER_SIZE];
-    char   prefix[BUFFER_SIZE];
-    char   * suffix;
-    char   num[BUFFER_SIZE];
-    size_t maxlen;
-
-    maxlen = strlen( pls->BaseName ) + 10;
-    if ( pls->FileName == NULL )
-    {
-        if ( ( pls->FileName = (char *) malloc( maxlen ) ) == NULL )
-        {
-            plexit( "plP_getmember: Insufficient memory" );
-        }
-    }
-
-    suffix = strstr( pls->BaseName, "%n" );
-
-    snprintf( tmp, BUFFER_SIZE, "%%0%1ii", (int) pls->fflen );
-    snprintf( num, BUFFER_SIZE, tmp, pls->member );
-
-    if ( suffix == NULL )
-        snprintf( pls->FileName, maxlen, "%s.%s", pls->BaseName, num );
-    else
-    {
-        strncpy( prefix, pls->BaseName, BUFFER_SIZE - 1 );
-        prefix [( suffix - pls->BaseName < BUFFER_SIZE ) ? ( suffix - pls->BaseName ) : BUFFER_SIZE - 1] = '\0';
-        snprintf( pls->FileName, maxlen, "%s%s%s", prefix, num, suffix + 2 );
     }
 }
 
@@ -2569,87 +2329,6 @@ plP_sfnam( PLStream *pls, PLCHAR_VECTOR fnam )
     strncpy( pls->BaseName, fnam, maxlen - 1 );
     pls->BaseName[maxlen - 1] = '\0';
 }
-
-//--------------------------------------------------------------------------
-// plFamInit()
-//
-//! Initializes family file parameters.
-//!
-//! @param pls A plot stream structure.
-//--------------------------------------------------------------------------
-
-void
-plFamInit( PLStream *pls )
-{
-    if ( pls->family )
-    {
-        pls->bytecnt = 0;
-        if ( !pls->member )
-            pls->member = 1;
-        if ( !pls->finc )
-            pls->finc = 1;
-        if ( !pls->fflen )
-            pls->fflen = 1;
-        if ( !pls->bytemax )
-            pls->bytemax = PL_FILESIZE_KB * 1000;
-    }
-}
-
-//--------------------------------------------------------------------------
-// plGetFam()
-//
-//! Starts new member file of family file set if necessary.
-//!
-//! Note each member file is a complete graphics file (can be printed
-//! individually), although 'plrender' will treat a family as a single
-//! logical file if given the family name instead of the member name.
-//!
-//! @param pls A plot stream structure.
-//--------------------------------------------------------------------------
-
-void
-plGetFam( PLStream *pls )
-{
-    PLFLT xpmm_loc, ypmm_loc;
-    if ( pls->family )
-    {
-        if ( pls->bytecnt > pls->bytemax || pls->famadv )
-        {
-            PLINT local_page_status = pls->page_status;
-            plP_tidy();
-            pls->member += pls->finc;
-            pls->famadv  = 0;
-            plP_init();
-            // Restore page status (normally AT_BOP) that was changed
-            // to AT_EOP by plP_init.
-            pls->page_status = local_page_status;
-
-            // Apply compensating factor to original xpmm and ypmm so that
-            // character aspect ratio is preserved when overall aspect ratio
-            // is changed.
-            plP_gpixmm( &xpmm_loc, &ypmm_loc );
-            plP_setpxl( xpmm_loc * plsc->caspfactor, ypmm_loc / plsc->caspfactor );
-            return;
-        }
-    }
-}
-
-//--------------------------------------------------------------------------
-// plRotPhy()
-//
-//! Rotates physical coordinates if necessary for given orientation.
-//! Each time orient is incremented, the plot is rotated 90 deg clockwise.
-//! Note: this is now used only to rotate by 90 degrees for devices that
-//! expect portrait mode.
-//!
-//! @param orient New plot orientation (0-3)
-//! @param xmin Current plot x minimum?
-//! @param ymin Current plot y minimum?
-//! @param xmax Current plot x maximum?
-//! @param ymax Current plot y maximum?
-//! @param px Old x coordinate mapped to new x coordinate.
-//! @param py Old y coordinate mapped to new y coordinate.
-//--------------------------------------------------------------------------
 
 void
 plRotPhy( PLINT orient, PLINT xmin, PLINT ymin, PLINT xmax, PLINT ymax,
@@ -2728,80 +2407,6 @@ plGinInit( PLGraphicsIn *gin )
 }
 
 //--------------------------------------------------------------------------
-// plGetInt()
-//
-//! Prompts human to input an integer in response to given message.
-//!
-//! @param s The prompt message.
-//!
-//! @returns The PLINT the human entered.
-//--------------------------------------------------------------------------
-
-PLINT
-plGetInt( PLCHAR_VECTOR s )
-{
-    int  m;
-    int  i = 0;
-    char line[BUFFER_SIZE];
-
-    while ( i++ < 10 )
-    {
-        fputs( s, stdout );
-        plio_fgets( line, sizeof ( line ), stdin );
-
-#ifdef MSDOS
-        m = atoi( line );
-        return ( m );
-#else
-        if ( sscanf( line, "%d", &m ) == 1 )
-            return ( m );
-        fprintf( stdout, "No value or value out of range; please try again\n" );
-#endif
-    }
-    plexit( "Too many tries." );
-    return ( 0 );
-}
-
-//--------------------------------------------------------------------------
-// plGetFlt()
-//
-//! Prompts human to input a float in response to given message.
-//!
-//! @param s The prompt message.
-//!
-//! @returns The PLFLT the human entered.
-//--------------------------------------------------------------------------
-
-PLFLT
-plGetFlt( PLCHAR_VECTOR s )
-{
-    PLFLT  m;
-    double m1;
-    int    i = 0;
-    char   line[BUFFER_SIZE];
-
-    while ( i++ < 10 )
-    {
-        fputs( s, stdout );
-        plio_fgets( line, sizeof ( line ), stdin );
-
-#ifdef MSDOS
-        m = atof( line );
-        return ( m );
-#else
-        if ( sscanf( line, "%lf", &m1 ) == 1 )
-        {
-            m = (PLFLT) m1;
-            return ( m );
-        }
-        fprintf( stdout, "No value or value out of range; please try again\n" );
-#endif
-    }
-    plexit( "Too many tries." );
-    return ( 0. );
-}
-
-//--------------------------------------------------------------------------
 // plstrdup()
 //
 //! A replacement for strdup(), which isn't portable.
@@ -2823,112 +2428,6 @@ plstrdup( PLCHAR_VECTOR src )
 
     return dest;
 }
-
-#ifndef PL_HAVE_SNPRINTF
-//--------------------------------------------------------------------------
-// plsnprintf()
-//
-//! Dummy function for snprintf(). This function just calls
-//! the unsafe function ignoring the string size. This function will
-//! rarely be needed if ever.
-//!
-//! @param buffer String output buffer.
-//! @param n Size of buffer.
-//! @param format The format string.
-//! @param ... The values that go in the format string (...)
-//!
-//! @returns The length of buffer that is actually used.
-//--------------------------------------------------------------------------
-
-int
-plsnprintf( char *buffer, int n, PLCHAR_VECTOR format, ... )
-{
-    int     ret;
-
-    va_list args;
-    va_start( args, format );
-    ret = vsprintf( buffer, format, args );
-    va_end( args );
-
-    // Check if overrun occured
-    if ( ret > n - 1 )
-        plabort( "plsnprintf: buffer overrun" );
-
-    return ret;
-}
-
-//--------------------------------------------------------------------------
-// plsnscanf()
-//
-//! Dummy function for snscanf(). This function just calls
-//! the unsafe function ignoring the string size. This function will
-//! rarely be needed if ever.
-//!
-//! @param buffer String output buffer.
-//! @param n Size of buffer.
-//! @param format The format string.
-//! @param ... The values that go in the format string (...)
-//!
-//! @returns The length of buffer that is actually used.
-//--------------------------------------------------------------------------
-
-int
-plsnscanf( PLCHAR_VECTOR buffer, int n, PLCHAR_VECTOR format, ... )
-{
-    int     ret;
-
-    va_list args;
-    va_start( args, format );
-    ret = vsscanf( buffer, format, args );
-    va_end( args );
-
-    return ret;
-}
-
-#endif // PL_HAVE_SNPRINTF
-
-/*
-//--------------------------------------------------------------------------
-// plseed()
-//
-//! Set the seed for the random number generator included.
-//!
-//! @param seed The random number generator seed value.
-//--------------------------------------------------------------------------
-
-void
-c_plseed( unsigned int seed )
-{
-    init_genrand( seed );
-}
-
-//--------------------------------------------------------------------------
-// plrandd()
-//
-//! @returns A random number on [0,1]-interval.
-//!
-//--------------------------------------------------------------------------
-
-PLFLT
-c_plrandd( void )
-{
-    return (PLFLT) ( genrand_real1() );
-}
-*/
-
-//--------------------------------------------------------------------------
-// plsave_set_locale()
-//
-//! Save LC_NUMERIC locale in a string.  The pointer to that string is
-//! returned. Then set LC_NUMERIC to "C" locale.
-//! n.b. plsave_set_locale and plrestore_locale should always be used as
-//! a pair to surround PLplot code that absolutely requires the
-//! LC_NUMERIC "C" locale to be in effect.  It is one of plrestore_locale's
-//! responsibilities to free the memory allocated here for the locale
-//! string.
-//!
-//! @returns The LC_NUMERIC locale.
-//--------------------------------------------------------------------------
 
 char *
 plsave_set_locale( void )

@@ -44,43 +44,6 @@ enum PLcolor { Black = 0, Red, Yellow, Green,
                DarkRed, DeepBlue, Purple, LightCyan,
                LightBlue, Orchid, Mauve, White };
 
-//--------------------------------------------------------------------------
-//Callback functions for passing into various API methods. We provide these
-//wrappers to avoid a requirement for linking to the C shared library.
-//--------------------------------------------------------------------------
-
-namespace plcallback
-{
-// Callback for plfill. This will just call the C plfill function
-
-PLDLLIMPEXP_CXX void fill( PLINT n, const PLFLT *x, const PLFLT *y );
-
-// Identity transformation.
-
-PLDLLIMPEXP_CXX void tr0( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-// Does linear interpolation from singly dimensioned coord arrays.
-
-PLDLLIMPEXP_CXX void tr1( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-// Does linear interpolation from doubly dimensioned coord arrays
-// (column dominant, as per normal C 2d arrays).
-
-PLDLLIMPEXP_CXX void tr2( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-// Just like pltr2() but uses pointer arithmetic to get coordinates from
-// 2d grid tables.
-
-PLDLLIMPEXP_CXX void tr2p( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-PLDLLIMPEXP_CXX void tr2f( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty, PLPointer pltr_data );
-
-}
-
-//--------------------------------------------------------------------------
-// class plstream - C++ class for encapsulating PLplot streams
-
-// Cool stuff.
-//--------------------------------------------------------------------------
 
 class PLDLLIMPEXP_CXX plstream {
     PLINT        stream;
@@ -116,26 +79,11 @@ public:
 
     void adv( PLINT page );
 
-// Plot an arc
-
-    void arc( PLFLT x, PLFLT y, PLFLT a, PLFLT b, PLFLT angle1, PLFLT angle2,
-              PLFLT rotate, PLBOOL fill );
-
-    void vect( const PLFLT * const *u, const PLFLT * const *v, PLINT nx, PLINT ny, PLFLT scale,
-               PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-// Set the arrow style
-    void svect( const PLFLT *arrow_x = NULL, const PLFLT *arrow_y = NULL, PLINT npts = 0, bool fill = false );
-
 // This functions similarly to plbox() except that the origin of the axes is
 // placed at the user-specified point (x0, y0).
 
     void axes( PLFLT x0, PLFLT y0, const char *xopt, PLFLT xtick, PLINT nxsub,
                const char *yopt, PLFLT ytick, PLINT nysub );
-
-// Plot a histogram using x to store data values and y to store frequencies.
-
-    void bin( PLINT nbin, const PLFLT *x, const PLFLT *y, PLINT center );
 
 // Start new page.  Should only be used with pleop().
 
@@ -145,21 +93,6 @@ public:
 
     void box( const char *xopt, PLFLT xtick, PLINT nxsub,
               const char *yopt, PLFLT ytick, PLINT nysub );
-
-// This is the 3-d analogue of plbox().
-
-    void box3( const char *xopt, const char *xlabel, PLFLT xtick, PLINT nsubx,
-               const char *yopt, const char *ylabel, PLFLT ytick, PLINT nsuby,
-               const char *zopt, const char *zlabel, PLFLT ztick, PLINT nsubz );
-
-//// Calculate broken-down time from continuous time for current stream.
-//
-//    void btime( PLINT &year, PLINT &month, PLINT &day, PLINT &hour,
-//                PLINT &min, PLFLT &sec, PLFLT ctime );
-
-// Calculate world coordinates and subpage from relative device coordinates.
-
-    void calc_world( PLFLT rx, PLFLT ry, PLFLT& wx, PLFLT& wy, PLINT& window );
 
 // Clear the current subpage.
 
@@ -178,44 +111,6 @@ public:
 
     void col1( PLFLT c );
 
-#ifdef PL_DEPRECATED
-// Previous function was inadvertently named plcol in old versions of
-// plplot - this is maintained for backwards compatibility, but is best
-// avoided in new code.
-    void col( PLFLT c );
-#endif //PL_DEPRECATED
-
-//// Configure transformation between continuous and broken-down time (and
-//// vice versa) for current stream.
-//    void configtime( PLFLT scale, PLFLT offset1, PLFLT offset2,
-//                     PLINT ccontrol, PLBOOL ifbtime_offset, PLINT year,
-//                     PLINT month, PLINT day, PLINT hour, PLINT min, PLFLT sec );
-
-// Draws a contour plot from data in f(nx,ny).  Is just a front-end to
-// plfcont, with a particular choice for f2eval and f2eval_data.
-
-    void cont( const PLFLT * const *f, PLINT nx, PLINT ny, PLINT kx, PLINT lx,
-               PLINT ky, PLINT ly, const PLFLT * clevel, PLINT nlevel,
-               PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-// Draws a contour plot using the function evaluator f2eval and data stored
-// by way of the f2eval_data pointer.  This allows arbitrary organizations
-// of 2d array data to be used.
-
-    void fcont( PLFLT ( *f2eval )( PLINT, PLINT, PLPointer ),
-                PLPointer f2eval_data,
-                PLINT nx, PLINT ny, PLINT kx, PLINT lx,
-                PLINT ky, PLINT ly, const PLFLT * clevel, PLINT nlevel,
-                PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-// Copies state parameters from the reference stream to the current stream.
-
-    void cpstrm( plstream &pls, bool flags );
-
-//// Calculate continuous time from broken-down time for current stream.
-//    void ctime( PLINT year, PLINT month, PLINT day, PLINT hour, PLINT min,
-//                PLFLT sec, PLFLT &ctime );
-
 // Converts input values from relative device coordinates to relative plot
 // coordinates.
 
@@ -226,51 +121,13 @@ public:
 
     void dip2dc( PLFLT& xmin, PLFLT& ymin, PLFLT& xmax, PLFLT& ymax );
 
-// These shouldn't be needed, are supposed to be handled by ctor/dtor
-// semantics of the plstream object.
-
-//  End a plotting session for all open streams.
-
-//     void end();
-
-// End a plotting session for the current stream only.
-
-//     void end1();
-
-// Simple interface for defining viewport and window.
-
-    void env( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-              PLINT just, PLINT axis );
-
-// similar to env() above, but in multiplot mode does not advance
-// the subpage, instead the current subpage is cleared
-
-    void env0( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-               PLINT just, PLINT axis );
-
 // End current page.  Should only be used with plbop().
 
     void eop( void );
 
-// Plot horizontal error bars (xmin(i),y(i)) to (xmax(i),y(i)).
-
-    void errx( PLINT n, const PLFLT *xmin, const PLFLT *xmax, const PLFLT *y );
-
-// Plot vertical error bars (x,ymin(i)) to (x(i),ymax(i)).
-
-    void erry( PLINT n, const PLFLT *x, const PLFLT *ymin, const PLFLT *ymax );
-
-// Advance to the next family file on the next new page.
-
-    void famadv( void );
-
 // Pattern fills the polygon bounded by the input points.
 
     void fill( PLINT n, const PLFLT *x, const PLFLT *y );
-
-// Pattern fills the 3d polygon bounded by the input points.
-
-    void fill3( PLINT n, const PLFLT *x, const PLFLT *y, const PLFLT *z );
 
 // Flushes the output stream.  Use sparingly, if at all.
 
@@ -296,10 +153,6 @@ public:
 
     void gcolbga( PLINT& r, PLINT& g, PLINT& b, PLFLT& a );
 
-// Returns the current compression setting
-
-    void gcompression( PLINT& compression );
-
 // Retrieve current window into device space.
 
     void gdidev( PLFLT& mar, PLFLT& aspect, PLFLT& jx, PLFLT& jy );
@@ -311,14 +164,6 @@ public:
 // Retrieve current window into plot space.
 
     void gdiplt( PLFLT& xmin, PLFLT& ymin, PLFLT& xmax, PLFLT& ymax );
-
-// Get family file parameters.
-
-    void gfam( PLINT& fam, PLINT& num, PLINT& bmax );
-
-// Get the (current) output file name.  Must be preallocated to >80 bytes.
-
-    void gfnam( char *fnam );
 
 // Get the (current) run level.
 
@@ -686,15 +531,6 @@ public:
 
     void sesc( char esc );
 
-// Set offset and spacing of contour labels
-
-    void setcontlabelparam( PLFLT offset, PLFLT size, PLFLT spacing,
-                            PLINT active );
-
-// Set the format of the contour labels
-
-    void setcontlabelformat( PLINT lexp, PLINT sigdig );
-
 // Set family file parameters
 
     void sfam( PLINT fam, PLINT num, PLINT bmax );
@@ -884,10 +720,6 @@ public:
 // Set z axis labeling parameters
 
     void szax( PLINT digmax, PLINT digits );
-
-// Switches to text screen.
-
-    void text( void );
 
 // Set the format for date / time labels
 
@@ -1081,66 +913,6 @@ public:
 
     PLINT GetCursor( PLGraphicsIn *plg );
 
-#ifdef PL_DEPRECATED
-// Deprecated versions of methods which use PLINT instead of bool
-    void svect( const PLFLT *arrow_x, const PLFLT *arrow_y, PLINT npts, PLINT fill );
-    void cpstrm( plstream &pls, PLINT flags );
-    void plot3d( const PLFLT *x, const PLFLT *y, const PLFLT * const *z,
-                 PLINT nx, PLINT ny, PLINT opt, PLINT side );
-    void poly3( PLINT n, const PLFLT *x, const PLFLT *y, const PLFLT *z, const PLINT *draw, PLINT ifcc );
-    void scmap1l( PLINT itype, PLINT npts, const PLFLT *intensity,
-                  const PLFLT *coord1, const PLFLT *coord2, const PLFLT *coord3, const PLINT *alt_hue_path );
-
-    void shade( const PLFLT * const *a, PLINT nx, PLINT ny,
-                PLDEFINED_callback defined,
-                PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                PLFLT shade_min, PLFLT shade_max,
-                PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                PLINT min_color, PLFLT min_width,
-                PLINT max_color, PLFLT max_width,
-                PLFILL_callback fill, PLINT rectangular,
-                PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-    void shades( const PLFLT * const *a, PLINT nx, PLINT ny, PLDEFINED_callback defined,
-                 PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-                 const PLFLT * clevel, PLINT nlevel, PLFLT fill_width,
-                 PLINT cont_color, PLFLT cont_width,
-                 PLFILL_callback fill, PLINT rectangular,
-                 PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-    void shade( Contourable_Data& d, PLFLT xmin, PLFLT xmax,
-                PLFLT ymin, PLFLT ymax, PLFLT shade_min, PLFLT shade_max,
-                PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                PLINT min_color, PLFLT min_width,
-                PLINT max_color, PLFLT max_width,
-                PLINT rectangular,
-                Coord_Xformer *pcxf );
-
-    void fshade( PLFLT ( *f2eval )( PLINT, PLINT, PLPointer ),
-                 PLPointer f2eval_data,
-                 PLFLT ( *c2eval )( PLINT, PLINT, PLPointer ),
-                 PLPointer c2eval_data,
-                 PLINT nx, PLINT ny,
-                 PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                 PLFLT shade_min, PLFLT shade_max,
-                 PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                 PLINT min_color, PLFLT min_width,
-                 PLINT max_color, PLFLT max_width,
-                 PLFILL_callback fill, PLINT rectangular,
-                 PLTRANSFORM_callback pltr, PLPointer pltr_data );
-
-    void spause( PLINT pause );
-
-    void stripc( PLINT *id, const char *xspec, const char *yspec,
-                 PLFLT xmin, PLFLT xmax, PLFLT xjump, PLFLT ymin, PLFLT ymax,
-                 PLFLT xlpos, PLFLT ylpos,
-                 PLINT y_ascl, PLINT acc,
-                 PLINT colbox, PLINT collab,
-                 const PLINT colline[], const PLINT styline[], const char *legline[],
-                 const char *labx, const char *laby, const char *labtop );
-
-    void xormod( PLINT mode, PLINT *status );
-#endif //PL_DEPRECATED
 };
 
 

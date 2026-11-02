@@ -510,13 +510,6 @@ void fillContour(int i, double *x, double *y){
 
       // PLOT ONLY IF NODATA=0
       if (!nodata) {
-
-        //here every postion XYZ must be in NORMalized coordinates to follow convention above.
-        //use of intermediate contourable for correct handling of blanking values and nans. We take advantage of the fact that
-        //this program makes either filled regions with plshades() [but plshades hates Nans!] or contours with plcont,
-        //which needs Nans to avoid blanked regions. The idea is to mark unwanted regions with Nans for plcont, and
-        //with a blanking value (minmin) for plshade. Eventually one could use a zdefined() function testing on top of it.
-
         if (irregular) {
           //x-y ranges:
           DDouble xmin, xmax, ymin, ymax;

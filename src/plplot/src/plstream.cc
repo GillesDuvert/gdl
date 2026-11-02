@@ -40,58 +40,6 @@
 using namespace std;
 #endif
 
-//Callbacks
-
-// Callback for plfill. This will just call the C plfill function
-
-void plcallback::fill( PLINT n, const PLFLT *x, const PLFLT *y )
-{
-    plfill( n, x, y );
-}
-
-// Transformation routines
-
-// Identity transformation.
-
-void plcallback::tr0( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty,
-                      PLPointer pltr_data )
-{
-    pltr0( x, y, tx, ty, pltr_data );
-}
-
-// Does linear interpolation from singly dimensioned coord arrays.
-
-void plcallback::tr1( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty,
-                      PLPointer pltr_data )
-{
-    pltr1( x, y, tx, ty, pltr_data );
-}
-
-// Does linear interpolation from doubly dimensioned coord arrays
-// (column dominant, as per normal C 2d arrays).
-
-void plcallback::tr2( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty,
-                      PLPointer pltr_data )
-{
-    pltr2( x, y, tx, ty, pltr_data );
-}
-
-// Just like pltr2() but uses pointer arithmetic to get coordinates from
-// 2d grid tables.
-
-void plcallback::tr2p( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty,
-                       PLPointer pltr_data )
-{
-    pltr2p( x, y, tx, ty, pltr_data );
-}
-// Just like pltr2() but uses fortran pointer arithmetic to get coordinates from
-// 2d grid tables.
-
-void plcallback::tr2f( PLFLT x, PLFLT y, PLFLT *tx, PLFLT *ty,
-                       PLPointer pltr_data )
-{
-    pltr2f( x, y, tx, ty, pltr_data );
-}
 
 PLINT plstream::active_streams = 0;
 
@@ -210,25 +158,6 @@ void plstream::box( const char *xopt, PLFLT xtick, PLINT nxsub,
 }
 
 
-//// Calculate broken-down time from continuous time for current stream.
-//void plstream::btime( PLINT & year, PLINT & month, PLINT & day, PLINT & hour,
-//                      PLINT & min, PLFLT & sec, PLFLT ctime )
-//{
-//    set_stream();
-//
-//    plbtime( &year, &month, &day, &hour, &min, &sec, ctime );
-//}
-
-// Calculate world coordinates and subpage from relative device coordinates.
-
-void plstream::calc_world( PLFLT rx, PLFLT ry, PLFLT & wx, PLFLT & wy,
-                           PLINT & window )
-{
-    set_stream();
-
-    plcalc_world( rx, ry, &wx, &wy, &window );
-}
-
 // Clear the current subpage.
 
 void plstream::clear()
@@ -265,82 +194,6 @@ void plstream::col1( PLFLT c )
     plcol1( c );
 }
 
-#ifdef PL_DEPRECATED
-// Old (incorrect) version retained only for compatibility
-void plstream::col( PLFLT c )
-{
-    set_stream();
-
-    cerr <<
-        "plstream::col(PLFLT c) : function deprecated. Use plstream::col1(PLFLT c) instead"
-         << endl;
-
-    plcol1( c );
-}
-#endif //PL_DEPRECATED
-
-//// Configure transformation between continuous and broken-down time (and
-//// vice versa) for current stream.
-//void plstream::configtime( PLFLT scale, PLFLT offset1, PLFLT offset2,
-//                           PLINT ccontrol, PLBOOL ifbtime_offset, PLINT year,
-//                           PLINT month, PLINT day, PLINT hour, PLINT min,
-//                           PLFLT sec )
-//{
-//    set_stream();
-//
-//    plconfigtime( scale, offset1, offset2, ccontrol, ifbtime_offset, year,
-//        month, day, hour, min, sec );
-//}
-//
-
-
-// Draws a contour plot from data in f(nx,ny).  Is just a front-end to
-// plfcont, with a particular choice for f2eval and f2eval_data.
-
-void plstream::cont( const PLFLT * const *f, PLINT nx, PLINT ny, PLINT kx, PLINT lx,
-                     PLINT ky, PLINT ly, const PLFLT *clevel, PLINT nlevel,
-                     PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plcont( f, nx, ny, kx, lx, ky, ly, clevel, nlevel,
-        pltr, pltr_data );
-}
-
-// Draws a contour plot using the function evaluator f2eval and data stored
-// by way of the f2eval_data pointer.  This allows arbitrary organizations
-// of 2d array data to be used.
-
-void plstream::fcont( PLFLT ( *f2eval )( PLINT, PLINT, PLPointer ),
-                      PLPointer f2eval_data,
-                      PLINT nx, PLINT ny, PLINT kx, PLINT lx,
-                      PLINT ky, PLINT ly, const PLFLT *clevel, PLINT nlevel,
-                      PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plfcont( f2eval, f2eval_data,
-        nx, ny, kx, lx, ky, ly, clevel, nlevel,
-        pltr, pltr_data );
-}
-
-// Copies state parameters from the reference stream to the current stream.
-
-void plstream::cpstrm( plstream & pls, bool flags )
-{
-    set_stream();
-
-    plcpstrm( pls.stream, (PLBOOL) flags );
-}
-
-//// Calculate continuous time from broken-down time for current stream.
-//void plstream::ctime( PLINT year, PLINT month, PLINT day, PLINT hour, PLINT min,
-//                      PLFLT sec, PLFLT & ctime )
-//{
-//    set_stream();
-//
-//    plctime( year, month, day, hour, min, sec, &ctime );
-//}
 
 // Converts input values from relative device coordinates to relative plot
 // coordinates.
@@ -362,47 +215,6 @@ void plstream::dip2dc( PLFLT & xmin, PLFLT & ymin, PLFLT & xmax, PLFLT & ymax )
     pldip2dc( &xmin, &ymin, &xmax, &ymax );
 }
 
-// These shouldn't be needed, are supposed to be handled by ctor/dtor
-// semantics of the plstream object.
-
-// End a plotting session for all open streams.
-
-// void plstream::end()
-// {
-//     set_stream();
-
-//     plend();
-// }
-
-// End a plotting session for the current stream only.
-
-// void plstream::end1()
-// {
-//     set_stream();
-
-//     plend1();
-// }
-
-// Simple interface for defining viewport and window.
-
-void plstream::env( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-                    PLINT just, PLINT axis )
-{
-    set_stream();
-
-    plenv( xmin, xmax, ymin, ymax, just, axis );
-}
-
-// Similar to env() above, but in multiplot mode does not advance
-// the subpage, instead the current subpage is cleared
-
-void plstream::env0( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-                     PLINT just, PLINT axis )
-{
-    set_stream();
-
-    plenv0( xmin, xmax, ymin, ymax, just, axis );
-}
 
 // End current page.  Should only be used with plbop().
 
@@ -413,23 +225,23 @@ void plstream::eop()
     pleop();
 }
 
-// Plot horizontal error bars (xmin(i),y(i)) to (xmax(i),y(i)).
-
-void plstream::errx( PLINT n, const PLFLT *xmin, const PLFLT *xmax, const PLFLT *y )
-{
-    set_stream();
-
-    plerrx( n, xmin, xmax, y );
-}
-
-// Plot vertical error bars (x,ymin(i)) to (x(i),ymax(i)).
-
-void plstream::erry( PLINT n, const PLFLT *x, const PLFLT *ymin, const PLFLT *ymax )
-{
-    set_stream();
-
-    plerry( n, x, ymin, ymax );
-}
+//// Plot horizontal error bars (xmin(i),y(i)) to (xmax(i),y(i)).
+//
+//void plstream::errx( PLINT n, const PLFLT *xmin, const PLFLT *xmax, const PLFLT *y )
+//{
+//    set_stream();
+//
+//    plerrx( n, xmin, xmax, y );
+//}
+//
+//// Plot vertical error bars (x,ymin(i)) to (x(i),ymax(i)).
+//
+//void plstream::erry( PLINT n, const PLFLT *x, const PLFLT *ymin, const PLFLT *ymax )
+//{
+//    set_stream();
+//
+//    plerry( n, x, ymin, ymax );
+//}
 
 // Pattern fills the polygon bounded by the input points.
 
@@ -494,14 +306,14 @@ void plstream::gcolbga( PLINT & r, PLINT & g, PLINT & b, PLFLT & a )
     plgcolbga( &r, &g, &b, &a );
 }
 
-// Returns the current compression setting
-
-void plstream::gcompression( PLINT & compression )
-{
-    set_stream();
-
-    plgcompression( &compression );
-}
+//// Returns the current compression setting
+//
+//void plstream::gcompression( PLINT & compression )
+//{
+//    set_stream();
+//
+//    plgcompression( &compression );
+//}
 
 // Retrieve current window into device space.
 
@@ -530,23 +342,15 @@ void plstream::gdiplt( PLFLT & xmin, PLFLT & ymin, PLFLT & xmax, PLFLT & ymax )
     plgdiplt( &xmin, &ymin, &xmax, &ymax );
 }
 
-// Get family file parameters.
+//// Get family file parameters.
+//
+//void plstream::gfam( PLINT & fam, PLINT & num, PLINT & bmax )
+//{
+//    set_stream();
+//
+//    plgfam( &fam, &num, &bmax );
+//}
 
-void plstream::gfam( PLINT & fam, PLINT & num, PLINT & bmax )
-{
-    set_stream();
-
-    plgfam( &fam, &num, &bmax );
-}
-
-// Get the (current) output file name.  Must be preallocated to >80 bytes.
-
-void plstream::gfnam( char *fnam )
-{
-    set_stream();
-
-    plgfnam( fnam );
-}
 
 // Get current run level.
 
@@ -565,15 +369,6 @@ void plstream::gpage( PLFLT & xp, PLFLT & yp, PLINT & xleng, PLINT & yleng,
     set_stream();
 
     plgpage( &xp, &yp, &xleng, &yleng, &xoff, &yoff );
-}
-
-// Switches to graphics screen.
-
-void plstream::gra()
-{
-    set_stream();
-
-    plgra();
 }
 
 
@@ -1067,14 +862,14 @@ void plstream::scolor( PLINT color )
     plscolor( color );
 }
 
-// Sets the compression level
-
-void plstream::scompression( PLINT compression )
-{
-    set_stream();
-
-    plscompression( compression );
-}
+//// Sets the compression level
+//
+//void plstream::scompression( PLINT compression )
+//{
+//    set_stream();
+//
+//    plscompression( compression );
+//}
 
 // Set the device (keyword) name
 
@@ -1151,33 +946,14 @@ void plstream::sesc( char esc )
     plsesc( esc );
 }
 
-// Set the offset and spacing of contour labels
-
-void plstream::setcontlabelparam( PLFLT offset, PLFLT size, PLFLT spacing,
-                                  PLINT active )
-{
-    set_stream();
-
-    pl_setcontlabelparam( offset, size, spacing, active );
-}
-
-// Set the format of the contour labels
-
-void plstream::setcontlabelformat( PLINT lexp, PLINT sigdig )
-{
-    set_stream();
-
-    pl_setcontlabelformat( lexp, sigdig );
-}
-
-// Set family file parameters
-
-void plstream::sfam( PLINT fam, PLINT num, PLINT bmax )
-{
-    set_stream();
-
-    plsfam( fam, num, bmax );
-}
+//// Set family file parameters
+//
+//void plstream::sfam( PLINT fam, PLINT num, PLINT bmax )
+//{
+//    set_stream();
+//
+//    plsfam( fam, num, bmax );
+//}
 
 // Set the output file name.
 
@@ -1195,69 +971,6 @@ void plstream::sdevdata( void *data )
     set_stream();
 
     plsdevdata( data );
-}
-
-// Shade region.
-
-void
-plstream::shade( const PLFLT * const *a, PLINT nx, PLINT ny,
-                 PLDEFINED_callback defined,
-                 PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                 PLFLT shade_min, PLFLT shade_max,
-                 PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                 PLINT min_color, PLFLT min_width,
-                 PLINT max_color, PLFLT max_width,
-                 PLFILL_callback fill, bool rectangular,
-                 PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plshade( a, nx, ny, defined, left, right, bottom, top,
-        shade_min, shade_max,
-        sh_cmap, sh_color, sh_width,
-        min_color, min_width, max_color, max_width,
-        fill, (PLBOOL) rectangular, pltr, pltr_data );
-}
-
-void
-plstream::shades( const PLFLT * const *a, PLINT nx, PLINT ny,
-                  PLDEFINED_callback defined,
-                  PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-                  const PLFLT *clevel, PLINT nlevel, PLFLT fill_width,
-                  PLINT cont_color, PLFLT cont_width,
-                  PLFILL_callback fill, bool rectangular,
-                  PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plshades( a, nx, ny, defined, xmin, xmax, ymin, ymax,
-        clevel, nlevel, fill_width, cont_color, cont_width,
-        fill, (PLBOOL) rectangular, pltr, pltr_data );
-}
-
-void
-plstream::fshade( PLFLT ( *f2eval )( PLINT, PLINT, PLPointer ),
-                  PLPointer f2eval_data,
-                  PLFLT ( *c2eval )( PLINT, PLINT, PLPointer ),
-                  PLPointer c2eval_data,
-                  PLINT nx, PLINT ny,
-                  PLFLT left, PLFLT right, PLFLT bottom, PLFLT top,
-                  PLFLT shade_min, PLFLT shade_max,
-                  PLINT sh_cmap, PLFLT sh_color, PLFLT sh_width,
-                  PLINT min_color, PLFLT min_width,
-                  PLINT max_color, PLFLT max_width,
-                  PLFILL_callback fill, bool rectangular,
-                  PLTRANSFORM_callback pltr, PLPointer pltr_data )
-{
-    set_stream();
-
-    plfshade( f2eval, f2eval_data,
-        c2eval, c2eval_data,
-        nx, ny, left, right, bottom, top,
-        shade_min, shade_max,
-        sh_cmap, sh_color, sh_width,
-        min_color, min_width, max_color, max_width,
-        fill, (PLBOOL) rectangular, pltr, pltr_data );
 }
 
 // Setup a user-provided custom labeling function
@@ -1278,23 +991,6 @@ void plstream::smaj( PLFLT def, PLFLT scale )
     plsmaj( def, scale );
 }
 
-//// Set the RGB memory area to be plotted (with the 'mem' or 'memcairo' drivers)
-//
-//void plstream::smem( PLINT maxx, PLINT maxy, void *plotmem)
-//{
-//    set_stream();
-//
-//    plsmem( maxx, maxy, plotmem);
-//}
-//
-//// Set the RGBA memory area to be plotted (with the 'memcairo' drivers)
-//
-//void plstream::smema( PLINT maxx, PLINT maxy, void *plotmem)
-//{
-//    set_stream();
-//
-//    plsmema( maxx, maxy, plotmem);
-//}
 
 // Set up lengths of minor tick marks.
 
@@ -1459,15 +1155,6 @@ void plstream::szax( PLINT digmax, PLINT digits )
     plszax( digmax, digits );
 }
 
-// Switches to text screen.
-
-void plstream::text()
-{
-    set_stream();
-
-    pltext();
-}
-
 // Set the format for date / time labels
 
 void plstream::timefmt( const char *fmt )
@@ -1588,38 +1275,6 @@ void plstream::sexit( int ( *handler )( const char * ) )
 }
 
 
-// Function evaluators
-
-// Does a lookup from a 2d function array.  Array is of type (PLFLT **),
-// and is column dominant (normal C ordering).
-
-PLFLT plstream::f2eval2( PLINT ix, PLINT iy, PLPointer plf2eval_data )
-{
-    set_stream();
-
-    return ::plf2eval2( ix, iy, plf2eval_data );
-}
-
-// Does a lookup from a 2d function array.  Array is of type (PLFLT *),
-// and is column dominant (normal C ordering).
-
-PLFLT plstream::f2eval( PLINT ix, PLINT iy, PLPointer plf2eval_data )
-{
-    set_stream();
-
-    return ::plf2eval( ix, iy, plf2eval_data );
-}
-
-// Does a lookup from a 2d function array.  Array is of type (PLFLT *),
-// and is row dominant (Fortran ordering).
-
-PLFLT plstream::f2evalr( PLINT ix, PLINT iy, PLPointer plf2eval_data )
-{
-    set_stream();
-
-    return ::plf2evalr( ix, iy, plf2eval_data );
-}
-
 // Command line parsing utilities
 
 // Clear internal option table info structure.
@@ -1698,15 +1353,6 @@ void plstream::sfile( FILE *file )
 }
 
 
-// Get the escape character for text strings.
-
-void plstream::gesc( char *p_esc )
-{
-    set_stream();
-
-    ::plgesc( p_esc );
-}
-
 // Front-end to driver escape function.
 
 void plstream::cmd( PLINT op, void *ptr )
@@ -1715,16 +1361,6 @@ void plstream::cmd( PLINT op, void *ptr )
 
     ::pl_cmd( op, ptr );
 }
-
-// Return full pathname for given file if executable
-
-PLINT plstream::FindName( char *p )
-{
-    set_stream();
-
-    return plFindName( p );
-}
-
 
 // Gets search name for file by concatenating the dir, subdir, and file
 // name, allocating memory as needed.
@@ -1735,24 +1371,6 @@ void plstream::GetName( char *dir, char *subdir, char *filename,
     set_stream();
 
     plGetName( dir, subdir, filename, filespec );
-}
-
-// Prompts human to input an integer in response to given message.
-
-PLINT plstream::GetInt( char *s )
-{
-    set_stream();
-
-    return plGetInt( s );
-}
-
-// Prompts human to input a float in response to given message.
-
-PLFLT plstream::GetFlt( char *s )
-{
-    set_stream();
-
-    return plGetFlt( s );
 }
 
 // Determine the Iliffe column vector of pointers to PLFLT row

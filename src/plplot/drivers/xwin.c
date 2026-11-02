@@ -2059,13 +2059,11 @@ Locate( PLStream *pls )
 
             if ( dev->locate_mode == LOCATE_INVOKED_VIA_DRIVER )
             {
-                pltext();
                 if ( gin->keysym < 0xFF && isprint( gin->keysym ) )
                     printf( "%f %f %c\n", gin->wX, gin->wY, gin->keysym );
                 else
                     printf( "%f %f 0x%02x\n", gin->wX, gin->wY, gin->keysym );
 
-                plgra();
             }
         }
         else

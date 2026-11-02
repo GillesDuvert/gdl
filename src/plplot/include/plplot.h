@@ -655,9 +655,10 @@ typedef struct
 #ifdef BRAINDEAD
 
 #ifndef __PLSTUBS_H__   // i.e. do not expand this in the stubs
+//used by GDL
+#define    plot3dc                  c_plot3dc
+#define    plot3dcl                 c_plot3dcl
 
-#define    pl_setcontlabelformat    c_pl_setcontlabelformat
-#define    pl_setcontlabelparam     c_pl_setcontlabelparam
 #define    pladv                    c_pladv
 #define    plaxes                   c_plaxes
 #define    plbop                    c_plbop
@@ -667,7 +668,6 @@ typedef struct
 #define    plcol0                   c_plcol0
 #define    plcol1                   c_plcol1
 #define    plcont                   c_plcont
-#define    plcpstrm                 c_plcpstrm
 #define    plend                    c_plend
 #define    plend1                   c_plend1
 #define    plenv                    c_plenv
@@ -723,8 +723,7 @@ typedef struct
 #define    plmkstrm                 c_plmkstrm
 #define    plmtex                   c_plmtex
 #define    plot3d                   c_plot3d
-#define    plot3dc                  c_plot3dc
-#define    plot3dcl                 c_plot3dcl
+
 #define    plparseopts              c_plparseopts
 #define    plpat                    c_plpat
 #define    plpoly3                  c_plpoly3
@@ -790,7 +789,6 @@ typedef struct
 #define    plsxax                   c_plsxax
 #define    plsyax                   c_plsyax
 #define    plszax                   c_plszax
-#define    pltext                   c_pltext
 #define    pltimefmt                c_pltimefmt
 #define    plvasp                   c_plvasp
 #define    plvpas                   c_plvpas
@@ -1077,12 +1075,6 @@ PLDLLIMPEXP void
 c_plgpage( PLFLT_NC_SCALAR p_xp, PLFLT_NC_SCALAR p_yp,
            PLINT_NC_SCALAR p_xleng, PLINT_NC_SCALAR p_yleng, PLINT_NC_SCALAR p_xoff, PLINT_NC_SCALAR p_yoff );
 
-// Switches to graphics screen.
-
-PLDLLIMPEXP void
-c_plgra( void );
-
-
 // Get subpage boundaries in absolute coordinates
 
 PLDLLIMPEXP void
@@ -1264,9 +1256,6 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 #define DRAW_LINEY     0x002  // draw lines parallel to the Y axis
 #define DRAW_LINEXY    0x003  // draw lines parallel to both the X and Y axis
 #define MAG_COLOR      0x004  // draw the mesh with a color dependent of the magnitude
-#define BASE_CONT      0x008  // draw contour plot at bottom xy plane
-#define TOP_CONT       0x010  // draw contour plot at top xy plane
-#define SURF_CONT      0x020  // draw contour plot at surface
 #define DRAW_SIDES     0x040  // draw sides
 #define FACETED        0x080  // draw outline for each square that makes up the surface
 #define MESH           0x100  // draw mesh
@@ -1274,12 +1263,12 @@ plfplot3dcl( PLFLT_VECTOR x, PLFLT_VECTOR y, PLF2OPS zops, PLPointer zp,
 //
 //  valid options for plot3dc():
 //
-//  DRAW_SIDES, BASE_CONT, TOP_CONT (not yet),
+//  DRAW_SIDES,  (not yet),
 //  MAG_COLOR, DRAW_LINEX, DRAW_LINEY, DRAW_LINEXY.
 //
 //  valid options for plsurf3d():
 //
-//  MAG_COLOR, BASE_CONT, SURF_CONT, FACETED, DRAW_SIDES.
+//  MAG_COLOR, BASE_CONT, FACETED, DRAW_SIDES.
 //
 
 // Set fill pattern directly.
@@ -1725,11 +1714,6 @@ c_plsym_remove( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, PLINT code );
 
 PLDLLIMPEXP void
 c_plszax( PLINT digmax, PLINT digits );
-
-// Switches to text screen.
-
-PLDLLIMPEXP void
-c_pltext( void );
 
 // Set the format for date / time labels for current stream.
 

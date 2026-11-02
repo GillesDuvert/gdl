@@ -65,8 +65,6 @@ pldebug( const char *label, ... )
 
     if ( plsc->debug )
     {
-        if ( plsc->termin )
-            c_pltext();
         va_start( args, label );
 
         // print out identifying tag
@@ -80,8 +78,6 @@ pldebug( const char *label, ... )
         vfprintf( stderr, fmt, args );
 
         va_end( args );
-        if ( plsc->termin )
-            c_plgra();
     }
 #else
     // Avoid warning about unused parameter

@@ -186,6 +186,7 @@ ps_init( PLStream *pls )
 
     pls->dev_fill0 = 1;         // Can do solid fills
 
+/*
 // Initialize family file info
 
     plFamInit( pls );
@@ -193,6 +194,7 @@ ps_init( PLStream *pls )
 // Prompt for a file name if not already set
 
     plOpenFile( pls );
+*/
 
 // Allocate and initialize device-specific data
 
@@ -570,15 +572,9 @@ plD_bop_ps( PLStream *pls )
     dev->xold = PL_UNDEFINED;
     dev->yold = PL_UNDEFINED;
 
-    if ( !pls->termin )
-        plGetFam( pls );
-
     pls->page++;
 
-    if ( pls->family )
-        fprintf( OF, "%%%%Page: %d %d\n", (int) pls->page, 1 );
-    else
-        fprintf( OF, "%%%%Page: %d %d\n", (int) pls->page, (int) pls->page );
+    fprintf( OF, "%%%%Page: %d %d\n", (int) pls->page, (int) pls->page );
 
     if ( !pls->portrait ) fprintf( OF, "%%%%PageOrientation: Landscape\n"); else fprintf( OF, "%%%%PageOrientation: Portrait\n");
 
@@ -634,10 +630,7 @@ plD_tidy_ps( PLStream *pls )
     dev->urx += 1;
     dev->ury += 1;
 
-    if ( pls->family )
-        fprintf( OF, "%%%%Pages: %d\n", (int) 1 );
-    else
-        fprintf( OF, "%%%%Pages: %d\n", (int) pls->page );
+    fprintf( OF, "%%%%Pages: %d\n", (int) pls->page );
 
     fprintf( OF, "@end\n" );
     fprintf( OF, "%%%%EOF\n" );
