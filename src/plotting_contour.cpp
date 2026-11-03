@@ -24,9 +24,8 @@
 #define LABELOFFSET 0.003
 #define LABELSPACING 0.4
 #define OVERSAMPLING 16
-// sometime after 10/14 the tr0,tr1 moved from plstream:: to plcallback::
-
-#define PLCALLBACK plcallback
+      static DDouble minmin = std::numeric_limits<PLFLT>::min();
+      static DDouble maxmax = std::numeric_limits<PLFLT>::max();
 
 namespace lib {
 
@@ -51,12 +50,13 @@ namespace lib {
   }
   static PLFLT * contourable;
   static SizeT M,N;
+  static DLong multx,multy;
   // for contours, close contours here on map limits, using a different sampling
   double fieldFunctionForFill(double x, double y) {
   if (x < 0) return -1000.; if (x > M-1) return -1000.;
   if (y < 0) return -1000.; if (y > N-1) return -1000.;
   int i=x; if (i>=M-1) i=M-2;
-  int j=y; if (i>=N-1) i=N-2;
+  int j=y; if (j>=N-1) j=N-2;
   double A=contourable[i+M*j];
   double B=contourable[i+1+M*j];
   double C=contourable[i+M*(j+1)];
@@ -70,7 +70,7 @@ namespace lib {
   }
   double fieldFunctionForContour(double x, double y) {
   int i=x; if (i>=M-1) i=M-2;
-  int j=y; if (i>=N-1) i=N-2;
+  int j=y; if (j>=N-1) j=N-2;
   double A=contourable[i+M*j];
   double B=contourable[i+1+M*j];
   double C=contourable[i+M*(j+1)];
@@ -84,15 +84,26 @@ namespace lib {
   }
   
   void drawContour(int i, double *x, double *y){
+    if (i < 2 ) return;
 //  std::cerr<<"npoi="<<i<<", ";
-//  for (auto j=0;j<i;++j) std::cerr<<x[j]<<","<<y[j]<<"\n";
-//  plfill( i, x, y );
-  plline( i, x, y );
+    SelfConvertToNormXY(i, x, false, y, false, DATA); 
+//    for (auto j=0;j<i;++j) {
+//    x[j]/=(M);
+//    y[j]/=(N);
+//    std::cerr<<x[j]<<","<<y[j]<<"\n";
+//  }
+  plline( i,  y ,x );
 }
 void fillContour(int i, double *x, double *y){
-//  std::cerr<<"npoi="<<i<<", ";
-//  for (auto j=0;j<i;++j) std::cerr<<x[j]<<","<<y[j]<<"\n";
-  plfill( i, x, y );
+    if (i < 3 ) return;
+    SelfConvertToNormXY(i, x, false, y, false, DATA); 
+//  for (auto j=0;j<i;++j) {
+//    x[j]/=(M);
+//    y[j]/=(N);
+////    std::cerr<<x[j]<<","<<y[j]<<"\n";
+//  }
+//  plline( i,  y ,x );
+    plfill( i,  y, x );
   }
 
   void drawPlot(int i, int j, int h, int k, int l) {
@@ -101,8 +112,10 @@ void fillContour(int i, double *x, double *y){
     x[1] = k;
     y[0] = h;
     y[1] = l;
+    for (int z=0; z<2; ++z) {x[z]/=(M*multx);y[z]/=(N*multy);}
     plline(2, x, y);
-    //  std::cerr<<i<<","<<j<<","<<h<<","<<k<<","<<l<<std::endl;
+      std::cerr<<i<<","<<j<<","<<h<<","<<k<<","<<l<<",";for (int z=0; z<2; ++z) std::cerr<<x[z]<<","<<y[z]<<" ";
+      std::cerr<<std::endl;
   }
   
   class contour_call : public plotting_routine_call {
@@ -387,7 +400,7 @@ void fillContour(int i, double *x, double *y){
         if (doT3d) gdlStop3DDriverTransform(actStream);
       }
 
-//      if (gdlSwitchToClippedNormalizedCoordinates(e, actStream)) return true; //normal clip meaning
+      if (gdlSwitchToClippedNormalizedCoordinates(e, actStream)) return true; //normal clip meaning
 
       return false;
     }
@@ -401,8 +414,6 @@ void fillContour(int i, double *x, double *y){
       // we need to define the NaN value
       DStructGDL *Values = SysVar::Values(); //MUST NOT BE STATIC, due to .reset 
       static DDouble d_nan = (*static_cast<DDoubleGDL*> (Values->GetTag(Values->Desc()->TagIndex("D_NAN"), 0)))[0];
-      static DDouble minmin = std::numeric_limits<PLFLT>::min();
-      static DDouble maxmax = std::numeric_limits<PLFLT>::max();
 
       //We could RECORD PATH this way. Not developed since PATH_INFO seems not to be used
       static int pathinfoIx = e->KeywordIx("PATH_INFO");
@@ -419,13 +430,13 @@ void fillContour(int i, double *x, double *y){
       // C_CHARSIZE. IDL doc false: c_charsize independent from /CHARSIZE. Charsize should be 3/4 size of AXIS LABELS,
       // but in fact c_charsize is independent from all [XYZ]charsize setups. Implies FOLLOW.
       // C_CHARTHICK Implies FOLLOW.
-      // C_COLORS=vector, (eventually converted to integer), give color index. repated if less than contours.
+      // C_COLORS=vector, (eventually converted to integer), give color index. repeated if less than contours.
       // C_LABELS=vector of 0 and 1 (float, double, int) . Implies FOLLOW.
       // C_LINESTYLE =vector of linestyles. Defaults to !P.LINESTYLE
       // C_ORIENTATION = vector of angles of lines to  FILL (needs FILL KW) .
       // C_SPACING= vector of spacing in CENTIMETRES of lines to  FILL (needs FILL KW) .
       // if C_SPACING and C_ORIENTATION absent, FILL will do a solid fill .
-      // C_THICK=vector of thickness. repated if less than contours. defaults to !P.THICK or THICK
+      // C_THICK=vector of thickness. repeated if less than contours. defaults to !P.THICK or THICK
 
       static int FOLLOW = e->KeywordIx("FOLLOW");
       static int C_ANNOTATION = e->KeywordIx("C_ANNOTATION");
@@ -519,7 +530,7 @@ void fillContour(int i, double *x, double *y){
           GetMinMaxVal(xValIrregularCase, &xmin, &xmax);
           GetMinMaxVal(yValIrregularCase, &ymin, &ymax);
           if (!isfinite(xmin)||!isfinite(xmax)||!isfinite(ymin)||!isfinite(ymax)) return; //possible leak
-          //filter out z values whre x or y is nan
+          //filter out z values where x or y is nan
           SizeT finalSize=0;
           for (SizeT i = 0; i < nEl; ++i) if (isfinite((*xValIrregularCase)[i]) && isfinite((*yValIrregularCase)[i])) finalSize++;
           if (finalSize != nEl) {
@@ -569,32 +580,28 @@ void fillContour(int i, double *x, double *y){
           // very bad c++: will pass contourable and its dimensions without object.
           M=ixEl; N=iyEl;
           contourable=(PLFLT*)malloc(M*N*sizeof(PLFLT));
-          for (SizeT j = 0, k = 0; j < N; j++) {
-            for (SizeT i = 0; i < M; i++) {
-              PLFLT v = (*res)[k++];
-              if (!isfinite(v)) v = (fill) ? minmin : d_nan; //note: nan regions could eventually be filled.
-              if (hasMinVal && v < minVal) v = (fill) ? minmin : d_nan;
-              if (hasMaxVal && v > maxVal) v = (fill) ? maxmax : d_nan;
-              contourable[i+M*j] = v;
-            }
+          for (SizeT i = 0; i < M*N; ++i) {
+            PLFLT v = (*res)[i];
+            if (!isfinite(v)) v = minmin; //new algorithm will crash with NANs in any case //(fill) ? minmin : d_nan; //note: nan regions could eventually be filled.
+            if (hasMinVal && v < minVal) v = minmin; //(fill) ? minmin : d_nan;
+            if (hasMaxVal && v > maxVal) v = minmin; //(fill) ? maxmax : d_nan;
+            contourable[i] = v;
           }
         } else {
           // very bad c++: will pass contourable and its dimensions without object.
           M=xEl; N=yEl;
           contourable=(PLFLT*)malloc(M*N*sizeof(PLFLT));
-          for (SizeT j = 0, k = 0; j < N; j++) {
-            for (SizeT i = 0; i < M; i++) {
-              PLFLT v = (*zVal)[k++];
-              if (!isfinite(v)) v = (fill) ? minmin : d_nan; //note: nan regions could eventually be filled.
-              if (hasMinVal && v < minVal) v = (fill) ? minmin : d_nan;
-              if (hasMaxVal && v > maxVal) v = (fill) ? maxmax : d_nan;
-              contourable[i+M*j] = v;
+            for (SizeT i = 0; i < M*N; ++i) {
+              PLFLT v = (*zVal)[i];
+              if (!isfinite(v)) v = minmin; //new algorithm will crash with NANs in any case //(fill) ? minmin : d_nan; //note: nan regions could eventually be filled.
+              if (hasMinVal && v < minVal) v = minmin; //(fill) ? minmin : d_nan;
+              if (hasMaxVal && v > maxVal) v = minmin; //(fill) ? maxmax : d_nan;
+              contourable[i] = v;
             }
-          }
         }
 
-        DLong multx=OVERSAMPLING;
-        DLong multy=OVERSAMPLING;
+        multx=OVERSAMPLING;
+        multy=OVERSAMPLING;
 
         // define the input function for the contour plot. No need to oversample more than the number of output pixels/2.
         if (M*multx > xsize/2) {float c=(float)xsize/(float)(2*multx*M); multx=MAX(2, c*multx); }
@@ -809,4 +816,3 @@ private:
   }
 
 } // namespace
-#undef PLCALLBACK
