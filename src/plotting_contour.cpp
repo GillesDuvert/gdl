@@ -1,5 +1,5 @@
 /***************************************************************************
-                       plotting.cpp  -  GDL routines for plotting
+                       plotting_contour.cpp  -  GDL routines for contour
                              -------------------
     begin                : July 22 2002
     copyright            : (C) 2002-2011 by Marc Schellens et al.
@@ -19,13 +19,26 @@
 #include "dinterpreter.hpp"
 #include "plotting.hpp"
 #include "math_utl.hpp"
-#include "ofxContourPlot/src/ofxContourPlot.cpp"
-#include "ofxContourPlot/src/ListContour.cpp"
+#include "ofxContourPlot/ofxContourPlot.cpp"
+#include "ofxContourPlot/ListContour.cpp"
 #define LABELOFFSET 0.003
 #define LABELSPACING 0.4
 #define OVERSAMPLING 16
-      static DDouble minmin = std::numeric_limits<PLFLT>::min();
-      static DDouble maxmax = std::numeric_limits<PLFLT>::max();
+
+static DDouble minmin = std::numeric_limits<PLFLT>::min();
+static DDouble maxmax = std::numeric_limits<PLFLT>::max();
+
+class myContour: public  CListContour
+{
+public:
+  myContour() : CListContour() {}
+  ~myContour(){}
+  void SetXYCoordFun(void (*_m_xyCoordinateFunc)(double &x, double &y)){m_xyCoordinateFunc=_m_xyCoordinateFunc;}
+private:
+  void (*m_xyCoordinateFunc)(double &x, double &y); // function to retrieve 'good' world xy coordinate
+  virtual void GetWorldXYi(double &x, double &y) const {
+    (*m_xyCoordinateFunc)(x,y);}
+};
 
 namespace lib {
 
@@ -48,19 +61,25 @@ namespace lib {
     if (yLog && y <= 0) return 0;
     return 1;
   }
+
+  //very bad use of static pointers but I do not want to rewrite the base objects.
   static PLFLT * contourable;
   static SizeT M,N;
   static DLong multx,multy;
-  // for contours, close contours here on map limits, using a different sampling
+  static DDoubleGDL* currentXVal;
+  static DDoubleGDL* currentYVal;
+
+  // for filled contours, close contours here on map limits, using a different sampling.
+  // Transpose GDL array in the process, as CContour explores a C colmajor array
   double fieldFunctionForFill(double x, double y) {
   if (x < 0) return -1000.; if (x > M-1) return -1000.;
   if (y < 0) return -1000.; if (y > N-1) return -1000.;
   int i=x; if (i>=M-1) i=M-2;
   int j=y; if (j>=N-1) j=N-2;
-  double A=contourable[i+M*j];
-  double B=contourable[i+1+M*j];
-  double C=contourable[i+M*(j+1)];
-  double D=contourable[i+1+M*(j+1)];
+  double A=contourable[N*i+j];
+  double B=contourable[N*(i+1)+j];
+  double C=contourable[N*i+j+1];
+  double D=contourable[N*(i+1)+j+1];
   double dx = (x - i);
   double dy = (y - j);
   double ab = A * (1 - dx) + B * dx;
@@ -68,13 +87,15 @@ namespace lib {
   double ret=ab * (1 - dy) + cd * dy;
   return ret;
   }
+  // for line contours
+  // Transpose GDL array in the process, as CContour explores a C colmajor array
   double fieldFunctionForContour(double x, double y) {
   int i=x; if (i>=M-1) i=M-2;
   int j=y; if (j>=N-1) j=N-2;
-  double A=contourable[i+M*j];
-  double B=contourable[i+1+M*j];
-  double C=contourable[i+M*(j+1)];
-  double D=contourable[i+1+M*(j+1)];
+  double A=contourable[N*i+j];
+  double B=contourable[N*(i+1)+j];
+  double C=contourable[N*i+j+1];
+  double D=contourable[N*(i+1)+j+1];
   double dx = (x - i);
   double dy = (y - j);
   double ab = A * (1 - dx) + B * dx;
@@ -82,28 +103,14 @@ namespace lib {
   double ret=ab * (1 - dy) + cd * dy;
   return ret;
   }
-  
+
   void drawContour(int i, double *x, double *y){
     if (i < 2 ) return;
-//  std::cerr<<"npoi="<<i<<", ";
-    SelfConvertToNormXY(i, x, false, y, false, DATA); 
-//    for (auto j=0;j<i;++j) {
-//    x[j]/=(M);
-//    y[j]/=(N);
-//    std::cerr<<x[j]<<","<<y[j]<<"\n";
-//  }
-  plline( i,  y ,x );
+  plline( i,  x , y );
 }
 void fillContour(int i, double *x, double *y){
     if (i < 3 ) return;
-    SelfConvertToNormXY(i, x, false, y, false, DATA); 
-//  for (auto j=0;j<i;++j) {
-//    x[j]/=(M);
-//    y[j]/=(N);
-////    std::cerr<<x[j]<<","<<y[j]<<"\n";
-//  }
-//  plline( i,  y ,x );
-    plfill( i,  y, x );
+    plfill( i,  x , y );
   }
 
   void drawPlot(int i, int j, int h, int k, int l) {
@@ -114,8 +121,6 @@ void fillContour(int i, double *x, double *y){
     y[1] = l;
     for (int z=0; z<2; ++z) {x[z]/=(M*multx);y[z]/=(N*multy);}
     plline(2, x, y);
-      std::cerr<<i<<","<<j<<","<<h<<","<<k<<","<<l<<",";for (int z=0; z<2; ++z) std::cerr<<x[z]<<","<<y[z]<<" ";
-      std::cerr<<std::endl;
   }
   
   class contour_call : public plotting_routine_call {
@@ -139,8 +144,60 @@ void fillContour(int i, double *x, double *y){
     DDouble zValue;
     bool hasMinVal, hasMaxVal;
     bool recordPath;
-    CListContour contouring;
-//    CContour contouring;
+    myContour contouring;
+
+  public:
+    static void XYIdentity(double &x, double &y){ //interpolate x (fractional pixels) on world X
+//      static unsigned sxTag = SysVar::X()->Desc()->TagIndex("S");
+//      DDouble *sx= &(*static_cast<DDoubleGDL*>(SysVar::X()->GetTag(sxTag, 0)))[0];
+//      static unsigned syTag = SysVar::Y()->Desc()->TagIndex("S");
+//      DDouble *sy= &(*static_cast<DDoubleGDL*>(SysVar::Y()->GetTag(syTag, 0)))[0];
+//      x = sx[0] + sx[1] * x;
+//      y = sy[0] + sy[1] * y;
+    }
+    static void XY1D(double &x, double &y){ //interpolate x (fractional pixels) on world X
+//      static unsigned sxTag = SysVar::X()->Desc()->TagIndex("S");
+//      DDouble *sx= &(*static_cast<DDoubleGDL*>(SysVar::X()->GetTag(sxTag, 0)))[0];
+//      static unsigned syTag = SysVar::Y()->Desc()->TagIndex("S");
+//      DDouble *sy= &(*static_cast<DDoubleGDL*>(SysVar::Y()->GetTag(syTag, 0)))[0];
+
+      int i=x; if (i>=M-1) i=M-2;
+      double dx = (x - i);
+      double retx= (1-dx)*(*currentXVal)[i]+dx*(*currentXVal)[i+1];
+      int j=y; if (j>=N-1) j=N-2;
+      double dy = (y - j);
+      double rety= (1-dy)*(*currentYVal)[j]+dy*(*currentYVal)[j+1];
+      x = retx;//sx[0] + sx[1] * retx;
+      y = rety;//sy[0] + sy[1] * rety;
+    }
+    static void XY2D(double &x, double &y){
+//      static unsigned sxTag = SysVar::X()->Desc()->TagIndex("S");
+//      DDouble *sx= &(*static_cast<DDoubleGDL*>(SysVar::X()->GetTag(sxTag, 0)))[0];
+//      static unsigned syTag = SysVar::Y()->Desc()->TagIndex("S");
+//      DDouble *sy= &(*static_cast<DDoubleGDL*>(SysVar::Y()->GetTag(syTag, 0)))[0];
+      int i=x; if (i>=M-1) i=M-2;
+      int j=y; if (j>=N-1) j=N-2;
+      double A=(*currentXVal)[i+M*j];
+      double B=(*currentXVal)[i+1+M*j];
+      double C=(*currentXVal)[i+M*(j+1)];
+      double D=(*currentXVal)[i+1+M*(j+1)];
+      double dx = (x - i);
+      double dy = (y - j);
+      double ab = A * (1 - dx) + B * dx;
+      double cd = C * (1 - dx) + D * dx;
+      double retx=ab * (1 - dy) + cd * dy;
+      A=(*currentYVal)[i+M*j];
+      B=(*currentYVal)[i+1+M*j];
+      C=(*currentYVal)[i+M*(j+1)];
+      D=(*currentYVal)[i+1+M*(j+1)];
+      dx = (x - i);
+      dy = (y - j);
+      ab = A * (1 - dx) + B * dx;
+      cd = C * (1 - dx) + D * dx;
+      double rety=ab * (1 - dy) + cd * dy;
+      x = retx;//sx[0] + sx[1] * retx;
+      y = rety;//sy[0] + sy[1] * rety;
+    }
 
   private:
 
@@ -188,6 +245,7 @@ void fillContour(int i, double *x, double *y){
         xval_guard.Init(xVal); // delete upon exit
         yVal = new DDoubleGDL(dimension(yEl), BaseGDL::INDGEN);
         yval_guard.Init(yVal); // delete upon exit
+        contouring.SetXYCoordFun(XYIdentity);
       }
 
       if (nParam() == 3) {
@@ -225,6 +283,7 @@ void fillContour(int i, double *x, double *y){
             xEl = xVal->Dim(0);
             if (xEl != zVal->Dim(1))
               e->Throw("X, Y, or Z array dimensions are incompatible.");
+        contouring.SetXYCoordFun(XY1D);
           }
           if (yVal->Rank() == 1) {
             yEl = yVal->Dim(0);
@@ -236,6 +295,7 @@ void fillContour(int i, double *x, double *y){
             xEl = xVal->Dim(0);
             if ((xVal->Dim(0) != zVal->Dim(1))&&(xVal->Dim(1) != zVal->Dim(0)))
               e->Throw("X, Y, or Z array dimensions are incompatible.");
+        contouring.SetXYCoordFun(XY2D);
           }
           if (yVal->Rank() == 2) {
             yEl = yVal->Dim(1);
@@ -249,12 +309,14 @@ void fillContour(int i, double *x, double *y){
             for (SizeT j = 0; j < zVal->Dim(1); ++j) for (SizeT i = 0; i < zVal->Dim(0); ++i) (*xValExpanded)[k++] = (*xVal)[i];
             xval_guard.Init(xValExpanded); // delete upon exit
             xVal = xValExpanded;
+            contouring.SetXYCoordFun(XY2D);
           } else if (xVal->Rank() == 2 && yVal->Rank() == 1) {
             DDoubleGDL* yValExpanded = new DDoubleGDL(zVal->Dim(), BaseGDL::NOZERO);
             SizeT k = 0;
             for (SizeT j = 0; j < zVal->Dim(1); ++j) for (SizeT i = 0; i < zVal->Dim(0); ++i) (*yValExpanded)[k++] = (*yVal)[j];
             xval_guard.Init(yValExpanded); // delete upon exit
             yVal = yValExpanded;
+            contouring.SetXYCoordFun(XY2D);
           }
 //          //if there is a projection, we can use the irregular case, see:
 //          bool mapSet = false;
@@ -400,7 +462,7 @@ void fillContour(int i, double *x, double *y){
         if (doT3d) gdlStop3DDriverTransform(actStream);
       }
 
-      if (gdlSwitchToClippedNormalizedCoordinates(e, actStream)) return true; //normal clip meaning
+//      if (gdlSwitchToClippedNormalizedCoordinates(e, actStream, true)) return true; //avoid vpor problems due to gdlBox
 
       return false;
     }
@@ -630,10 +692,13 @@ void fillContour(int i, double *x, double *y){
           vIso[i] = clevel[i];
         }
         contouring.SetPlanes(vIso);
-        contouring.Generate();
-        //Good place for conversion to normed values
-        COORDSYS coordinateSystem = DATA;
-        SelfConvertToNormXY(xVal, xLog, yVal, yLog, coordinateSystem); //DATA
+        contouring.Generate(); //makes vectors of contours, in fractions of contourable map pixels.
+        //assign  currentXVal and currentYVal for final conversion of contour units (fractinal pixels) to world coordinates.
+        currentXVal=xVal;
+        currentYVal=yVal;
+//        //Good place for conversion to normed values
+//        COORDSYS coordinateSystem = DATA;
+//        SelfConvertToNormXY(xVal, xLog, yVal, yLog, coordinateSystem); //DATA
 
         if (flat3d) {
           gdlStartT3DMatrixDriverTransform(actStream, zValue); //call for driver to perform special transform for all further drawing. No further 3D case as everyting is handled by the driver.
