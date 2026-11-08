@@ -225,24 +225,6 @@ void plstream::eop()
     pleop();
 }
 
-//// Plot horizontal error bars (xmin(i),y(i)) to (xmax(i),y(i)).
-//
-//void plstream::errx( PLINT n, const PLFLT *xmin, const PLFLT *xmax, const PLFLT *y )
-//{
-//    set_stream();
-//
-//    plerrx( n, xmin, xmax, y );
-//}
-//
-//// Plot vertical error bars (x,ymin(i)) to (x(i),ymax(i)).
-//
-//void plstream::erry( PLINT n, const PLFLT *x, const PLFLT *ymin, const PLFLT *ymax )
-//{
-//    set_stream();
-//
-//    plerry( n, x, ymin, ymax );
-//}
-
 // Pattern fills the polygon bounded by the input points.
 
 void plstream::fill( PLINT n, const PLFLT *x, const PLFLT *y )
@@ -250,6 +232,15 @@ void plstream::fill( PLINT n, const PLFLT *x, const PLFLT *y )
     set_stream();
 
     plfill( n, x, y );
+}
+
+// fills multiple polygons using e.g., EOFILL device capabilities.
+
+void plstream::fill_paths( PLINT npath, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem )
+{
+    set_stream();
+
+    plfill_paths( npath, x, y, nelem );
 }
 
 // Flushes the output stream.  Use sparingly, if at all.
@@ -306,15 +297,6 @@ void plstream::gcolbga( PLINT & r, PLINT & g, PLINT & b, PLFLT & a )
     plgcolbga( &r, &g, &b, &a );
 }
 
-//// Returns the current compression setting
-//
-//void plstream::gcompression( PLINT & compression )
-//{
-//    set_stream();
-//
-//    plgcompression( &compression );
-//}
-
 // Retrieve current window into device space.
 
 void plstream::gdidev( PLFLT & mar, PLFLT & aspect, PLFLT & jx, PLFLT & jy )
@@ -341,16 +323,6 @@ void plstream::gdiplt( PLFLT & xmin, PLFLT & ymin, PLFLT & xmax, PLFLT & ymax )
 
     plgdiplt( &xmin, &ymin, &xmax, &ymax );
 }
-
-//// Get family file parameters.
-//
-//void plstream::gfam( PLINT & fam, PLINT & num, PLINT & bmax )
-//{
-//    set_stream();
-//
-//    plgfam( &fam, &num, &bmax );
-//}
-
 
 // Get current run level.
 
@@ -380,17 +352,6 @@ void plstream::gspa( PLFLT & xmin, PLFLT & xmax, PLFLT & ymin, PLFLT & ymax )
 
     plgspa( &xmin, &xmax, &ymin, &ymax );
 }
-
-// This shouldn't be needed in this model.
-
-// Get current stream number.
-
-// void plstream::gstrm( PLINT *p_strm )
-// {
-//     set_stream();
-
-//     plgstrm(p_strm);
-// }
 
 // Get the current library version number.
 
@@ -819,15 +780,6 @@ void plstream::scolor( PLINT color )
     plscolor( color );
 }
 
-//// Sets the compression level
-//
-//void plstream::scompression( PLINT compression )
-//{
-//    set_stream();
-//
-//    plscompression( compression );
-//}
-
 // Set the device (keyword) name
 
 void plstream::sdev( const char *devname )
@@ -902,15 +854,6 @@ void plstream::sesc( char esc )
 
     plsesc( esc );
 }
-
-//// Set family file parameters
-//
-//void plstream::sfam( PLINT fam, PLINT num, PLINT bmax )
-//{
-//    set_stream();
-//
-//    plsfam( fam, num, bmax );
-//}
 
 // Set the output file name.
 
@@ -1093,36 +1036,6 @@ void plstream::szax( PLINT digmax, PLINT digits )
 
     plszax( digmax, digits );
 }
-
-//// Set the format for date / time labels
-//
-//void plstream::timefmt( const char *fmt )
-//{
-//    set_stream();
-//
-//    pltimefmt( fmt );
-//}
-
-//// Sets the edges of the viewport with the given aspect ratio, leaving
-//// room for labels.
-//
-//void plstream::vasp( PLFLT aspect )
-//{
-//    set_stream();
-//
-//    plvasp( aspect );
-//}
-//
-//// Creates the largest viewport of the specified aspect ratio that fits
-//// within the specified normalized subpage coordinates.
-//
-//void plstream::vpas( PLFLT xmin, PLFLT xmax, PLFLT ymin, PLFLT ymax,
-//                     PLFLT aspect )
-//{
-//    set_stream();
-//
-//    plvpas( xmin, xmax, ymin, ymax, aspect );
-//}
 
 // Creates a viewport with the specified normalized subpage coordinates.
 

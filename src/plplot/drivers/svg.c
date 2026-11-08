@@ -161,8 +161,10 @@ void plD_init_svg( PLStream *pls )
     plFamInit( pls );
 
     // Prompt for a file name if not already set
-    plOpenFile( pls );
 */
+    if ( ( pls->OutFile = fopen( pls->FileName, "wb+" ) ) == NULL )
+            fprintf( stderr, "Can't open %s.\n", pls->FileName ); //plOpenFile( pls );
+
 // Allocate and initialize device-specific data
 
     if ( pls->dev != NULL )

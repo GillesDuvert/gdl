@@ -104,13 +104,11 @@ namespace lib {
   return ret;
   }
 
-  void drawContour(int i, double *x, double *y){
-    if (i < 2 ) return;
-  plline( i,  x , y );
+  void drawContour(int i, const double **x, const double **y, const int *nelem){
+    for (int j=0; j<i; ++j)  plline( nelem[j],  x[j] , y[j] );
 }
-void fillContour(int i, double *x, double *y){
-    if (i < 3 ) return;
-    plfill( i,  x , y );
+void fillContour(int i, const double **x, const double **y, const int *nelem){
+    plfill_paths( i,  x , y, nelem );
   }
 
   void drawPlot(int i, int j, int h, int k, int l) {
@@ -453,15 +451,17 @@ void fillContour(int i, double *x, double *y){
         gdlSetPlotCharsize(e, actStream);
         zValue = gdlSetViewPortAndWorldCoordinates(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue, iso);
 
-        if (doT3d) gdlStartT3DMatrixDriverTransform(actStream, zValue); //call for driver to perform special transform for all further drawing
-
-        //current pen color...
-        gdlSetGraphicsForegroundColorFromKw(e, actStream);
-        gdlBox(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog);
-
-        if (doT3d) gdlStop3DDriverTransform(actStream);
+// axis will be drawn after contour
+//        if (doT3d) gdlStartT3DMatrixDriverTransform(actStream, zValue); //call for driver to perform special transform for all further drawing
+//
+//        //current pen color...
+//        gdlSetGraphicsForegroundColorFromKw(e, actStream);
+//        gdlBox(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog);
+//
+//        if (doT3d) gdlStop3DDriverTransform(actStream);
       }
 
+// no need to switch to normalized coordinates here. avoids unnecessary conversions.
 //      if (gdlSwitchToClippedNormalizedCoordinates(e, actStream, true)) return true; //avoid vpor problems due to gdlBox
 
       return false;
@@ -866,9 +866,23 @@ void fillContour(int i, double *x, double *y){
 
 private:
 
-    virtual void post_call(EnvT*, GDLGStream * actStream) {
+    virtual void post_call(EnvT* e, GDLGStream * actStream) {
 //      if (recordPath) actStream->stransform(NULL, NULL);
 //      actStream->setcontlabelparam(0,0,0,0);
+      //plot axes AFTER
+        // viewport and world coordinates
+        // set the PLOT charsize before setting viewport (margin depend on charsize)
+        gdlSetPlotCharsize(e, actStream);
+        zValue = gdlSetViewPortAndWorldCoordinates(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog, zStart, zEnd, zLog, zValue, iso);
+
+        if (doT3d||flat3d) gdlStartT3DMatrixDriverTransform(actStream, zValue); //call for driver to perform special transform for all further drawing
+
+        //current pen color...
+        gdlSetGraphicsForegroundColorFromKw(e, actStream);
+        gdlBox(e, actStream, xStart, xEnd, xLog, yStart, yEnd, yLog);
+
+        if (doT3d||flat3d) gdlStop3DDriverTransform(actStream);
+      
       actStream->lsty(1); //reset linestyle
       actStream->sizeChar(1.0);
    }

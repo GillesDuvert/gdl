@@ -192,6 +192,7 @@ public:
     thePage.plyoff=0;
     theBox.initialized=false;
     plgpls( &pls);
+	pls->dev_eofill=1; //by default, and probably in all and every cases.
 	plsesc('!');
     //you can debug plplot things with
 //     pls->debug=1;

@@ -129,6 +129,9 @@ public:
 
     void fill( PLINT n, const PLFLT *x, const PLFLT *y );
 
+// Pattern fills the polygon bounded by the input points.
+
+    void fill_paths ( PLINT npath, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem );
 // Flushes the output stream.  Use sparingly, if at all.
 
     void flush( void );

@@ -676,6 +676,7 @@ typedef struct
 #define    plerrx                   c_plerrx
 #define    plerry                   c_plerry
 #define    plfill                   c_plfill
+#define    plfill_paths             c_plfill_multi
 #define    plflush                  c_plflush
 #define    plgchr                   c_plgchr
 #define    plgcmap1_range           c_plgcmap1_range
@@ -982,6 +983,10 @@ c_plfamadv( void );
 
 PLDLLIMPEXP void
 c_plfill( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y );
+
+// fill multiple polygons at once using EOFILL capabilities
+PLDLLIMPEXP void
+c_plfill_multi( PLINT npath, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem );
 
 // Flushes the output stream.  Use sparingly, if at all.
 

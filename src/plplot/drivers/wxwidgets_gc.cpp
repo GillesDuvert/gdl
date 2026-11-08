@@ -228,7 +228,6 @@ void wxPLDevGC::FillPath(PLStream *pls) {
           path.AddCurveToPoint(x[j+1] / scalex, height - y[j+1] / scaley, x[j+2] / scalex, height - y[j+2] / scaley, x[j+3] / scalex, height - y[j+3] / scaley);
           j+=3;
           break;
-          break;
         default:
           printf("should not happen in FillPolygons(%d), please report!\n",x[j]);
       }

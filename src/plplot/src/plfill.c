@@ -117,19 +117,7 @@ notcrossed( PLINT *xintersect, PLINT *yintersect,
             PLINT xA1, PLINT yA1, PLINT xA2, PLINT yA2,
             PLINT xB1, PLINT yB1, PLINT xB2, PLINT yB2 );
 
-//--------------------------------------------------------------------------
-// void plfill()
-//
-// Pattern fills the polygon bounded by the input points.
-// For a number of vertices greater than PL_MAXPOLY-1, memory is managed via
-// malloc/free. Otherwise statically defined arrays of length PL_MAXPOLY
-// are used.
-// The final point is explicitly added if it doesn't match up to the first,
-// to prevent clipping problems.
-//--------------------------------------------------------------------------
-
-void
-c_plfill( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y )
+void c_plfill_one( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y, void (func)( short *, short *, PLINT ) )
 {
     PLINT _xpoly[PL_MAXPOLY], _ypoly[PL_MAXPOLY];
     PLINT *xpoly, *ypoly;
@@ -178,7 +166,7 @@ c_plfill( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y )
     }
 
     plP_plfclp( xpoly, ypoly, n, plsc->clpxmi, plsc->clpxma,
-        plsc->clpymi, plsc->clpyma, plP_fill );
+        plsc->clpymi, plsc->clpyma, func);
 
     if ( npts > PL_MAXPOLY - 1 )
     {
@@ -187,6 +175,79 @@ c_plfill( PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y )
     }
 }
 
+//--------------------------------------------------------------------------
+// void plfill()
+//
+// Pattern fills the polygon bounded by the input points.
+// For a number of vertices greater than PL_MAXPOLY-1, memory is managed via
+// malloc/free. Otherwise statically defined arrays of length PL_MAXPOLY
+// are used.
+// The final point is explicitly added if it doesn't match up to the first,
+// to prevent clipping problems.
+//--------------------------------------------------------------------------
+
+void
+c_plfill(PLINT n, PLFLT_VECTOR x, PLFLT_VECTOR y) {
+	c_plfill_one(n, x, y, plP_fill);
+}
+void
+c_plfill_multi(PLINT npoly, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem) {
+	PLFLT xt, yt;
+	if (plsc->level < 3) {
+		plabort("plfill: Please set up window first");
+		return;
+	}
+
+	if (plsc->patt > 0) {
+		for (int i = 0; i < npoly; ++i) {
+			c_plfill_one(nelem[i], x[i], y[i], plP_fill);
+		}
+	} else { //unleash full EOFILL power
+		PLINT** xpoly = (PLINT**) malloc(npoly * sizeof (PLINT*));
+		PLINT** ypoly = (PLINT**) malloc(npoly * sizeof (PLINT*));
+		PLINT* pathsize = (PLINT*) malloc(npoly * sizeof (PLINT));
+		for (int ipoly = 0; ipoly < npoly; ++ipoly) {
+			pathsize[ipoly]=2 * nelem[ipoly]-1;
+			xpoly[ipoly]=(PLINT*) malloc(pathsize[ipoly] * sizeof (PLINT));
+			ypoly[ipoly]=(PLINT*) malloc(pathsize[ipoly] * sizeof (PLINT));
+			TRANSFORM(x[ipoly][0], y[ipoly][0], &xt, &yt);
+			xpoly[ipoly][0] = plP_wcpcx(xt);
+			ypoly[ipoly][0] = plP_wcpcy(yt);
+			int k=1;
+			for (int i = 1; i< nelem[ipoly]; ++i) {
+				xpoly[ipoly][k]=-1; //code
+				k++;
+				TRANSFORM(x[ipoly][i], y[ipoly][i], &xt, &yt);
+				xpoly[ipoly][k] = plP_wcpcx(xt);
+				ypoly[ipoly][k] = plP_wcpcy(yt);
+				k++;
+			}
+			/*
+
+					if (xpoly[0] != xpoly[n - 1] || ypoly[0] != ypoly[n - 1]) {
+						n++;
+						xpoly[n - 1] = xpoly[0];
+						ypoly[n - 1] = ypoly[0];
+					}
+			 */
+
+			/*
+					plP_plfclp(xpoly, ypoly, n, plsc->clpxmi, plsc->clpxma,
+							plsc->clpymi, plsc->clpyma, 
+			 */
+		}
+		plP_pathfill(xpoly, ypoly, pathsize, npoly);
+
+		for (int ipoly = 0; ipoly < npoly; ++ipoly) {
+			free(xpoly[ipoly]);
+			free(ypoly[ipoly]);
+		}
+		free(ypoly);
+		free(xpoly);
+		free(pathsize);
+	}
+
+}
 
 
 //--------------------------------------------------------------------------

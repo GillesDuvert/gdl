@@ -186,15 +186,11 @@ ps_init( PLStream *pls )
 
     pls->dev_fill0 = 1;         // Can do solid fills
 
-/*
-// Initialize family file info
-
-    plFamInit( pls );
 
 // Prompt for a file name if not already set
 
-    plOpenFile( pls );
-*/
+    if ( ( pls->OutFile = fopen( pls->FileName, "wb+" ) ) == NULL )
+            fprintf( stderr, "Can't open %s.\n", pls->FileName ); //plOpenFile( pls );
 
 // Allocate and initialize device-specific data
 
@@ -355,13 +351,8 @@ ps_init( PLStream *pls )
     fprintf( OF, "/A {0.5 0 360 arc} def\n" );
     fprintf( OF, "/S {stroke} def\n" );
     fprintf( OF, "/Z {newpath} def\n" );
-    // Modify to use fill and stroke for better output with
-    // anti-aliasing
-    //fprintf(OF, "/F {fill} def\n");
-    if ( pls->dev_eofill )
-        fprintf( OF, "/F {closepath gsave eofill grestore 0.1 setlinewidth stroke} def \n" );
-    else
-        fprintf( OF, "/F {closepath gsave fill grestore 0.1 setlinewidth stroke} def \n" );
+	fprintf( OF, "/E {closepath gsave eofill grestore 0.1 setlinewidth stroke} def \n" );
+	fprintf( OF, "/F {closepath gsave fill grestore 0.1 setlinewidth stroke} def \n" );
 	fprintf( OF, "/N {newpath} def\n" );
     fprintf( OF, "/C {setrgbcolor} def\n" );
     fprintf( OF, "/H {rcurveto} def\n" );
@@ -899,7 +890,10 @@ void FillPath(PLStream *pls) {
 	}
 	dev->xold = PL_UNDEFINED;
 	dev->yold = PL_UNDEFINED;
-	pls->linepos += fprintf(OF, " F ");
+	if (pls->dev_eofill)
+		pls->linepos += fprintf(OF, " E ");
+	else
+		pls->linepos += fprintf(OF, " F ");
 		if (pls->linepos > LINELENGTH) {
 			putc('\n', OF);
 			pls->linepos = 0;
