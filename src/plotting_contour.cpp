@@ -19,8 +19,8 @@
 #include "dinterpreter.hpp"
 #include "plotting.hpp"
 #include "math_utl.hpp"
-#include "ofxContourPlot/ofxContourPlot.cpp"
-#include "ofxContourPlot/ListContour.cpp"
+#include "contourHelper/ofxContourPlot.cpp"
+#include "contourHelper/ListContour.cpp"
 #define LABELOFFSET 0.003
 #define LABELSPACING 0.4
 #define OVERSAMPLING 16
