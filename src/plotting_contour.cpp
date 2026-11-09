@@ -682,16 +682,15 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
           contouring.SetSecondaryGrid(multx*(M-1),multy*(N-1));
         }
         // define the function that will draw the contour-plot
-        contouring.SetDrawFcn(drawPlot);
+        // contouring.SetDrawFcn(drawPlot); //no -only for CCountour object
         // sampling size of input function
         // this is the drawing resolution of the plot generated
         // set the number of contour planes 
-        int numPlanes = nlevel;
-        std::vector<double> vIso(numPlanes);
-        for (unsigned int i = 0; i < vIso.size(); i++) {
-          vIso[i] = clevel[i];
+        std::vector<double> levelsVect(nlevel);
+        for (unsigned int i = 0; i < levelsVect.size(); i++) {
+          levelsVect[i] = clevel[i];
         }
-        contouring.SetPlanes(vIso);
+        contouring.SetPlanes(levelsVect);
         contouring.Generate(); //makes vectors of contours, in fractions of contourable map pixels.
         //assign  currentXVal and currentYVal for final conversion of contour units (fractinal pixels) to world coordinates.
         currentXVal=xVal;
@@ -781,32 +780,30 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
 
         PLFLT value; //used for all filled contours: they use colortable 1; value is between 0 and 1.
         if (docolors) actStream->SetColorMap1Table(nlevel, colors, decomposed); //load colormap1 with given colors (decomposed or not))
-        else actStream->SetColorMap1DefaultColors(nlevel, decomposed);
+        else if (nlevel > 1) actStream->SetColorMap1DefaultColors(nlevel, decomposed); // if 1 contour, it is in foreground color.
 
         if (fill) {
           if (hachures) {
             PLINT ori;
             PLINT spa;
 
-            actStream->psty(1);
             // C_ORIENTATION = vector of angles of lines to  FILL (needs FILL KW) .
             // C_SPACING= vector of spacing in CENTIMETRES of lines to  FILL (needs FILL KW) .
             // if C_SPACING and C_ORIENTATION absent, FILL will do a solid fill .
-            for (SizeT i = 0; i < nlevel - 1; ++i) {
+            for (SizeT i = 0; i < nlevel; ++i) {
               if (doT3d) gdlStartT3DMatrixDriverTransform(actStream, (clevel[i] - cmin) / (cmax - cmin));
               ori = floor(10.0 * (*orientation)[i % orientation->N_Elements()]);
               spa = floor(10000 * (*spacing)[i % spacing->N_Elements()]);
-              value = static_cast<PLFLT> (i) / nlevel;
               if (dothick) actStream->Thick((*thick)[i % thick->N_Elements()]);
               if (dostyle) gdlLineStyle(actStream, (*style)[i % style->N_Elements()]); //not working; plplot bug see https://sourceforge.net/p/plplot/bugs/111
               //the background
               actStream->psty(0);
               gdlSetGraphicsForegroundColorFromBackgroundKw(e,actStream); //patterns written on background, not transparents!
-
               contouring.PlotContour(i, fillContour);
               //the pattern, now
-              gdlSetGraphicsForegroundColorFromKw ( e, actStream );
+              actStream->psty(1);
               actStream->pat(1, &ori, &spa);
+              if (docolors) actStream->Color((*colors)[i % colors->N_Elements()], decomposed); else gdlSetGraphicsForegroundColorFromKw ( e, actStream );
               contouring.PlotContour(i, fillContour);
               actStream->psty(0);
             }
@@ -815,6 +812,7 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
             for (SizeT i = 0; i < nlevel; ++i) {
               gdlStartT3DMatrixDriverTransform(actStream, (clevel[i] - cmin) / (cmax - cmin));
               value = static_cast<PLFLT> (i) / nlevel;
+              actStream->col1(value);
               contouring.PlotContour(i, fillContour);
             }
           } else { 

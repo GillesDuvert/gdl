@@ -50,6 +50,7 @@ public:
     GDLCT* myCT = GraphicsDevice::GetGUIDevice()->GetCT();
     myCT->Get(r, g, b);
     SetColorMap0(r, g, b, ctSize); //set colormap 0 to 256 values
+    SetColorMap1(r, g, b, ctSize); //set colormap 1 to 256 values
 
 
     // Do not init colors --- we handle colors ourseves, very much faster!
