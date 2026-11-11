@@ -47,7 +47,6 @@ public:
 
 	// Area given by this function can be positive or negative depending on the winding direction of the contour.
 	double Area(CLineStrip* Line);
-    int  Inside(CLineStrip* Line1,CLineStrip* Line2);
 	double EdgeWeight(CLineStrip* pLine, double R);
 	bool   PrintContour(char *fname);
     virtual bool PlotContour(const unsigned int iPlane, void (plotfunc)(int, const double**, const double**, const int*)) final;

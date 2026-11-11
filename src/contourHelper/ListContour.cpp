@@ -549,52 +549,6 @@ void CListContour::DumpPlane(unsigned int iPlane) const
 			// GetXi(pStrip->back()),GetYi(pStrip->back()) );
 	}
 }
-int  CListContour::Inside(CLineStrip* Line1,CLineStrip* Line2){
-  double x1min,x1max,y1min,y1max;
-  double x2min,x2max,y2min,y2max;
-  double x1,y1,x2,y2;
-	int index;
-	
-	CLineStrip::iterator pos;
-	pos = Line1->begin();
-	index = (*pos);
-	x1min = x1max = GetXi(index);
-	y1min = y1max = GetYi(index);
-	
-	pos ++;
-	
-	for(;pos!=Line1->end();pos++) 
-	{
-		index = (*pos);  
-		x1 = GetXi(index);
-		y1 = GetYi(index);
-        x1min=min(x1min,x1);
-        x1max=max(x1max,x1);
-        y1min=min(y1min,y1);
-        y1max=max(y1max,y1);
-	}
-	pos = Line2->begin();
-	index = (*pos);
-	x2min = x2max = GetXi(index);
-	y2min = y2max = GetYi(index);
-	
-	pos ++;
-	
-	for(;pos!=Line2->end();pos++) 
-	{
-		index = (*pos);  
-		x2 = GetXi(index);
-		y2 = GetYi(index);
-        x2min=min(x2min,x2);
-        x2max=max(x2max,x2);
-        y2min=min(y2min,y2);
-        y2max=max(y2max,y2);
-	}
-    std::cerr<<x1min<<", "<<x2min<<", "<< x1max <<", "<< x2max <<", "<< y1min <<", "<<  y2min <<", "<<  y1max <<", "<<  y2max<<std::endl;
-    if (x1min <= x2min && x1max >= x2max && y1min <= y2min && y1max >= y2max) return 1; 
-    if (x2min <= x1min && x2max >= x1max && y2min <= y1min && y2max >= y1max) return 2;
-    return 0;
-}
 
 double CListContour::Area(CLineStrip* Line) 
 {
@@ -710,7 +664,6 @@ bool::CListContour::PlotContour(const unsigned int iPlane, void (plotfunc)(int, 
     pStrip = (*pos);
     npoi[ipol]=pStrip->size();
     if (npoi[ipol]<2) continue;
-    std::cerr<<Inside(refStrip,pStrip)<<std::endl;
     x[ipol]=(double*)malloc(npoi[ipol]*sizeof(double*));
     y[ipol]=(double*)malloc(npoi[ipol]*sizeof(double*));
     int k=0;

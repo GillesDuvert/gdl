@@ -370,39 +370,40 @@ static void path_fill_mem( PLStream *pls) {
   }
   pathFill(pls);
 }
-void pathFill(PLStream *pls) {
-	int len=0;
-	for (int i = 0; i < pls->dev_npath; ++i) len+=pls->dev_pathnxy[i];// 
+unsigned char* pathFillMask(PLStream *pls, PLINT *pm, PLINT *pn, PLINT *xoff, PLINT *yoff ) {
+	int len = 0;
+	for (int i = 0; i < pls->dev_npath; ++i) len += pls->dev_pathnxy[i]; // 
 	//Need some preparation: put all pathx in a row, mark the subpath lengths 
 	int *subpath_lengths = (int *) malloc(sizeof (*subpath_lengths) * pls->dev_npath);
-	short *xa=(short*)  malloc(sizeof(short) * len);
-	short *ya=(short*)  malloc(sizeof(short) * len);
-	xa[0]=pls->dev_pathx[0][0];
+	short *xa = (short*) malloc(sizeof (short) * len);
+	short *ya = (short*) malloc(sizeof (short) * len);
+	xa[0] = pls->dev_pathx[0][0];
 	PLINT xmin = xa[0];
 	PLINT xmax = xmin;
-	ya[0]=pls->dev_pathy[0][0];
+	ya[0] = pls->dev_pathy[0][0];
 	PLINT ymin = ya[0];
 	PLINT ymax = ymin;
-	int k=0;
-    for (int i = 0; i < pls->dev_npath; ++i) {
+	int k = 0;
+	for (int i = 0; i < pls->dev_npath; ++i) {
 		PLINT* x = pls->dev_pathx[i];
 		PLINT* y = pls->dev_pathy[i];
-		int l=0;
+		int l = 0;
 		for (int j = 0; j < pls->dev_pathnxy[i]; ++j) {
 			if (x[j] >= 0) {
-				short sx=x[j];
-				short sy=y[j];
-				xa[k]=sx;
-				ya[k]=sy;
+				short sx = x[j];
+				short sy = y[j];
+				xa[k] = sx;
+				ya[k] = sy;
 				xmin = MIN(xmin, sx);
 				xmax = MAX(xmax, sx);
 				ymin = MIN(ymin, sy);
 				ymax = MAX(ymax, sy);
-				k++; l++;
+				k++;
+				l++;
 			}
 		}
-		subpath_lengths[i] = l;	
-    }
+		subpath_lengths[i] = l;
+	}
 	PLINT M = pls->phyxma;
 	PLINT N = pls->phyyma;
 	xmin = MAX(xmin, 0);
@@ -411,32 +412,45 @@ void pathFill(PLStream *pls) {
 	ymax = MIN(ymax, N);
 	PLINT m = xmax - xmin + 1;
 	PLINT n = ymax - ymin + 1;
-	if (n <= 2 || m <= 2) return;
-	unsigned char *mem = (unsigned char *) pls->dev;
+	if (n <= 2 || m <= 2) return NULL;
 	unsigned char *pixels = (char*) malloc(m * n);
 	memset(pixels, 0, m * n);
-	plSTBTTFill_short(xa, ya, len, pls->dev_npath, subpath_lengths, pixels, m, n, xmin, ymin, pls->dev_eofill ); //0: use zero-winding, 1:use EOFILL
+	plSTBTTFill_short(xa, ya, len, pls->dev_npath, subpath_lengths, pixels, m, n, xmin, ymin, pls->dev_eofill); //0: use zero-winding, 1:use EOFILL
 	free(subpath_lengths);
 	free(xa);
 	free(ya);
-//	plSTBTTFill_int(pls->dev_pathx[0], pls->dev_pathy[0], len, pls->dev_npath , pls->dev_pathnxy, pixels, m, n, xmin, ymin );
+	*xoff = xmin;
+	*yoff = ymin;
+	*pm = m;
+	*pn = n;
+	return pixels;
+}
+
+void pathFill(PLStream *pls) {
+	PLINT M = pls->phyxma;
+	PLINT N = pls->phyyma;
+	PLINT m, n, xoff, yoff;
+	unsigned char *mem = (unsigned char *) pls->dev;
+	unsigned char* mask = pathFillMask(pls, &m, &n, &xoff, &yoff);
+	if (mask == NULL) return;
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
 	unsigned char b = pls->curcolor.b;
-		for (int j = 0, jref=N-ymax; j < n; ++j, ++jref) {
-			int ref = 3 * M * jref; 
-			for (int i = 0; i < m; ++i) {
-				if (pixels[(n-j-1) * m + i] > 127) {
-				int iref = xmin + i;
+	for (int j = 0, jref = N - (n + yoff - 1); j < n; ++j, ++jref) {
+		int ref = 3 * M * jref;
+		for (int i = 0; i < m; ++i) {
+			if (mask[(n - j - 1) * m + i] > 127) {
+				int iref = xoff + i;
 				int ref2 = ref + 3 * iref;
-				mem[ref2++]=r;
-				mem[ref2++]=g;
-				mem[ref2  ]=b;
-				}
+				mem[ref2++] = r;
+				mem[ref2++] = g;
+				mem[ref2] = b;
 			}
 		}
-	free(pixels);
+	}
+	free(mask);
 }
+
 void
 plD_eop_mem( PLStream *pls )
 {
