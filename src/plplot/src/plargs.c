@@ -139,7 +139,9 @@ static int opt_dev( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_dev_compression( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_dpi( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 static int opt_drvopt( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
+/*
 static int opt_eofill( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
+*/
 /*
 static int opt_fam( PLCHAR_VECTOR, PLCHAR_VECTOR, void * );
 */
@@ -641,6 +643,7 @@ static PLOptionTable ploption_table[] = {
         "-locale",
         "Use locale environment (e.g., LC_ALL, LC_NUMERIC, or LANG) to set LC_NUMERIC locale (which affects decimal point separator)."
     },
+/*
     {
         "eofill",
         opt_eofill,
@@ -650,6 +653,7 @@ static PLOptionTable ploption_table[] = {
         "-eofill",
         "For the case where the boundary of the filled region is self-intersecting, use the even-odd fill rule rather than the default nonzero fill rule."
     },
+*/
     {
         "drvopt",               // Driver specific options
         opt_drvopt,
@@ -2944,6 +2948,7 @@ opt_locale( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR PL_UNUSED( opt_arg ), 
 //! returns 0.
 //!
 //--------------------------------------------------------------------------
+/*
 
 static int
 opt_eofill( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR PL_UNUSED( opt_arg ), void * PL_UNUSED( client_data ) )
@@ -2953,6 +2958,7 @@ opt_eofill( PLCHAR_VECTOR PL_UNUSED( opt ), PLCHAR_VECTOR PL_UNUSED( opt_arg ), 
         plP_state( PLSTATE_EOFILL );
     return 0;
 }
+*/
 
 //--------------------------------------------------------------------------
 // opt_mfo()

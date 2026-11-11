@@ -437,10 +437,10 @@ plP_fill( short *x, short *y, PLINT npts )
 }
 
 void
-plP_pathfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly  )
+plP_pathfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly, PLINT fillrule  )
 {
     plsc->page_status = DRAWING;
-	grpathfill( x, y, npts, npoly );
+	grpathfill( x, y, npts, npoly, fillrule );
 }
 
 
@@ -608,12 +608,14 @@ grfill(short *x, short *y, PLINT npts) {
 }
 
 static void
-grpathfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath) {
+grpathfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath, PLINT fillRule) {
 	char * save_locale;
 	plsc->dev_npath = npath;
 	plsc->dev_pathx = x;
 	plsc->dev_pathy = y;
 	plsc->dev_pathnxy=npts;
+	PLINT oldFillRule=plsc->dev_eofill;
+	plsc->dev_eofill=fillRule;
 
 	save_locale = plsave_set_locale();
 	if (!plsc->stream_closed) {
@@ -621,6 +623,7 @@ grpathfill(PLINT **x, PLINT **y, PLINT *npts, PLINT npath) {
 				PLESC_FILL_PATH, NULL);
 	}
 	plrestore_locale(save_locale);
+	plsc->dev_eofill=oldFillRule;
 }
 
 //--------------------------------------------------------------------------

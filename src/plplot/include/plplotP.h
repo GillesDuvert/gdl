@@ -367,7 +367,7 @@ int plsnscanf( PLCHAR_VECTOR buffer, int n, PLCHAR_VECTOR format, ... );
 #define PLSTATE_CMAP1     6            // change to cmap 1
 #define PLSTATE_CHR       7            // change character height
 #define PLSTATE_SYM       8            // change symbol size
-#define PLSTATE_EOFILL    9            // change to even odd fill rule
+//#define PLSTATE_EOFILL    9            // change to even odd fill rule
 
 // Enum for flagging the render status of PLplot
 enum { AT_BOP, DRAWING, AT_EOP };
@@ -954,7 +954,7 @@ plP_fillz(plVertex v1, plVertex v2, plVertex v3, PLINT falsecolor);
 // Fill path
 
 PLDLLIMPEXP void
-plP_pathfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly );
+plP_pathfill( PLINT **x, PLINT **y, PLINT *npts, PLINT npoly, PLINT fillrule );
 
 // Render gradient
 

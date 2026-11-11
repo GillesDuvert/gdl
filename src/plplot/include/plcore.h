@@ -44,7 +44,7 @@ static void     grline( short *, short *, PLINT );
 static void     grpolyline( short *, short *, PLINT );
 static void     grfill( short *, short *, PLINT );
 static void     grfillz( plVertex v1, plVertex v2, plVertex v3, PLINT falsecolor );
-static void     grpathfill( PLINT **, PLINT **, PLINT *, PLINT);
+static void     grpathfill( PLINT **, PLINT **, PLINT *, PLINT, PLINT);
 static void     grgradient( short *, short *, PLINT );
 static void     plSelectDev( void );
 static void     pldi_ini( void );

@@ -718,7 +718,7 @@ plttf( stbtt_vertex *vects, int descent, int len, PLFLT  * const xform,
 	}
 	if (l > 2) { //3 for filling
 	    pathnxy[nPath-1]=n;
-		plP_pathfill( pathx, pathy, pathnxy, nPath);
+		plP_pathfill( pathx, pathy, pathnxy, nPath, 0); //use zero winding rule , this is for TT Fonts.
 		l = 0;
 	} else l=0;
 	free(llx);

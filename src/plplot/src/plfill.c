@@ -229,7 +229,7 @@ c_plfill_multi(PLINT npoly, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem
 			ypoly[ipoly][k] = ypoly[ipoly][0];
 			k++;
 		}
-		plP_pathfill(xpoly, ypoly, pathsize, npoly);
+		plP_pathfill(xpoly, ypoly, pathsize, npoly, 1); //use dev_eofill
 
 		for (int ipoly = 0; ipoly < npoly; ++ipoly) {
 			free(xpoly[ipoly]);
