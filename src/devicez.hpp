@@ -1,9 +1,9 @@
 /* *************************************************************************
-                          devicez.hpp  -  Z-buffer device
-                             -------------------
-    begin                : July 22 2002
-    copyright            : (C) 2002 by Marc Schellens
-    email                : m_schellens@users.sf.net
+						  devicez.hpp  -  Z-buffer device
+							 -------------------
+	begin                : July 22 2002
+	copyright            : (C) 2002 by Marc Schellens
+	email                : m_schellens@users.sf.net
  ***************************************************************************/
 
 /* *************************************************************************
@@ -18,199 +18,199 @@
 #ifndef DEVICEZ_HPP_
 #define DEVICEZ_HPP_
 
-static const PLFLT Z_DPI = 96 ; //in dpi;
+static const PLFLT Z_DPI = 96; //in dpi;
 
 #include "gdlzstream.hpp"
 
-class DeviceZ: public GraphicsDevice
-{
-  GDLZStream*     actStream;
+class DeviceZ : public GraphicsDevice {
+	GDLZStream* actStream;
 
-  char*  memBuffer=NULL;;
-  DInt*  zBuffer=NULL;
-  SizeT  memM;
-  SizeT  memN;
-  int    decomposed;
+	char* memBuffer = NULL;
+	;
+	DInt* zBuffer = NULL;
+	SizeT memM;
+	SizeT memN;
+	int decomposed;
 
-  void ResetZbuffer() {
-	  if (zBuffer) {
-         for( SizeT i=0; i<memM*memN; ++i)  zBuffer[ i] = -32765;
-	  }
-  }
-  
-  void DeleteStream()
-  {
-    // note: the plplot documentation says that the user has to
-    //       free this buffer, but plplot does it itself.
-    //       even worse: it does it with 'free'
-    if (actStream) delete actStream;
-	actStream = NULL;
-    if (memBuffer) delete[] memBuffer;
-    memBuffer =  NULL;
-	memM=0;
-	memN=0;
-    zBuffer =  NULL;
-  }
+	void ResetZbuffer() {
+		if (zBuffer) {
+			for (SizeT i = 0; i < memM * memN; ++i) zBuffer[ i] = -32765;
+		}
+	}
 
-  void InitStream()
-  {
-    DeleteStream();
+	void DeleteStream() {
+		// note: the plplot documentation says that the user has to
+		//       free the mem buffer. (mem's eop(), called by plend1, called by ~plstream, puts pls->dev to NULL,
+		//       avoiding plend1 to delete pls->dev on its own. 
 
-    DLong& actX = (*static_cast<DLongGDL*>( dStruct->GetTag( xSTag, 0)))[0];
-    DLong& actY = (*static_cast<DLongGDL*>( dStruct->GetTag( ySTag, 0)))[0];
+		if (actStream) delete actStream;
+		actStream = NULL;
+		if (memBuffer) free(memBuffer);
+		memBuffer = NULL;
+		memM = 0;
+		memN = 0;
+		if (zBuffer) free(zBuffer); //remember zBuffer is NOT an alias to a section of memBuffer, contrary to IDL's logic
+		zBuffer = NULL;
+	}
 
-    // always allocate the buffer with creating a new stream
-	memM=actX;
-	memN=actY;
-    actStream = new GDLZStream( memM, memN);
-	SizeT buffersize = memM * memN * 3;//3 planes for 24 bits
-    memBuffer = (char*) calloc(buffersize,  sizeof( char)); 
-	zBuffer=(DInt*) calloc( memM * memN,  sizeof(DInt)); //pointer 
-    ResetZbuffer();
-	// make it known to plplot
-    plsmem( actX, actY, memBuffer, zBuffer);
+	void InitStream() {
+		DeleteStream();
 
-    // no pause on destruction
-    actStream->spause( false);
+		DLong& actX = (*static_cast<DLongGDL*> (dStruct->GetTag(xSTag, 0)))[0];
+		DLong& actY = (*static_cast<DLongGDL*> (dStruct->GetTag(ySTag, 0)))[0];
 
-    // we want color
-    actStream->scolor( 1);
+		// always allocate the buffer with creating a new stream
+		memM = actX;
+		memN = actY;
+		actStream = new GDLZStream(memM, memN);
+		SizeT buffersize = memM * memN * 3; //3 planes for 24 bits
+		memBuffer = (char*) calloc(buffersize, sizeof ( char));
+		zBuffer = (DInt*) malloc(memM * memN * sizeof (DInt)); //pointer 
+		for (SizeT i = 0; i < memM * memN; ++i) zBuffer[ i] = -32765;
+		// make it known to plplot
+		plsmem(actX, actY, memBuffer, zBuffer);
 
-    // set color map (always grey ramp)
-    PLINT r[ctSize], g[ctSize], b[ctSize];
-    for( PLINT i = 0; i<ctSize; ++i)
-      { r[ i] = g[ i] = b[ i] = i;}
-    actStream->SetColorMap0( r, g, b, ctSize); 
-    actStream->SetColorMap1( r, g, b, ctSize); 
-    
-    actStream->spage(Z_DPI, Z_DPI, memM, memN, 0, 0 );
+		// no pause on destruction
+		actStream->spause(false);
 
-    actStream->Init();
-    // need to be called initially. permit to fix things
-    actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
-    actStream->plstream::adv(0); //-->this one is the 1st and only pladv
-    actStream->plstream::vpor(0, 1, 0, 1);
-    actStream->plstream::wind(0, 1, 0, 1);
+		// we want color
+		actStream->scolor(1);
 
-    actStream->ssub(1, 1);
-    actStream->SetPageDPMM();
-    actStream->DefaultCharSize();
-    actStream->adv(0); //this is for us (counters) //needs DefaultCharSize
-  }
+		// set color map (always grey ramp)
+		PLINT r[ctSize], g[ctSize], b[ctSize];
+		for (PLINT i = 0; i < ctSize; ++i) {
+			r[ i] = g[ i] = b[ i] = i;
+		}
+		actStream->SetColorMap0(r, g, b, ctSize);
+		actStream->SetColorMap1(r, g, b, ctSize);
+
+		actStream->spage(Z_DPI, Z_DPI, memM, memN, 0, 0);
+
+		actStream->Init();
+		// need to be called initially. permit to fix things
+		actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
+		actStream->plstream::adv(0); //-->this one is the 1st and only pladv
+		actStream->plstream::vpor(0, 1, 0, 1);
+		actStream->plstream::wind(0, 1, 0, 1);
+
+		actStream->ssub(1, 1);
+		actStream->SetPageDPMM();
+		actStream->DefaultCharSize();
+		actStream->adv(0); //this is for us (counters) //needs DefaultCharSize
+	}
 
 public:
-  DeviceZ(): GraphicsDevice(), actStream( NULL), memBuffer( NULL), decomposed(0)
-  {
-    name = "Z";
 
-    DLongGDL origin( dimension( 2));
-    DLongGDL zoom( dimension( 2));
-    zoom[0] = 1;
-    zoom[1] = 1;
+	DeviceZ() : GraphicsDevice(), actStream(NULL), memBuffer(NULL), decomposed(0) {
+		name = "Z";
 
-    dStruct = new DStructGDL( "!DEVICE");
-    dStruct->InitTag("NAME",       DStringGDL( name)); 
-    dStruct->InitTag("X_SIZE",     DLongGDL( 640)); 
-    dStruct->InitTag("Y_SIZE",     DLongGDL( 480)); 
-    dStruct->InitTag("X_VSIZE",    DLongGDL( 640)); 
-    dStruct->InitTag("Y_VSIZE",    DLongGDL( 480)); 
-    dStruct->InitTag("X_CH_SIZE",  DLongGDL( 8)); 
-    dStruct->InitTag("Y_CH_SIZE",  DLongGDL( 12)); 
-    dStruct->InitTag("X_PX_CM",    DFloatGDL( 26.0)); 
-    dStruct->InitTag("Y_PX_CM",    DFloatGDL( 26.0)); 
-    dStruct->InitTag("N_COLORS",   DLongGDL( 256)); //our default is 24bpp 
-    dStruct->InitTag("TABLE_SIZE", DLongGDL( 256)); 
-    dStruct->InitTag("FILL_DIST",  DLongGDL( 1)); 
-    dStruct->InitTag("WINDOW",     DLongGDL( -1)); 
-    dStruct->InitTag("UNIT",       DLongGDL( 0)); 
-    dStruct->InitTag("FLAGS",      DLongGDL( 414908)); 
-    dStruct->InitTag("ORIGIN",     origin); 
-    dStruct->InitTag("ZOOM",       zoom); 
-  }
-  
-  ~DeviceZ()
-  {
-    DeleteStream();
-  }
+		DLongGDL origin(dimension(2));
+		DLongGDL zoom(dimension(2));
+		zoom[0] = 1;
+		zoom[1] = 1;
 
-  GDLGStream* GetStream( bool open=true)
-  {
-    if( actStream == NULL) 
-      {
-	if( !open) return NULL;
-	InitStream();
-      }
-    return actStream;
-  }
-
-  bool CloseFile() // CLOSE keyword NOT CLOSE_FILE!!!
-  {
-    return false;
-  }
-
-  bool SetResolution( DLong nx, DLong ny)
-  {
-    DLong& actX = (*static_cast<DLongGDL*>( dStruct->GetTag( xSTag, 0)))[0];
-    DLong& actY = (*static_cast<DLongGDL*>( dStruct->GetTag( ySTag, 0)))[0];
-
-    if( nx == actX && ny == actY) return true;
-
-    DeleteStream();
-
-    actX = nx;
-    actY = ny;
-
-    DLong& actXV = (*static_cast<DLongGDL*>( dStruct->GetTag( xVSTag, 0)))[0];
-    DLong& actYV = (*static_cast<DLongGDL*>( dStruct->GetTag( yVSTag, 0)))[0];
-
-    actXV = nx;
-    actYV = ny;
-
-    return true;
-  }
-
-  void ClearStream( DLong bColor)
-  {
-    if( actStream == NULL) 
-      {
-	if( !open) return;
-	InitStream();
+		dStruct = new DStructGDL("!DEVICE");
+		dStruct->InitTag("NAME", DStringGDL(name));
+		dStruct->InitTag("X_SIZE", DLongGDL(640));
+		dStruct->InitTag("Y_SIZE", DLongGDL(480));
+		dStruct->InitTag("X_VSIZE", DLongGDL(640));
+		dStruct->InitTag("Y_VSIZE", DLongGDL(480));
+		dStruct->InitTag("X_CH_SIZE", DLongGDL(8));
+		dStruct->InitTag("Y_CH_SIZE", DLongGDL(12));
+		dStruct->InitTag("X_PX_CM", DFloatGDL(26.0));
+		dStruct->InitTag("Y_PX_CM", DFloatGDL(26.0));
+		dStruct->InitTag("N_COLORS", DLongGDL(256)); //our default is 24bpp 
+		dStruct->InitTag("TABLE_SIZE", DLongGDL(256));
+		dStruct->InitTag("FILL_DIST", DLongGDL(1));
+		dStruct->InitTag("WINDOW", DLongGDL(-1));
+		dStruct->InitTag("UNIT", DLongGDL(0));
+		dStruct->InitTag("FLAGS", DLongGDL(414908));
+		dStruct->InitTag("ORIGIN", origin);
+		dStruct->InitTag("ZOOM", zoom);
 	}
-	for( SizeT i=0; i< memM*memN* 3; ++i)  memBuffer[i] = bColor;
-  }
 
-  DInt GetPixelDepth() { return 24;}  
-  
-  bool SetPixelDepth(DInt value) {
-   static int displayed=0;
-   if (!displayed) {displayed=1; cerr<<"Pixel Depth changes ignored in GDL, stays at 24."<<endl;}
-   return true;
-  }
-  
-  bool Decomposed( bool value)           
-  {   
-    decomposed = value;
-//    if (decomposed==1) (*static_cast<DLongGDL*>( dStruct->GetTag(dStruct->Desc()->TagIndex("N_COLORS"))))[0]=256*256*256;
-//    else (*static_cast<DLongGDL*>( dStruct->GetTag(dStruct->Desc()->TagIndex("N_COLORS"))))[0]=256;
-    return true;
-  }
-  
-    DLong GetDecomposed()        
-  {
-    return decomposed;  
-  }
-  virtual bool ZBuffering( bool yes) final                  {
-	  PLINT value=yes?1:0;
-	  if (plsc->dev_zbuffering==value) return true;
+	~DeviceZ() {
+		DeleteStream();
+	}
+
+	GDLGStream* GetStream(bool open = true) {
+		if (actStream == NULL) {
+			if (!open) return NULL;
+			InitStream();
+		}
+		return actStream;
+	}
+
+	bool CloseFile() // CLOSE keyword NOT CLOSE_FILE!!!
+	{
+		return false;
+	}
+
+	bool SetResolution(DLong nx, DLong ny) {
+		DLong& actX = (*static_cast<DLongGDL*> (dStruct->GetTag(xSTag, 0)))[0];
+		DLong& actY = (*static_cast<DLongGDL*> (dStruct->GetTag(ySTag, 0)))[0];
+
+		if (nx == actX && ny == actY) return true;
+
+		DeleteStream();
+
+		actX = nx;
+		actY = ny;
+
+		DLong& actXV = (*static_cast<DLongGDL*> (dStruct->GetTag(xVSTag, 0)))[0];
+		DLong& actYV = (*static_cast<DLongGDL*> (dStruct->GetTag(yVSTag, 0)))[0];
+
+		actXV = nx;
+		actYV = ny;
+
+		return true;
+	}
+
+	void ClearStream(DLong bColor) {
+		if (actStream == NULL) {
+			if (!open) return;
+			InitStream();
+		}
+		for (SizeT i = 0; i < memM * memN * 3; ++i) memBuffer[i] = bColor;
+		ResetZbuffer();
+	}
+
+	DInt GetPixelDepth() {
+		return 24;
+	}
+
+	bool SetPixelDepth(DInt value) {
+		static int displayed = 0;
+		if (!displayed) {
+			displayed = 1;
+			cerr << "Pixel Depth changes ignored in GDL, stays at 24." << endl;
+		}
+		return true;
+	}
+
+	bool Decomposed(bool value) {
+		decomposed = value;
+		//    if (decomposed==1) (*static_cast<DLongGDL*>( dStruct->GetTag(dStruct->Desc()->TagIndex("N_COLORS"))))[0]=256*256*256;
+		//    else (*static_cast<DLongGDL*>( dStruct->GetTag(dStruct->Desc()->TagIndex("N_COLORS"))))[0]=256;
+		return true;
+	}
+
+	DLong GetDecomposed() {
+		return decomposed;
+	}
+
+	virtual bool ZBuffering(bool yes) final {
+		PLINT value = yes ? 1 : 0;
+		if (plsc->dev_zbuffering == value) return true;
 		ClearStream(0);
-	  if (yes) {
-		  plsc->dev_zbuffering=1;
-	  } else {
-		  ResetZbuffer(); 
-		  plsc->dev_zbuffering=0;
-	  }
-	  return true;
-  }
+		if (yes) {
+			plsc->dev_zbuffering = 1;
+		} else {
+			ResetZbuffer();
+			plsc->dev_zbuffering = 0;
+		}
+		return true;
+	}
 };
 
 #endif

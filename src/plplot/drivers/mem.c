@@ -123,7 +123,6 @@ plD_init_mem( PLStream *pls )
     pls->dev_fill0 = 1;         // Handle solid fills
     pls->dev_fill1 = 0;         // Use PLplot core fallback for pattern fills
     pls->nopause   = 1;         // Don't pause between frames
-    pls->use_unicode  = 0;      // wants text as unicode
     pls->dev_alt_unicode  = 0;      // use alternate filling for unicode fonts
 }
 
@@ -373,23 +372,37 @@ static void path_fill_mem( PLStream *pls) {
 }
 void pathFill(PLStream *pls) {
 	int len=0;
-	for (int i = 0; i < pls->dev_npath; ++i) len+= pls->dev_pathnxy[i];
-	PLINT xmin = 32768;
-	PLINT xmax = 0;
-	PLINT ymin = 32768;
-	PLINT ymax = 0;
-   for (int i = 0; i < pls->dev_npath; ++i) {
-    PLINT* x = pls->dev_pathx[i];
-    PLINT* y = pls->dev_pathy[i];
-	for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
-		if (x[i] >= 0) {
-			xmin = MIN(xmin, x[j + 1]);
-			xmax = MAX(xmax, x[j + 1]);
-			ymin = MIN(ymin, y[j + 1]);
-			ymax = MAX(ymax, y[j + 1]);
+	for (int i = 0; i < pls->dev_npath; ++i) len+=pls->dev_pathnxy[i];// 
+	//Need some preparation: put all pathx in a row, mark the subpath lengths 
+	int *subpath_lengths = (int *) malloc(sizeof (*subpath_lengths) * pls->dev_npath);
+	short *xa=(short*)  malloc(sizeof(short) * len);
+	short *ya=(short*)  malloc(sizeof(short) * len);
+	xa[0]=pls->dev_pathx[0][0];
+	PLINT xmin = xa[0];
+	PLINT xmax = xmin;
+	ya[0]=pls->dev_pathy[0][0];
+	PLINT ymin = ya[0];
+	PLINT ymax = ymin;
+	int k=0;
+    for (int i = 0; i < pls->dev_npath; ++i) {
+		PLINT* x = pls->dev_pathx[i];
+		PLINT* y = pls->dev_pathy[i];
+		int l=0;
+		for (int j = 0; j < pls->dev_pathnxy[i]; ++j) {
+			if (x[j] >= 0) {
+				short sx=x[j];
+				short sy=y[j];
+				xa[k]=sx;
+				ya[k]=sy;
+				xmin = MIN(xmin, sx);
+				xmax = MAX(xmax, sx);
+				ymin = MIN(ymin, sy);
+				ymax = MAX(ymax, sy);
+				k++; l++;
+			}
 		}
-	}
-   }
+		subpath_lengths[i] = l;	
+    }
 	PLINT M = pls->phyxma;
 	PLINT N = pls->phyyma;
 	xmin = MAX(xmin, 0);
@@ -402,23 +415,26 @@ void pathFill(PLStream *pls) {
 	unsigned char *mem = (unsigned char *) pls->dev;
 	unsigned char *pixels = (char*) malloc(m * n);
 	memset(pixels, 0, m * n);
-	int *subpath_lengths = (int *) malloc(sizeof(*subpath_lengths) * pls->dev_npath);
-	plSTBTTFill_int(pls->dev_pathx[0], pls->dev_pathy[0], len, pls->dev_npath , pls->dev_pathnxy, pixels, m, n, xmin, ymin );
+	plSTBTTFill_short(xa, ya, len, pls->dev_npath, subpath_lengths, pixels, m, n, xmin, ymin );
+	free(subpath_lengths);
+	free(xa);
+	free(ya);
+//	plSTBTTFill_int(pls->dev_pathx[0], pls->dev_pathy[0], len, pls->dev_npath , pls->dev_pathnxy, pixels, m, n, xmin, ymin );
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
 	unsigned char b = pls->curcolor.b;
-	for (int j = 0, jref=N-ymax; j < n; ++j, ++jref) {
-		int ref = 3 * M * jref; 
-		for (int i = 0; i < m; ++i) {
-			if (pixels[(n-j-1) * m + i] > 127) {
-			int iref = xmin + i;
-			int ref2 = ref + 3 * iref;
-			mem[ref2++]=r;
-		    mem[ref2++]=g;
-		    mem[ref2]=b;
+		for (int j = 0, jref=N-ymax; j < n; ++j, ++jref) {
+			int ref = 3 * M * jref; 
+			for (int i = 0; i < m; ++i) {
+				if (pixels[(n-j-1) * m + i] > 127) {
+				int iref = xmin + i;
+				int ref2 = ref + 3 * iref;
+				mem[ref2++]=r;
+				mem[ref2++]=g;
+				mem[ref2  ]=b;
+				}
 			}
 		}
-	}
 	free(pixels);
 }
 void
@@ -428,7 +444,8 @@ plD_eop_mem( PLStream *pls )
     // to NULL here so it won't be freed when PLplot is closed.
     // (the user is responsible for freeing it when ready).
     //
-    pls->dev = NULL;
+    // NO as GDL wants to manage this by itself, including the meaning of a NULL pls->dev
+	pls->dev = NULL;
 }
 
 void

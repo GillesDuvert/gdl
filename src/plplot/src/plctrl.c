@@ -2361,6 +2361,7 @@ plRotPhy( PLINT orient, PLINT xmin, PLINT ymin, PLINT xmax, PLINT ymax,
     }
 }
 
+/*
 //--------------------------------------------------------------------------
 // plAllocDev()
 //
@@ -2384,6 +2385,7 @@ plAllocDev( PLStream *pls )
 
     return (PLDev *) pls->dev;
 }
+*/
 
 //--------------------------------------------------------------------------
 // plGinInit()

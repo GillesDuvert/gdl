@@ -257,8 +257,6 @@ wxPLDevBase* common_init( PLStream *pls) {
   pls->dev_dash = 0;
   pls->dev_clear = 1; // driver supports clear
 
-    pls->use_unicode = 1; // want unicode
-
   // initialize frame size and position
   if (pls->xlength <= 0 || pls->ylength <= 0)
     plspage(0.0, 0.0, (PLINT) (CANVAS_WIDTH * DEVICE_PIXELS_PER_IN),

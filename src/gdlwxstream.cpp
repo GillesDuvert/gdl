@@ -44,18 +44,13 @@ GDLWXStream::GDLWXStream( int width, int height)
   spage(0,0, width, height, 0, 0 ); //width and height have importance. dpi is best left to plplot.
 
 //init the driver...  
-//plplot switched from PLESC_DEVINIT to dev_data for wxwidgets around version 5.11
-//#define PLPLOT_TEST_VERSION_NUMBER PLPLOT_VERSION_MAJOR*1000+PLPLOT_VERSION_MINOR
-//#if (PLPLOT_TEST_VERSION_NUMBER > 5010)
-  this->sdevdata((void*)streamDC);
-//#endif
   init();
   
   // in our copy of the state of plplot trimmed for our useage, we used their old but fast driver.
   // we can then set the font to hershey or truetype. (the plplot new driver was buggy with hershey anyway)
   PLINT doFont = ((PLINT) SysVar::GetPFont() > -1) ? 1 : 0;
   pls->use_unicode=doFont;
-  
+  //pass streamDC
   plstream::cmd(PLESC_DEVINIT, (void*)streamDC );
    // no pause on win destruction
     plstream::spause( false);

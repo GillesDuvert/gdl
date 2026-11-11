@@ -2231,7 +2231,6 @@ c_plsmem( PLINT maxx, PLINT maxy, void *plotmem, void* zbuffer)
 	plsc->dev_zbuffering=1;
     plsc->dev_mem_alpha = 0;
     plP_setphy( 0, maxx, 0, maxy );
-	unsigned char* data=(unsigned char*)plotmem;
 	plsc->dev_data  = zbuffer;
 }
 
@@ -2244,7 +2243,6 @@ c_plsmema( PLINT maxx, PLINT maxy, void *plotmem, void* zbuffer)
 	plsc->dev_zbuffering=1;
     plsc->dev_mem_alpha = 1;
     plP_setphy( 0, maxx-1, 0, maxy-1 );
-	unsigned char* data=(unsigned char*)plotmem;
 	plsc->dev_data = zbuffer;
 }
 
@@ -2391,20 +2389,6 @@ void
 c_plsfnam( PLCHAR_VECTOR fnam )
 {
     plP_sfnam( plsc, fnam );
-}
-
-// Set the pointer to the data used in driver initialisation
-
-// N.B. Currently used only by the wxwidgets device driver and
-// associated binding.  This function might be used for other device drivers
-// later on whether written in c++ or c.  But this function is not part of the
-// common API and should not be propagated to any binding other than
-// c++.
-
-void
-plsdevdata( void *data )
-{
-    plsc->dev_data = data;
 }
 
 // Set the pause (on end-of-page) status

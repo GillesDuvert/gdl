@@ -182,8 +182,6 @@ ps_init( PLStream *pls )
     pxlx = YPSSIZE / LPAGE_X;
     pxly = XPSSIZE / LPAGE_Y;
 
-	pls->use_unicode = 1;                // want unicode
-
     pls->dev_fill0 = 1;         // Can do solid fills
 
 

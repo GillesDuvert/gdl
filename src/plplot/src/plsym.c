@@ -49,7 +49,7 @@
 #include "hershey_mapping.h"
 // our rasterizer used: the stbtt one, version 1 (2 would be too much ?)
 #define STB_TRUETYPE_IMPLEMENTATION 
-#define STBTT_RASTERIZER_VERSION 1
+#define STBTT_RASTERIZER_VERSION 2
 #include "stb_truetype.h"
 
 extern const char* findFontPath(const char* name);
@@ -486,14 +486,15 @@ redo:				if (plsc->use_unicode) {
 */
 					stbtt_vertex *vertices;
 					int nvecs = stbtt_GetGlyphShape(ttfVectors[ifont], glyph, &vertices);
-					if (plsc->dev_alt_unicode) {
-					plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*=charHeightCorr[ifont],
-							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width, ttfVectors[ifont]->userdata);
-					} else {
-					plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*charHeightCorr[ifont],
-							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+					if (nvecs > 0) {
+						if (plsc->dev_alt_unicode) {
+						plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*=charHeightCorr[ifont],
+								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width, ttfVectors[ifont]->userdata);
+						} else {
+						plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*charHeightCorr[ifont],
+								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+						}
 					}
-
 					stbtt_FreeShape(ttfVectors[ifont], vertices);
 				} else {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
@@ -1142,7 +1143,10 @@ void c_ttFontLoad(const char* fontName) {
         printf("loading of %s failed.\n",fontName);
 		return;
     }
-	if (n == MAXTTFONTS) n=MAXTTFONTS-1;
+	if (n == MAXTTFONTS) {
+		n=MAXTTFONTS-1;
+		free(ttfVectors[n]);
+	}
     ttfVectors[n]=info;
 	plsc->ttFontIndex=n;
 	plsc->ttFontName=fontName;
@@ -1152,7 +1156,9 @@ void c_ttFontLoad(const char* fontName) {
 	//the height of the “average” character (for IDL it is determined by the width of the rectangle?)
 	float averheight = (float) (y1 - y0);
 	//The aspect ratio of the “average” character remains fixed; each character is then scaled so that its width is the value of X_CH_SIZE.
+/*
 	float aspectratiooffont = averheight / (float) (x1 - x0);
+*/
 	charHeightCorr[n] =  stbtt_ScaleForPixelHeight(info, 32); // 4 pixels // 4. / averheight; //value found experimentally (?)
 	int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(info, &ascent, &descent, &lineGap);

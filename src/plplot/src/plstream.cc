@@ -864,15 +864,6 @@ void plstream::sfnam( const char *fnam )
     plsfnam( fnam );
 }
 
-// Set the pointer to the data used in driver initialisation
-
-void plstream::sdevdata( void *data )
-{
-    set_stream();
-
-    plsdevdata( data );
-}
-
 // Setup a user-provided custom labeling function
 
 void plstream::slabelfunc( PLLABEL_FUNC_callback label_func, PLPointer label_data )

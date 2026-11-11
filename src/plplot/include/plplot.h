@@ -2069,17 +2069,6 @@ plGetCursor( PLGraphicsIn *gin );
 PLDLLIMPEXP PLINT
 plTranslateCursor( PLGraphicsIn *gin );
 
-// Set the pointer to the data used in driver initialisation
-
-// N.B. Currently used only by the wxwidgets device driver and
-// associated binding.  This function might be used for other device drivers
-// later on whether written in c++ or c.  But this function is not part of the
-// common API and should not be propagated to any binding other than
-// c++.
-
-PLDLLIMPEXP void
-plsdevdata( PLPointer data );
-
 #ifdef __cplusplus
 }
 #endif

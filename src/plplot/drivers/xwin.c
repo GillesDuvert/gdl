@@ -265,7 +265,7 @@ plD_init_xw( PLStream *pls )
     pls->dev_fill1   = 0;       // Can't handle pattern fills
     pls->dev_fastimg = 1;       // is a fast image device
     pls->dev_xor     = 1;       // device support xor mode
-    pls->dev_alt_unicode  = 1;      // use alternate filling for unicode fonts
+    pls->dev_alt_unicode  = 0;      //do not use alternate filling for unicode fonts
 #ifndef PL_USE_PTHREADS_XWIN
     usepthreads = 0;
 #endif
@@ -919,6 +919,10 @@ FillPolygonCmd( PLStream *pls )
     }
 
 // Fill polygons
+	
+	XGCValues currentgcValues;
+	XGetGCValues(xwd->display, dev->gc, GCFillRule, &currentgcValues);
+	XSetFillRule(xwd->display, dev->gc, EvenOddRule);
 
     if ( dev->write_to_window )
         XFillPolygon( xwd->display, dev->window, dev->gc,
@@ -928,23 +932,7 @@ FillPolygonCmd( PLStream *pls )
         XFillPolygon( xwd->display, dev->pixmap, dev->gc,
             pts, pls->dev_npts, Complex, CoordModeOrigin );
 
-// If in debug mode, draw outline of boxes being filled
-
-#ifdef DEBUG
-    if ( pls->debug )
-    {
-        XSetForeground( xwd->display, dev->gc, xwd->fgcolor.pixel );
-        if ( dev->write_to_window )
-            XDrawLines( xwd->display, dev->window, dev->gc, pts, pls->dev_npts,
-                CoordModeOrigin );
-
-        if ( dev->write_to_pixmap )
-            XDrawLines( xwd->display, dev->pixmap, dev->gc, pts, pls->dev_npts,
-                CoordModeOrigin );
-
-        XSetForeground( xwd->display, dev->gc, dev->curcolor.pixel );
-    }
-#endif
+	XSetFillRule(xwd->display, dev->gc, currentgcValues.fill_rule);
 
     if ( pls->dev_npts > PL_MAXPOLY )
     {
@@ -966,9 +954,17 @@ DoFillPath(PLStream *pls) {
 		pts = _pts;
 	}
 	int k = 0;
+	
+	XGCValues currentgcValues;
+	XGetGCValues(xwd->display, dev->gc, GCFillRule, &currentgcValues);
+	XSetFillRule(xwd->display, dev->gc, WindingRule);
+	
 	for (int i = 0; i < pls->dev_npath; ++i) {
 		PLINT* x = pls->dev_pathx[i];
 		PLINT* y = pls->dev_pathy[i];
+		pts[k].x = (short) (dev->xscale * x[0]);
+		pts[k++].y = (short) (dev->yscale * (dev->ylen - y[0]));
+		
 		for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
 			switch (x[j]) {
 				case -1: //line
@@ -995,7 +991,6 @@ DoFillPath(PLStream *pls) {
 			}
 		}
 	}
-
 	// Fill polygons
 	if (dev->write_to_window)
 		XFillPolygon(xwd->display, dev->window, dev->gc,
@@ -1004,6 +999,8 @@ DoFillPath(PLStream *pls) {
 	if (dev->write_to_pixmap)
 		XFillPolygon(xwd->display, dev->pixmap, dev->gc,
 			pts, k, Complex, CoordModeOrigin);
+	
+	XSetFillRule(xwd->display, dev->gc, currentgcValues.fill_rule);
 
 	if (pls->dev_npts > PL_MAXPOLY) {
 		free(pts);

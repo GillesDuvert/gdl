@@ -207,7 +207,7 @@ c_plfill_multi(PLINT npoly, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem
 		PLINT** ypoly = (PLINT**) malloc(npoly * sizeof (PLINT*));
 		PLINT* pathsize = (PLINT*) malloc(npoly * sizeof (PLINT));
 		for (int ipoly = 0; ipoly < npoly; ++ipoly) {
-			pathsize[ipoly]=2 * nelem[ipoly]-1;
+			pathsize[ipoly]=2 * (nelem[ipoly]+1) -1; //[val, nelem[ipoly)-1 x [-1, val] + [-1, val] for closing the path.
 			xpoly[ipoly]=(PLINT*) malloc(pathsize[ipoly] * sizeof (PLINT));
 			ypoly[ipoly]=(PLINT*) malloc(pathsize[ipoly] * sizeof (PLINT));
 			TRANSFORM(x[ipoly][0], y[ipoly][0], &xt, &yt);
@@ -222,19 +222,12 @@ c_plfill_multi(PLINT npoly, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem
 				ypoly[ipoly][k] = plP_wcpcy(yt);
 				k++;
 			}
-			/*
-
-					if (xpoly[0] != xpoly[n - 1] || ypoly[0] != ypoly[n - 1]) {
-						n++;
-						xpoly[n - 1] = xpoly[0];
-						ypoly[n - 1] = ypoly[0];
-					}
-			 */
-
-			/*
-					plP_plfclp(xpoly, ypoly, n, plsc->clpxmi, plsc->clpxma,
-							plsc->clpymi, plsc->clpyma, 
-			 */
+			//close path
+			xpoly[ipoly][k]=-1; //code
+			k++;
+			xpoly[ipoly][k] = xpoly[ipoly][0];
+			ypoly[ipoly][k] = ypoly[ipoly][0];
+			k++;
 		}
 		plP_pathfill(xpoly, ypoly, pathsize, npoly);
 

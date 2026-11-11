@@ -66,7 +66,7 @@ PLDLLIMPEXP void * plbuf_switch( PLStream *, void * );
 PLDLLIMPEXP void plbuf_restore( PLStream *, void * );
 
 void plFlushBuffer( PLStream *pls, PLBOOL restart, size_t amount );
-
+extern void purgeTrueTypeFontsData();
 #ifdef __cplusplus
 }
 #endif
