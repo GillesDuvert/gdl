@@ -325,7 +325,7 @@ polyline_fill_mem(PLStream *pls, short *xa, short *ya, PLINT len) {
 	memset(pixels, 0, m * n);
 	int *subpath_lengths = (int *) malloc(sizeof(*subpath_lengths) * 1);
 	subpath_lengths[0]=len;
-	plSTBTTFill_short(xa, ya, len, 1, subpath_lengths, pixels, m, n, xamin, yamin );
+	plSTBTTFill_short(xa, ya, len, 1, subpath_lengths, pixels, m, n, xamin, yamin, 1 ); //1:use EOFILL
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
 	unsigned char b = pls->curcolor.b;
@@ -415,7 +415,7 @@ void pathFill(PLStream *pls) {
 	unsigned char *mem = (unsigned char *) pls->dev;
 	unsigned char *pixels = (char*) malloc(m * n);
 	memset(pixels, 0, m * n);
-	plSTBTTFill_short(xa, ya, len, pls->dev_npath, subpath_lengths, pixels, m, n, xmin, ymin );
+	plSTBTTFill_short(xa, ya, len, pls->dev_npath, subpath_lengths, pixels, m, n, xmin, ymin, pls->dev_eofill ); //0: use zero-winding, 1:use EOFILL
 	free(subpath_lengths);
 	free(xa);
 	free(ya);

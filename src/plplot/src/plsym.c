@@ -49,7 +49,7 @@
 #include "hershey_mapping.h"
 // our rasterizer used: the stbtt one, version 1 (2 would be too much ?)
 #define STB_TRUETYPE_IMPLEMENTATION 
-#define STBTT_RASTERIZER_VERSION 2
+#define STBTT_RASTERIZER_VERSION 1
 #include "stb_truetype.h"
 
 extern const char* findFontPath(const char* name);
@@ -775,13 +775,13 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 }
 
 //--------------------------------------------------------------------------
-// plSTBTTFill_short() and plSTBTTFill_int()
+// plSTBTTFill_short()
 //
 // Fills a given TTF character using STBTT rastering (fills passed bitmap).
 //--------------------------------------------------------------------------
 
 void
-plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int *subpath_lengths, char* where, int m, int n, int offx, int offy) {
+plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int *subpath_lengths, char* where, int m, int n, int offx, int offy, int fillMode) {
 	if (len == 0) return;
 	stbtt__bitmap result;
 	result.h=n;
@@ -794,24 +794,7 @@ plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int *subpath
 		windings[i].x=xa[i];
 		windings[i].y=ya[i];
 	}
-    stbtt__rasterize(&result, windings, subpath_lengths, subpath_count, 1,1,0,0,offx,offy,0, userdata);
-	STBTT_free(windings, userdata);
-}
-void
-plSTBTTFill_int(PLINT *xa, PLINT *ya, int len, int subpath_count, int *subpath_lengths, char* where, int m, int n, int offx, int offy) {
-	if (len == 0) return;
-	stbtt__bitmap result;
-	result.h=n;
-	result.stride=m;
-	result.w=m;
-	result.pixels=where;
-	void *userdata;
-	stbtt__point *windings = (stbtt__point *)malloc(len*sizeof(stbtt__point)) ;
-	for (int i = 0; i < len; ++i) {
-		windings[i].x=xa[i];
-		windings[i].y=ya[i];
-	}
-    stbtt__rasterize(&result, windings, subpath_lengths, subpath_count, 1,1,0,0,offx,offy,0, userdata);
+    stbtt__rasterize(&result, windings, subpath_lengths, subpath_count, 1,1,0,0,offx,offy,0, fillMode, userdata);
 	STBTT_free(windings, userdata);
 }
 

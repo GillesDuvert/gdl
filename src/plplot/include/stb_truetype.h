@@ -2770,7 +2770,7 @@ static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, i
 // are wrong, or if the user supplies a too-small bitmap
 static void stbtt__fill_active_edges(unsigned char *scanline, int len, stbtt__active_edge *e, int max_weight)
 {
-   // non-zero winding fill
+
    int x0=0, w=0;
 
    while (e) {
@@ -2810,8 +2810,9 @@ static void stbtt__fill_active_edges(unsigned char *scanline, int len, stbtt__ac
    }
 }
 
-static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)
+static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, int fillMode, void *userdata)
 {
+   int dir=0;
    stbtt__hheap hh = { 0, 0, 0 };
    stbtt__active_edge *active = NULL;
    int y,j=0;
@@ -2893,10 +2894,19 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
             }
             ++e;
          }
-
          // now process all active edges in XOR fashion
-         if (active)
+         if (active) { 
+			 // defaults to non-zero winding fill, set eofill here.
+			if (fillMode == 1) { //EOFILL
+				dir = -1;
+				stbtt__active_edge *e=active;
+				while (e) {
+					e->direction = dir; dir *= -1;
+					e=e->next;
+				}
+			}
             stbtt__fill_active_edges(scanline, result->w, active, max_weight);
+		 }
 
          ++y;
       }
@@ -3113,7 +3123,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
 }
 
 // directly AA rasterize edges w/o supersampling
-static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, void *userdata)
+static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e, int n, int vsubsample, int off_x, int off_y, int fillMode, void *userdata)
 {
    stbtt__hheap hh = { 0, 0, 0 };
    stbtt__active_edge *active = NULL;
@@ -3306,7 +3316,7 @@ typedef struct
    float x,y;
 } stbtt__point;
 
-static void stbtt__rasterize(stbtt__bitmap *result, stbtt__point *pts, int *wcount, int windings, float scale_x, float scale_y, float shift_x, float shift_y, int off_x, int off_y, int invert, void *userdata)
+static void stbtt__rasterize(stbtt__bitmap *result, stbtt__point *pts, int *wcount, int windings, float scale_x, float scale_y, float shift_x, float shift_y, int off_x, int off_y, int invert, int fillMode, void *userdata)
 {
    float y_scale_inv = invert ? -scale_y : scale_y;
    stbtt__edge *e;
@@ -3358,7 +3368,7 @@ static void stbtt__rasterize(stbtt__bitmap *result, stbtt__point *pts, int *wcou
    stbtt__sort_edges(e, n);
 
    // now, traverse the scanlines and find the intersections on each scanline, use xor winding rule
-   stbtt__rasterize_sorted_edges(result, e, n, vsubsample, off_x, off_y, userdata);
+   stbtt__rasterize_sorted_edges(result, e, n, vsubsample, off_x, off_y, fillMode, userdata);
 
    STBTT_free(e, userdata);
 }
@@ -3518,7 +3528,7 @@ STBTT_DEF void stbtt_Rasterize(stbtt__bitmap *result, float flatness_in_pixels, 
    int *winding_lengths   = NULL;
    stbtt__point *windings = stbtt_FlattenCurves(vertices, num_verts, flatness_in_pixels / scale, &winding_lengths, &winding_count, userdata);
    if (windings) {
-      stbtt__rasterize(result, windings, winding_lengths, winding_count, scale_x, scale_y, shift_x, shift_y, x_off, y_off, invert, userdata);
+      stbtt__rasterize(result, windings, winding_lengths, winding_count, scale_x, scale_y, shift_x, shift_y, x_off, y_off, invert, 0, userdata);
       STBTT_free(winding_lengths, userdata);
       STBTT_free(windings, userdata);
    }
