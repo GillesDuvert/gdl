@@ -558,8 +558,11 @@ plstik( PLFLT mx, PLFLT my, PLFLT dx, PLFLT dy );
 PLFLT
 plstr( PLCHAR_VECTOR string , PLINT length_only, PLINT base, PLFLT just, PLFLT * const xform, PLINT x, PLINT y, PLINT refx, PLINT refy);
 
+// make a mask for regions to be filled 
+unsigned char* pathFillMask(PLStream *pls, PLINT M, PLINT N, PLINT *pm, PLINT *pn, PLINT *xoff, PLINT *yoff);
+
 //
-void plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int* subpath_lengths, char* where, int n, int m, int offx, int offy, int fillMode);
+void plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int* subpath_lengths, char* where, int n, int m, float xscale, float yscale, int offx, int offy, int fillMode);
 
 // Draws a tick parallel to x.
 

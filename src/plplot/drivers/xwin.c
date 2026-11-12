@@ -690,7 +690,7 @@ plD_state_xw( PLStream *pls, PLINT op )
         if ( xwd->ncol1 < 2 )
             break;
 
-        icol1 = ( pls->icol1 * ( xwd->ncol1 - 1 ) ) / ( pls->ncol1 - 1 );
+        icol1 = ( pls->icol1 * ( xwd->ncol1) / ( pls->ncol1 ));
         if ( xwd->color )
             dev->curcolor = xwd->cmap1[icol1];
         else
@@ -939,72 +939,73 @@ FillPolygonCmd( PLStream *pls )
         free( pts );
     }
 }
+//--------------------------------------------------------------------------
+// GetImageErrorHandler()
+//
+// Error handler used in XGetImage() to catch errors when pixmap or window
+// are not completely viewable.
+//--------------------------------------------------------------------------
+
+static int
+GetImageErrorHandler(Display *display, XErrorEvent *error) {
+	if (error->error_code != BadMatch) {
+		char buffer[256];
+		XGetErrorText(display, error->error_code, buffer, 256);
+		fprintf(stderr, "xwin: Error in XGetImage: %s.\n", buffer);
+	}
+	return 1;
+}
 
 static void
 DoFillPath(PLStream *pls) {
-	XwDev *dev = (XwDev *) pls->dev;
-	XwDisplay *xwd = (XwDisplay *) dev->xwd;
-	XPoint _pts[PL_MAXPOLY];
-	XPoint *pts;
-	int i;
+	PLINT nx, ny, xoff, yoff;
+  XwDev *dev = (XwDev *) pls->dev;
+  XwDisplay *xwd = (XwDisplay *) dev->xwd;
+  XImage *ximg = NULL;
+  XWindowAttributes win_attr;
 
-	if (pls->dev_npts > PL_MAXPOLY) {
-		pts = (XPoint *) malloc(sizeof ( XPoint) * (size_t) (pls->dev_npts));
-	} else {
-		pts = _pts;
-	}
-	int k = 0;
-	
-	XGCValues currentgcValues;
-	XGetGCValues(xwd->display, dev->gc, GCFillRule, &currentgcValues);
-	XSetFillRule(xwd->display, dev->gc, WindingRule);
-	
-	for (int i = 0; i < pls->dev_npath; ++i) {
-		PLINT* x = pls->dev_pathx[i];
-		PLINT* y = pls->dev_pathy[i];
-		pts[k].x = (short) (dev->xscale * x[0]);
-		pts[k++].y = (short) (dev->yscale * (dev->ylen - y[0]));
-		
-		for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
-			switch (x[j]) {
-				case -1: //line
-					pts[k].x = (short) (dev->xscale * x[j + 1]);
-					pts[k].y = (short) (dev->yscale * (dev->ylen - y[j + 1]));
-					j++;
-					k++;
-					break;
-				case -2:
-					pts[k].x = (short) (dev->xscale * x[j + 1]);
-					pts[k].y = (short) (dev->yscale * (dev->ylen - y[j + 1]));
-					j += 2;
-					k++;
-					break;
-				case -3:
-					pts[k].x = (short) (dev->xscale * x[j + 1]);
-					pts[k].y = (short) (dev->yscale * (dev->ylen - y[j + 1]));
-					j += 3;
-					k++;
-					break;
-					break;
-				default:
-					printf("should not happen in FillPolygons(%d), please report!\n", x[j]);
-			}
+  /* query the window's attributes. */
+  Status rc = XGetWindowAttributes(xwd->display, dev->window, &win_attr);
+  PLINT N = win_attr.height;
+  PLINT M = win_attr.width;
+
+	unsigned char* mask = pathFillMask(pls, M, N, &nx, &ny, &xoff, &yoff); //will rescale virtual device coords in [M,N] range
+	if (mask == NULL) return;
+
+    int (*oldErrorHandler)(Display*, XErrorEvent*);
+    oldErrorHandler = XSetErrorHandler(GetImageErrorHandler);
+    if (dev->write_to_pixmap==1) {
+      ximg = XGetImage(xwd->display, dev->pixmap, xoff,  N-ny-yoff, nx, ny, AllPlanes, ZPixmap);
+    } else {
+      ximg = XGetImage( xwd->display, dev->window, xoff, N-ny-yoff, nx, ny, AllPlanes, ZPixmap);
+    }
+    XSetErrorHandler(oldErrorHandler);
+    
+    if (ximg == NULL) return;
+    if (ximg->bits_per_pixel != 32) return;
+
+    XColor    curcolor;
+	// color inside mask
+	if (xwd->color)
+		curcolor = dev->curcolor;
+	else
+		curcolor = xwd->fgcolor;
+
+	for (int j=0; j<ny; ++j) {
+		for (int i=0; i<nx; ++i) {
+			if (mask[(ny-j-1)*nx+i]>0) XPutPixel( ximg, i, j, curcolor.pixel);
 		}
 	}
-	// Fill polygons
-	if (dev->write_to_window)
-		XFillPolygon(xwd->display, dev->window, dev->gc,
-			pts, k, Complex, CoordModeOrigin);
+  if (dev->write_to_pixmap == 1)
+    XPutImage(xwd->display, dev->pixmap, dev->gc, ximg, 0, 0,
+    xoff, dev->height-yoff-ny, nx, ny);
 
-	if (dev->write_to_pixmap)
-		XFillPolygon(xwd->display, dev->pixmap, dev->gc,
-			pts, k, Complex, CoordModeOrigin);
-	
-	XSetFillRule(xwd->display, dev->gc, currentgcValues.fill_rule);
+  if (dev->write_to_window==1) //always write
+    XPutImage(xwd->display, dev->window, dev->gc, ximg, 0, 0,
+    xoff, dev->height-yoff-ny, nx, ny);
 
-	if (pls->dev_npts > PL_MAXPOLY) {
-		free(pts);
-	}
+    XDestroyImage( ximg );
+	free(mask);
 }
 
 //--------------------------------------------------------------------------
@@ -3472,24 +3473,6 @@ SaveColormap( Display *display, Colormap colormap )
 }
 #endif
 
-//--------------------------------------------------------------------------
-// GetImageErrorHandler()
-//
-// Error handler used in XGetImage() to catch errors when pixmap or window
-// are not completely viewable.
-//--------------------------------------------------------------------------
-
-static int
-GetImageErrorHandler( Display *display, XErrorEvent *error )
-{
-    if ( error->error_code != BadMatch )
-    {
-        char buffer[256];
-        XGetErrorText( display, error->error_code, buffer, 256 );
-        fprintf( stderr, "xwin: Error in XGetImage: %s.\n", buffer );
-    }
-    return 1;
-}
 
 //--------------------------------------------------------------------------
 // DrawImage()

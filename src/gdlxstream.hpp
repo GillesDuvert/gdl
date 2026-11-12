@@ -49,8 +49,6 @@ public:
     PLINT r[ctSize], g[ctSize], b[ctSize];
     GDLCT* myCT = GraphicsDevice::GetGUIDevice()->GetCT();
     myCT->Get(r, g, b);
-    SetColorMap0(r, g, b, ctSize); //set colormap 0 to 256 values
-    SetColorMap1(r, g, b, ctSize); //set colormap 1 to 256 values
 
 
     // Do not init colors --- we handle colors ourseves, very much faster!
@@ -63,6 +61,8 @@ public:
     FindTerminalWindow(); //to pro
     //all the options must be passed BEFORE INIT=plinit.
     init(); //creates the X11 window.
+		SetColorMap0(r, g, b, ctSize); //set colormap 0 to 256 values
+		SetColorMap1(r, g, b, ctSize); //set colormap 1 to 256 values
 	PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
 	pls->use_unicode=doFont;
     PostInit(); //finish setting different things, including giving back focus to terminal

@@ -781,7 +781,7 @@ plttf2(stbtt_vertex *vects, int descent, int len, PLFLT * const xform,
 //--------------------------------------------------------------------------
 
 void
-plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int *subpath_lengths, char* where, int m, int n, int offx, int offy, int fillMode) {
+plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int *subpath_lengths, char* where, int m, int n, float scalex, float scaley, int offx, int offy, int fillMode) {
 	if (len == 0) return;
 	stbtt__bitmap result;
 	result.h=n;
@@ -794,7 +794,7 @@ plSTBTTFill_short(short *xa, short *ya, int len, int subpath_count, int *subpath
 		windings[i].x=xa[i];
 		windings[i].y=ya[i];
 	}
-    stbtt__rasterize(&result, windings, subpath_lengths, subpath_count, 1,1,0,0,offx,offy,0, fillMode, userdata);
+    stbtt__rasterize(&result, windings, subpath_lengths, subpath_count, scalex,scaley,0,0,offx,offy,0, fillMode, userdata);
 	STBTT_free(windings, userdata);
 }
 

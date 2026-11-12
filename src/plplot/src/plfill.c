@@ -23,6 +23,70 @@
 
 #include "plplotP.h"
 
+unsigned char* pathFillMask(PLStream *pls, PLINT M, PLINT N, PLINT *pm, PLINT *pn, PLINT *xoff, PLINT *yoff) {
+	// compute scaling
+	float phyxmax=pls->phyxma;
+	float phyymax=pls->phyyma;
+	float scalex=(float)(M)/phyxmax;
+	float scaley=(float)(N)/phyymax;
+	int len = 0;
+	for (int i = 0; i < pls->dev_npath; ++i) len += pls->dev_pathnxy[i]; // 
+	//Need some preparation: put all pathx in a row, mark the subpath lengths 
+	int *subpath_lengths = (int *) malloc(sizeof (*subpath_lengths) * pls->dev_npath);
+	short *xa = (short*) malloc(sizeof (short) * len);
+	short *ya = (short*) malloc(sizeof (short) * len);
+	xa[0] = pls->dev_pathx[0][0];
+	PLINT xmin = xa[0];
+	PLINT xmax = xmin;
+	ya[0] = pls->dev_pathy[0][0];
+	PLINT ymin = ya[0];
+	PLINT ymax = ymin;
+	int k = 0;
+	for (int i = 0; i < pls->dev_npath; ++i) {
+		PLINT* x = pls->dev_pathx[i];
+		PLINT* y = pls->dev_pathy[i];
+		int l = 0;
+		for (int j = 0; j < pls->dev_pathnxy[i]; ++j) {
+			if (x[j] >= 0) {
+				short sx = x[j];
+				short sy = y[j];
+				xa[k] = sx;
+				ya[k] = sy;
+				xmin = MIN(xmin, sx);
+				xmax = MAX(xmax, sx);
+				ymin = MIN(ymin, sy);
+				ymax = MAX(ymax, sy);
+				k++;
+				l++;
+			}
+		}
+		subpath_lengths[i] = l;
+	}
+	xmax*=scalex;
+	xmin*=scalex;
+	ymax*=scaley;
+	ymin*=scaley;
+	PLINT m = xmax - xmin + 1;
+	PLINT n = ymax - ymin + 1;
+	if (n <= 2 || m <= 2) return NULL;
+	unsigned char *pixels = (char*) malloc(m * n);
+	memset(pixels, 0, m * n);
+/*
+	printf("vignette %d x %d @ %d,%d\n", m, n, xmin, ymin);
+*/
+	plSTBTTFill_short(xa, ya, len, pls->dev_npath, subpath_lengths, pixels, m, n, scalex, scaley, xmin, ymin, pls->dev_eofill); //0: use zero-winding, 1:use EOFILL
+	free(subpath_lengths);
+	free(xa);
+	free(ya);
+	*xoff = xmin;
+	*yoff = ymin;
+	*pm = m;
+	*pn = n;
+	return pixels;
+}
+
+
+
 #define INSIDE( ix, iy )    ( BETW( ix, xmin, xmax ) && BETW( iy, ymin, ymax ) )
 
 #define DTOR       ( PI / 180. )

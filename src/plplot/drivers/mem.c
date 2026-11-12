@@ -325,7 +325,9 @@ polyline_fill_mem(PLStream *pls, short *xa, short *ya, PLINT len) {
 	memset(pixels, 0, m * n);
 	int *subpath_lengths = (int *) malloc(sizeof(*subpath_lengths) * 1);
 	subpath_lengths[0]=len;
-	plSTBTTFill_short(xa, ya, len, 1, subpath_lengths, pixels, m, n, xamin, yamin, 1 ); //1:use EOFILL
+	float scalex=1; //for mem this is 1
+	float scaley=1; //for mem this is 1
+	plSTBTTFill_short(xa, ya, len, 1, subpath_lengths, pixels, m, n, scalex, scaley, xamin, yamin, 1 ); //1:use EOFILL
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
 	unsigned char b = pls->curcolor.b;
@@ -370,68 +372,13 @@ static void path_fill_mem( PLStream *pls) {
   }
   pathFill(pls);
 }
-unsigned char* pathFillMask(PLStream *pls, PLINT *pm, PLINT *pn, PLINT *xoff, PLINT *yoff ) {
-	int len = 0;
-	for (int i = 0; i < pls->dev_npath; ++i) len += pls->dev_pathnxy[i]; // 
-	//Need some preparation: put all pathx in a row, mark the subpath lengths 
-	int *subpath_lengths = (int *) malloc(sizeof (*subpath_lengths) * pls->dev_npath);
-	short *xa = (short*) malloc(sizeof (short) * len);
-	short *ya = (short*) malloc(sizeof (short) * len);
-	xa[0] = pls->dev_pathx[0][0];
-	PLINT xmin = xa[0];
-	PLINT xmax = xmin;
-	ya[0] = pls->dev_pathy[0][0];
-	PLINT ymin = ya[0];
-	PLINT ymax = ymin;
-	int k = 0;
-	for (int i = 0; i < pls->dev_npath; ++i) {
-		PLINT* x = pls->dev_pathx[i];
-		PLINT* y = pls->dev_pathy[i];
-		int l = 0;
-		for (int j = 0; j < pls->dev_pathnxy[i]; ++j) {
-			if (x[j] >= 0) {
-				short sx = x[j];
-				short sy = y[j];
-				xa[k] = sx;
-				ya[k] = sy;
-				xmin = MIN(xmin, sx);
-				xmax = MAX(xmax, sx);
-				ymin = MIN(ymin, sy);
-				ymax = MAX(ymax, sy);
-				k++;
-				l++;
-			}
-		}
-		subpath_lengths[i] = l;
-	}
-	PLINT M = pls->phyxma;
-	PLINT N = pls->phyyma;
-	xmin = MAX(xmin, 0);
-	ymin = MAX(ymin, 0);
-	xmax = MIN(xmax, M);
-	ymax = MIN(ymax, N);
-	PLINT m = xmax - xmin + 1;
-	PLINT n = ymax - ymin + 1;
-	if (n <= 2 || m <= 2) return NULL;
-	unsigned char *pixels = (char*) malloc(m * n);
-	memset(pixels, 0, m * n);
-	plSTBTTFill_short(xa, ya, len, pls->dev_npath, subpath_lengths, pixels, m, n, xmin, ymin, pls->dev_eofill); //0: use zero-winding, 1:use EOFILL
-	free(subpath_lengths);
-	free(xa);
-	free(ya);
-	*xoff = xmin;
-	*yoff = ymin;
-	*pm = m;
-	*pn = n;
-	return pixels;
-}
 
 void pathFill(PLStream *pls) {
 	PLINT M = pls->phyxma;
 	PLINT N = pls->phyyma;
 	PLINT m, n, xoff, yoff;
 	unsigned char *mem = (unsigned char *) pls->dev;
-	unsigned char* mask = pathFillMask(pls, &m, &n, &xoff, &yoff);
+	unsigned char* mask = pathFillMask(pls, M, N, &m, &n, &xoff, &yoff);
 	if (mask == NULL) return;
 	unsigned char r = pls->curcolor.r;
 	unsigned char g = pls->curcolor.g;
