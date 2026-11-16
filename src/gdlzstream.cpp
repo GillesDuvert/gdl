@@ -49,12 +49,6 @@ void GDLZStream::Init()
    pls->use_unicode=doFont;
 }
 
-void GDLZStream::GetGeometry(long& xSize, long& ySize)
-{
-  xSize=pls->phyxma;
-  ySize=pls->phyyma;
-}
-  
 unsigned long GDLZStream::GetWindowDepth(){
    GraphicsDevice* actDevice=GraphicsDevice::GetDevice();
    return actDevice->GetPixelDepth(); 
