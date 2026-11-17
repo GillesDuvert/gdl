@@ -2366,26 +2366,6 @@ plsfile( FILE *file )
     plsc->OutFile = file;
 }
 
-// Get the (current) output file name.  Must be preallocated to >=80 bytes
-// Beyond that, I truncate it.  You have been warned.
-
-void
-c_plgfnam( char *fnam )
-{
-    if ( fnam == NULL )
-    {
-        plabort( "filename string must be preallocated to >=80 bytes" );
-        return;
-    }
-
-    *fnam = '\0';
-    if ( plsc->FileName != NULL )
-    {
-        strncpy( fnam, plsc->FileName, 79 );
-        fnam[79] = '\0';
-    }
-}
-
 // Set the output file name.
 
 void
@@ -2426,35 +2406,6 @@ plP_gtimefmt()
     return (PLCHAR_VECTOR) plsc->timefmt;
 }
 
-//
-// Set the escape character for text strings.
-// From C you can pass as a character, from Fortran it needs to be the decimal
-// ASCII value.  Only selected characters are allowed to prevent the user from
-// shooting himself in the foot (a '\' isn't allowed since it conflicts with
-// C's use of backslash as a character escape).
-//
-
-void
-c_plsesc( char esc )
-{
-    switch ( esc )
-    {
-    case '!':                   // ASCII 33
-    case '#':                   // ASCII 35
-    case '$':                   // ASCII 36
-    case '%':                   // ASCII 37
-    case '&':                   // ASCII 38
-    case '*':                   // ASCII 42
-    case '@':                   // ASCII 64
-    case '^':                   // ASCII 94
-    case '~':                   // ASCII 126
-        plsc->esc = esc;
-        break;
-
-    default:
-        plwarn( "plsesc: Invalid escape character, ignoring." );
-    }
-}
 
 // Get the current library version number
 // Note: you MUST have allocated space for this (80 characters is safe)

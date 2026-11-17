@@ -846,15 +846,6 @@ void plstream::sdiplz( PLFLT xmin, PLFLT ymin, PLFLT xmax, PLFLT ymax )
     plsdiplz( xmin, ymin, xmax, ymax );
 }
 
-// Set the escape character for text strings.
-
-void plstream::sesc( char esc )
-{
-    set_stream();
-
-    plsesc( esc );
-}
-
 // Set the output file name.
 
 void plstream::sfnam( const char *fnam )

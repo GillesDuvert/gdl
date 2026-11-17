@@ -691,7 +691,6 @@ typedef struct
 #define    plgdiplt                 c_plgdiplt
 #define    plgdrawmode              c_plgdrawmode
 #define    plgfam                   c_plgfam
-#define    plgfnam                  c_plgfnam
 #define    ttFontLoad               c_ttFontLoad
 #define    ttFontSet                c_ttFontSet
 #define    plglevel                 c_plglevel
@@ -756,7 +755,6 @@ typedef struct
 #define    plsdiplt                 c_plsdiplt
 #define    plsdiplz                 c_plsdiplz
 #define    plseed                   c_plseed
-#define    plsesc                   c_plsesc
 #define    plsetopt                 c_plsetopt
 #define    plsfam                   c_plsfam
 #define    plsfnam                  c_plsfnam
@@ -1047,16 +1045,6 @@ c_plgdiori( PLFLT_NC_SCALAR p_rot );
 
 PLDLLIMPEXP void
 c_plgdiplt( PLFLT_NC_SCALAR p_xmin, PLFLT_NC_SCALAR p_ymin, PLFLT_NC_SCALAR p_xmax, PLFLT_NC_SCALAR p_ymax );
-
-// Get family file parameters
-
-PLDLLIMPEXP void
-c_plgfam( PLINT_NC_SCALAR p_fam, PLINT_NC_SCALAR p_num, PLINT_NC_SCALAR p_bmax );
-
-// Get the (current) output file name.  Must be preallocated to >80 bytes
-
-PLDLLIMPEXP void
-c_plgfnam( PLCHAR_NC_VECTOR fnam );
 
 // load a truetype font
 PLDLLIMPEXP void
@@ -1428,11 +1416,6 @@ c_plsdiplz( PLFLT xmin, PLFLT ymin, PLFLT xmax, PLFLT ymax );
 
 PLDLLIMPEXP void
 c_plseed( unsigned int seed );
-
-// Set the escape character for text strings.
-
-PLDLLIMPEXP void
-c_plsesc( char esc );
 
 // Set family file parameters
 
