@@ -51,7 +51,7 @@
 ; (at your option) any later version.                                   
 ;-
 
-pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, charsize=chrsz
+pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, _extra=ex
   
     on_error, 2
   
@@ -89,14 +89,15 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, charsize=ch
 
   ; plotting grid and title
   plot,  [h_x, v_x], [h_y+offin, v_y+offin],/xstyle,/ystyle, $
-     title='Font ' + strtrim(string(num), 2) + ', ' + name, $
+     title='!3Font ' + strtrim(string(num), 2) + ', ' + name, $ ; !3 to insure we start with Roman
      xrange=[-0.5, base-0.5], $
      yrange=[base * ((fin +offin + 1) / base) -base/2, beg + offin - base/2], $
      yticks=n_hor-1, $
      xticks=base, $
      ytickformat='(I8)',$
-     xtitle='char mod ' + strtrim(string(base), 2), $
-     ytitle=strtrim(string(base), 2) + ' * (char / ' + strtrim(string(base), 2) + ')'
+;     xtitle='!3char mod ' + strtrim(string(base), 2), $
+;         ytitle='!3'+strtrim(string(base), 2) + ' * (char / ' + strtrim(string(base), 2) + ')',
+  xticklayout=1, yticklayout=1,_extra=ex
   ; conversion for characters
   ; size of a character in user coord
     correction=convert_coord(!D.X_CH_SIZE*chrsz,!D.Y_CH_SIZE*chrsz,0,/DEVICE,/TO_NORM)
@@ -109,11 +110,11 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, charsize=ch
      DEVICE, SET_FONT=num, /TT_FONT
      for i = offin, offin+255 do begin
         c=STRING(i, FORMAT='("!Z(",Z4.4,")")')
-        xyouts, (i mod base), base * (i / base) +sz/2 , c,CHARSIZE=chrsz
+        xyouts, (i mod base), base * (i / base) +sz/2 , c,_extra=ex
      end
   endif else begin
     for c = beg, fin do $
-      xyouts, (c mod base), base * (c / base) +sz/2, '!' + strtrim(string(num), 2) + string(byte(c)),CHARSIZE=chrsz
+      xyouts, (c mod base), base * (c / base) +sz/2, '!' + strtrim(string(num), 2) + string(byte(c)),_extra=ex
   endelse
   ; reset
   !P.FONT=oldp
