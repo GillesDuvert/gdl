@@ -630,7 +630,6 @@ public:
   void ssub( PLINT nx, PLINT ny, PLINT nz=1);
   void adv(PLINT page);
   void getSubpageRegion(PLFLT *sxmin, PLFLT *symin, PLFLT *sxmax, PLFLT *symax, PLFLT *zmin=NULL, PLFLT *zmax=NULL);
-  void compute3DCubeLimits(PLFLT &xratio, PLFLT &yratio, PLFLT &zratio, PLFLT* displacement);
   void SetPageDPMM(float setPsCharFudge=1.0, float setPsSymFudge=1.0);
   void syncPageInfo();
   void updateBoxDeviceCoords();

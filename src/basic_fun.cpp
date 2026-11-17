@@ -8923,8 +8923,8 @@ unsigned int JSHash(const std::string& str)
         FindInStructList(structList, "IDL_TRACEBACK"),
         dimension(actIx));
 
-      unsigned tRoutine, tFilename, tLine, tLevel, tFunction;
-      unsigned tMethod = 0, tRestored = 0, tSystem = 0;
+      static unsigned tRoutine, tFilename, tLine, tLevel, tFunction;
+      static unsigned tMethod = 0, tRestored = 0, tSystem = 0;
 
       for (SizeT i = 0; i < actIx; ++i) {
 

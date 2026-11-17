@@ -313,17 +313,17 @@ void GDLGStream::DefaultCharSize() {
   if (GDL_DEBUG_PLSTREAM) fprintf(stderr,"GDLGStream::DefaultCharSize()\n");
   DStructGDL* d = SysVar::D();
   DStructDesc* s = d->Desc();
-  unsigned X_CH_SIZE = s->TagIndex("X_CH_SIZE");
-  unsigned Y_CH_SIZE = s->TagIndex("Y_CH_SIZE");
+  static unsigned X_CH_SIZE = s->TagIndex("X_CH_SIZE");
+  static unsigned Y_CH_SIZE = s->TagIndex("Y_CH_SIZE");
   DLong ichx = (*static_cast<DLongGDL*> (d->GetTag(X_CH_SIZE, 0)))[0];
   DLong ichy = (*static_cast<DLongGDL*> (d->GetTag(Y_CH_SIZE, 0)))[0];
   PLFLT chx=ichx; //needed as floats for subsequent computations!
   PLFLT chy=ichy;
-  unsigned FLAGS = s->TagIndex("FLAGS");
+  static unsigned FLAGS = s->TagIndex("FLAGS");
   DLong flags = (*static_cast<DLongGDL*> (d->GetTag(FLAGS, 0)))[0];
   if (flags & 0x1) {
-    unsigned X_PX_CM = s->TagIndex("X_PX_CM");
-    unsigned Y_PX_CM = s->TagIndex("Y_PX_CM");
+    static unsigned X_PX_CM = s->TagIndex("X_PX_CM");
+    static unsigned Y_PX_CM = s->TagIndex("Y_PX_CM");
     DFloat xpxcm = (*static_cast<DFloatGDL*> (d->GetTag(X_PX_CM, 0)))[0];
     DFloat ypxcm = (*static_cast<DFloatGDL*> (d->GetTag(Y_PX_CM, 0)))[0];
     setVariableCharacterSize(chx, 1.0, chy,xpxcm,ypxcm);
@@ -336,11 +336,11 @@ void GDLGStream::SetCharSize(DLong ichx, DLong chy) {
   if (GDL_DEBUG_PLSTREAM) fprintf(stderr,"GDLGStream::SetCharSize()\n");
   DStructGDL* d = SysVar::D();
   DStructDesc* s = d->Desc();
-  unsigned FLAGS = s->TagIndex("FLAGS");
+  static unsigned FLAGS = s->TagIndex("FLAGS");
   DLong flags = (*static_cast<DLongGDL*> (d->GetTag(FLAGS, 0)))[0];
   if (flags & 0x1) {
-    unsigned X_PX_CM = s->TagIndex("X_PX_CM");
-    unsigned Y_PX_CM = s->TagIndex("Y_PX_CM");
+    static unsigned X_PX_CM = s->TagIndex("X_PX_CM");
+    static unsigned Y_PX_CM = s->TagIndex("Y_PX_CM");
     DFloat xpxcm = (*static_cast<DFloatGDL*> (d->GetTag(X_PX_CM, 0)))[0];
     DFloat ypxcm = (*static_cast<DFloatGDL*> (d->GetTag(Y_PX_CM, 0)))[0];
     setVariableCharacterSize(chx, 1.0, chy,xpxcm,ypxcm);
@@ -683,25 +683,22 @@ void GDLGStream::adv(PLINT page)
   PLFLT sxmin,symin,sxmax,symax,szmin,szmax;
   getSubpageRegion(&sxmin,&symin,&sxmax,&symax,&szmin,&szmax);
   //SET ALL REGION TAGS
-  unsigned regionTag=SysVar::X()->Desc()->TagIndex("REGION");
+  static unsigned regionTag=SysVar::X()->Desc()->TagIndex("REGION");
   (*static_cast<DFloatGDL*>(SysVar::X()->GetTag(regionTag, 0)))[0]=sxmin;
   (*static_cast<DFloatGDL*>(SysVar::X()->GetTag(regionTag, 0)))[1]=sxmax;
-  regionTag=SysVar::Y()->Desc()->TagIndex("REGION");
   (*static_cast<DFloatGDL*>(SysVar::Y()->GetTag(regionTag, 0)))[0]=symin;
   (*static_cast<DFloatGDL*>(SysVar::Y()->GetTag(regionTag, 0)))[1]=symax;
-  regionTag=SysVar::Z()->Desc()->TagIndex("REGION");
   (*static_cast<DFloatGDL*>(SysVar::Z()->GetTag(regionTag, 0)))[0]=szmin;
   (*static_cast<DFloatGDL*>(SysVar::Z()->GetTag(regionTag, 0)))[1]=szmax;
 }
 
 void GDLGStream::getSubpageRegion(PLFLT *sxmin, PLFLT *symin, PLFLT *sxmax, PLFLT *symax, PLFLT *szmin, PLFLT *szmax) {
   //here we must take into account the contents of ![X|Y|Z].OMARGIN
-  unsigned omarginTag = SysVar::X()->Desc()->TagIndex("OMARGIN");
+  static unsigned omarginTag = SysVar::X()->Desc()->TagIndex("OMARGIN");
   DFloat xstart = (*static_cast<DFloatGDL*> (SysVar::X()->GetTag(omarginTag, 0)))[0];
   xstart=MAX(xstart,0);
   DFloat xend = (*static_cast<DFloatGDL*> (SysVar::X()->GetTag(omarginTag, 0)))[1];
   xend=MAX(xend,0);
-  omarginTag = SysVar::Y()->Desc()->TagIndex("OMARGIN");
   DFloat ystart = (*static_cast<DFloatGDL*> (SysVar::Y()->GetTag(omarginTag, 0)))[0];
   ystart=MAX(ystart,0);
   DFloat yend = (*static_cast<DFloatGDL*> (SysVar::Y()->GetTag(omarginTag, 0)))[1];
@@ -739,22 +736,6 @@ void GDLGStream::getSubpageRegion(PLFLT *sxmin, PLFLT *symin, PLFLT *sxmax, PLFL
    *szmin=k*profund;
    *szmax=*szmin+profund;
  }
-}
-
-void GDLGStream::compute3DCubeLimits(PLFLT &xratio, PLFLT &yratio, PLFLT &zratio, PLFLT* displacement) {
-  int p=thePage.curPage-1;
-  int nx = thePage.nx;
-  int ny = thePage.ny;
-  xratio=1.0/thePage.nx;
-  yratio=1.0/thePage.ny;
-  zratio=1.0/thePage.nz;
- int k= p / (thePage.nx*thePage.ny);
- int l= p - k*(thePage.nx*thePage.ny);
- int j= l /thePage.nx ;
- int i= (l - j*thePage.nx);
- displacement[0]=i*xratio;
- displacement[1]=1-yratio-j*yratio;
- displacement[2]=k*zratio;
 }
 
   //get region (3BPP data)

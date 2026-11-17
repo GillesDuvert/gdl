@@ -299,10 +299,12 @@ namespace SysVar
     //1) adjust FANCY (initial motive)
     DIntGDL* fancy=GetFancy();
     DStructGDL* pStruct=SysVar::P();   //MUST NOT BE STATIC, due to .reset
-    DFloat charsizePos=(*static_cast<DFloatGDL*>(pStruct->GetTag(pStruct->Desc()->TagIndex("CHARSIZE"), 0)))[0];
+    static unsigned staticIndexCharsize=pStruct->Desc()->TagIndex("CHARSIZE");
+    DFloat charsizePos=(*static_cast<DFloatGDL*>(pStruct->GetTag(staticIndexCharsize, 0)))[0];
     (*fancy)[0]=charsizePos*5-4;
     //2) call change of font for interested drivers.
-    DLong pfont=(*static_cast<DLongGDL*>(pStruct->GetTag(pStruct->Desc()->TagIndex("FONT"), 0)))[0];
+    static unsigned staticIndexFont=pStruct->Desc()->TagIndex("FONT");
+    DLong pfont=(*static_cast<DLongGDL*>(pStruct->GetTag(staticIndexFont, 0)))[0];
     GraphicsDevice::GetDevice()->FontChanged();
   }
   DLongGDL* GetPMulti()
