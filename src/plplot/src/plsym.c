@@ -491,6 +491,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT * c
 					stbtt_vertex *vertices;
 					int nvecs = stbtt_GetGlyphShape(ttfVectors[ifont], glyph, &vertices);
 					if (nvecs > 0) {
+						yorg += linespacing/4; //TT Fonts need to be displaced this amount to stay on reference line
 						if (plsc->dev_alt_unicode) {
 							plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale *= charHeightCorr[ifont],
 									plsc->xpmm, plsc->ypmm, &xorg, &yorg, width, ttfVectors[ifont]->userdata);
@@ -498,6 +499,7 @@ plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT * c
 							plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale * charHeightCorr[ifont],
 									plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
 						}
+						yorg -= linespacing/4; // reset reference line
 					}
 					stbtt_FreeShape(ttfVectors[ifont], vertices);
 				} else {
