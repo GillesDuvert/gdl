@@ -461,11 +461,6 @@ plP_affine_multiply(
 void
 pldtik( PLFLT vmin, PLFLT vmax, PLFLT *tick, PLINT *nsubt, PLBOOL ld );
 
-// Writes numeric labels on side(s) of box in custom locations
-
-void
-label_box_custom( PLCHAR_VECTOR xopt, PLINT n_xticks, PLFLT_VECTOR xticks, PLCHAR_VECTOR yopt, PLINT n_yticks, PLFLT_VECTOR yticks );
-
 // Determine factor to convert date / time in seconds to more natural
 // units
 

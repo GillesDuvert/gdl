@@ -344,15 +344,18 @@ c_plptex( PLFLT wx, PLFLT wy, PLFLT dx, PLFLT dy, PLFLT just, PLCHAR_VECTOR text
 // Note, all calculations are done in terms of millimetres. These are scaled
 // as necessary before plotting the string on the page.
 //--------------------------------------------------------------------------
-
 PLFLT
 plstr(PLCHAR_VECTOR string, PLINT length_only, PLINT base, PLFLT just, PLFLT * const xform, PLINT x, PLINT y, PLINT refx, PLINT refy) {
 	static PLFLT saverestore[1000] = {};
 	int counter = -1;
 	short *charPoints = 0;
 	PLUNICODE ifont = plsc->ttFontIndex;
-	if (!plsc->use_unicode) {ifont = plsc->HersheyFontIndex; ifont=MAX(3,ifont); ifont=MIN(numberfonts,ifont); }  
-PLUNICODE oldifont = ifont;
+	if (!plsc->use_unicode) {
+		ifont = plsc->HersheyFontIndex;
+		ifont = MAX(3, ifont);
+		ifont = MIN(numberfonts, ifont);
+	}
+	PLUNICODE oldifont = ifont;
 #define HEIGHTRATIO 1.6
 	PLINT ch, i, length, style;
 	PLFLT width = 0., xorg = 0., yorg = 0., yline = 0., yref = 0., def, ht, dscale, scale;
@@ -361,7 +364,7 @@ PLUNICODE oldifont = ifont;
 	// The correction itself depends on the size of the hershey fonts, all this is quite relative
 	// and the exact algorithm needs to be written, this one is too close to the vagaries of the plplot code.
 
-//	if (plsc->use_unicode) ht*=charHeightCorr[ifont]; //4 for 4 pix/mm
+	//	if (plsc->use_unicode) ht*=charHeightCorr[ifont]; //4 for 4 pix/mm
 
 	dscale = 0.05 * ht;
 	scale = dscale;
@@ -394,7 +397,7 @@ PLUNICODE oldifont = ifont;
 			case B: // !B Shift below the division line.
 				yorg = yref = yline - linespacing / 2;
 				ilev = 0,
-				scale = dscale;
+						scale = dscale;
 				break;
 			case C: // !C shift back to the starting position and down one line
 				xorg = 0;
@@ -428,7 +431,8 @@ PLUNICODE oldifont = ifont;
 				scale = dscale * scales[ilev];
 				break;
 			case M: // !M Switch to the !9 symbol font for one character, then switch back.
-				oldifont = ifont; oldglyph=-1;
+				oldifont = ifont;
+				oldglyph = -1;
 				ifont = 9;
 				revert = 1;
 			case N: // !N Shift back to the normal level and original character size.
@@ -448,22 +452,23 @@ PLUNICODE oldifont = ifont;
 				saverestore[++counter] = xorg;
 				break;
 			case V: // !V Switch to the !20 symbol font for one character, then switch back.
-				oldifont = ifont; oldglyph=-1;
+				oldifont = ifont;
+				oldglyph = -1;
 				ifont = 20;
 				revert = 1;
 			case SP:// SPACE : Just add space size
 				xorg += ht;
 				break;
 			default:
-				
-redo:				if (plsc->use_unicode) {
+
+				redo : if (plsc->use_unicode) {
 					if (ch >= PRIVATE_UNICODE_PLANE) {
 						ifont = ch - PRIVATE_UNICODE_PLANE;
 						break;
 					}
 					if (ttfVectors[ifont] == NULL) {
 						printf("True Type Fonts not loaded, reverting to Hershey fonts.\n");
-						plsc->use_unicode=0;
+						plsc->use_unicode = 0;
 						goto redo;
 					}
 					int glyph = stbtt_FindGlyphIndex(ttfVectors[ifont], ch);
@@ -475,23 +480,23 @@ redo:				if (plsc->use_unicode) {
 					}
 					oldglyph = glyph;
 					//ax is advance width, so corr*ax will be advance in pixels.
-					width = ax ;
+					width = ax;
 					if (length_only) {
-						xorg += (width * scale);
+						xorg += (width * scale * charHeightCorr[ifont]);
 						break; // do not draw anything, just add to xorg
 					}
-/*
-					printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,charHeightCorr[ifont],scale,width);
-*/
+					/*
+										printf("glyph: %c, ax=%d, corr=%f, scale=%f, width=%f\n",ch,ax,charHeightCorr[ifont],scale,width);
+					 */
 					stbtt_vertex *vertices;
 					int nvecs = stbtt_GetGlyphShape(ttfVectors[ifont], glyph, &vertices);
 					if (nvecs > 0) {
 						if (plsc->dev_alt_unicode) {
-						plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*=charHeightCorr[ifont],
-								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width, ttfVectors[ifont]->userdata);
+							plttf2(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale *= charHeightCorr[ifont],
+									plsc->xpmm, plsc->ypmm, &xorg, &yorg, width, ttfVectors[ifont]->userdata);
 						} else {
-						plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale*charHeightCorr[ifont],
-								plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
+							plttf(vertices, charDescent[ifont], nvecs, xform, refx, refy, scale * charHeightCorr[ifont],
+									plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
 						}
 					}
 					stbtt_FreeShape(ttfVectors[ifont], vertices);
@@ -509,9 +514,9 @@ redo:				if (plsc->use_unicode) {
 						xorg += width * scale;
 						break; // do not draw anything, just add to xorg
 					}
-/*
-					printf("glyph: %c, scale=%f, width=%f\n",ch,scale,width);
-*/
+					/*
+										printf("glyph: %c, scale=%f, width=%f\n",ch,scale,width);
+					 */
 					charPoints = &(hersheyFontVectors[ifont][offset]);
 					plhershey(charPoints, nvecs, xform, refx, refy, scale,
 							plsc->xpmm, plsc->ypmm, &xorg, &yorg, width);
@@ -519,15 +524,15 @@ redo:				if (plsc->use_unicode) {
 		}
 		if (revert) {
 			revert = 0;
-			ifont = oldifont; 
-			oldglyph=-1;
+			ifont = oldifont;
+			oldglyph = -1;
 		}
 	}
 	free(symbol);
 	//reset line style
 	plsc->lineStyleNumberOfElements = style;
-	if (plsc->use_unicode) plsc->ttFontIndex=ifont; 
-	else plsc->HersheyFontIndex=ifont; // hershey fonts history are managed entirely inside plsc.
+	if (plsc->use_unicode) plsc->ttFontIndex = ifont;
+	else plsc->HersheyFontIndex = ifont; // hershey fonts history are managed entirely inside plsc.
 	return xorg; //length
 }
 

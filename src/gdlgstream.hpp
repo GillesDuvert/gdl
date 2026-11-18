@@ -184,6 +184,10 @@ public:
   {
     if (!checkPlplotDriver(driver))
       ThrowGDLException(std::string("PLplot installation lacks the requested driver: ") + driver);
+	// define character size (in mm as schr needs it) as device pixel per mm times base character size
+	DFloat pxpmm=0.1*(*static_cast<DFloatGDL*> (SysVar::D()->GetTag(SysVar::D()->Desc()->TagIndex("X_PX_CM"), 0)))[0];
+	PLFLT ch=pxpmm*(*static_cast<DLongGDL*> (SysVar::D()->GetTag(SysVar::D()->Desc()->TagIndex("X_CH_SIZE"), 0)))[0];
+	plschr(ch,1);
     gdlDefaultCharInitialized=0;
     thePage.nbPages=0;
     thePage.length=0;
@@ -193,7 +197,7 @@ public:
     theBox.initialized=false;
     plgpls( &pls);
 	pls->dev_eofill=1; //by default, and probably in all and every cases.
-	plsesc('!');
+	pls->esc='!';
     //you can debug plplot things with
 //     pls->debug=1;
 
