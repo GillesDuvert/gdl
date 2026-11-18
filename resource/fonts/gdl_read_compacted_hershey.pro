@@ -62,10 +62,6 @@ COMPILE_OPT hidden, strictarr
 
 x = ishft(in, -7) and 127	;X and Y
 y = in and 127
-neg = where(x and 64, count)
-if count gt 0 then x[neg] = x[neg]-128
-neg = where(y and 64, count)
-if count gt 0 then y[neg] = y[neg]-128
 pen_up = (in and 16384) ne 0
 end
 
@@ -143,6 +139,7 @@ pro gdl_read_compacted_hershey, fontnum
 
      start=1
      printf,include,"static const int font"+string(fontnum+1,format='(i2.2)')+'['+strtrim(ntouse,2)+'] = {'
+     listexy=[0,1,1,1,1,0,1,-1,0,-1,-1,-1,-1,0,-1,1]
 
      for i=0, ntouse-1 do begin ;n_elements(ctab)-1 do begin
         currentchar=fix(fix(i+32,type=1),type=7)
@@ -161,50 +158,100 @@ pro gdl_read_compacted_hershey, fontnum
            chright=right+r-1
            chleft=fix(chleft,type=1)
            chright=fix(chright,type=1)
-           foreach ix,[0,1,-1] do begin;,1,-1] do begin
-              foreach iy,[0,1,-1] do begin;,1,-1,2,-2,3,-3,4,-4] do begin
+           xx=intarr(ctab[i].nvecs)
+           yy=intarr(ctab[i].nvecs)
+           for j=0,ctab[i].nvecs-1 do begin
+              xx[j] = ishft(subvect[j], -7) and 127 ;Get X and Y components
+              yy[j] = subvect[j] and 127
+              if xx[j] && 64 then xx[j]-=128
+              if yy[j] && 64 then yy[j]-=128
+              xx[j]+=(r+left-1)  ; charx
+              yy[j]=10-y[j]+r       ; chary
+           endfor
+           number=0
+           signature=''
+           ; [0,0] case
+           for j=0,ctab[i].nvecs-1 do begin
+              x=xx[j]
+              y=yy[j]
+              x=fix(x,type=1) & y=fix(y,type=1)
+              x and= '7F'xb & y and= '7F'xb
+              pen_up = (j ne 0) and ((subvect[j] and 16384) ne 0)
+              if pen_up then signature+=string(" R",format='($,A2)',/PRINT)
+              signature+=string(string(x),string(y),format='($,A1,A1)',/PRINT)
+                                ; save basic signature for modified glyph used by IDL 
+           endfor
+           saved_signature=signature ; keep 0,0
+           ; try  to find in hersh.string
+           w=where(hersh.string eq signature, count)
+                                ;stop,nvects,string(chleft),string(chright),signature
+           if (count gt 0) then begin
+              number=hersh[w[0]].charnum
+                                ;if fontnum eq 20 then print,currentchar,number
+              goto, nextChar
+           endif
+           ; spiral search, only for known hershey
+           limit=(fontnum eq 3)?2:20
+           for kk=1,limit do begin
+              liste=listexy*kk   ; current spiral
+              restart=0
+              for ll=0,7 do begin
                  signature=''
+                 ix=liste[restart++] 
+                 iy=liste[restart++]
                  for j=0,ctab[i].nvecs-1 do begin
-                    x = ishft(subvect[j], -7) and 127 ;Get X and Y components
-                    y = subvect[j] and 127
-                    x+=(r+left-1) ; charx
-                    y=10-y+r      ; chary
-                    x+=ix
-                    y+=iy
+                    x=xx[j]+ix
+                    y=yy[j]+iy
                     x=fix(x,type=1) & y=fix(y,type=1)
                     x and= '7F'xb & y and= '7F'xb
                     pen_up = (j ne 0) and ((subvect[j] and 16384) ne 0)
                     if pen_up then signature+=string(" R",format='($,A2)',/PRINT)
                     signature+=string(string(x),string(y),format='($,A1,A1)',/PRINT)
+                                ; save basic signature for modified glyph used by IDL 
                  endfor
-                 ; save basic signature for modified glyph used by IDL 
-                 saved_signature=signature
-                 ; try  to find in hersh.string
+                 if ix eq 0 and iy eq 0 then  saved_signature=signature ; keep 0,0
+                                ; try  to find in hersh.string
                  w=where(hersh.string eq signature, count)
-                 ;stop,nvects,string(chleft),string(chright),signature
-                 number=0
+                                ;stop,nvects,string(chleft),string(chright),signature
                  if (count gt 0) then begin
+                    if (ix gt 10 or ix lt -10 or iy gt 10 or iy lt -10 ) then print,"found "+currentchar+": ",ix,iy
                     number=hersh[w[0]].charnum
+                                ;if fontnum eq 20 then print,currentchar,number
                     goto, nextChar
                  endif
-              end
-           end
+              endfor
+           endfor
            nextChar:
            if (count eq 0) then begin ;stop,nvects,string(chleft),string(chright),signature
               column=i mod 16 & line=i/16
-                    ;; read,number,prompt="Font #"+strtrim(fontnum,2)+": line "+strtrim(line,2)+", column "+strtrim(column,2)+": enter number or 0 to add glyph "
-                    ;; if number eq 0 then begin
-                       if ~additional_opened then begin
-                          openw,out,additional,/get
-                          additional_opened=1
-                       end
-                       number=iout
-                       printf,out,iout++,format='($,I5)'
-                       printf,out,nvects+1,format='($,I3)'
-                       printf,out,string(chleft),string(chright),format='($,A1,A1)'
-                       printf,out,saved_signature
-                    ;;end
-                 endif
+              ; known problem with some #20 entries in some cases:
+              if fontnum eq 20 then begin
+                 ;print,ix,iy,": ",currentchar,ctab[i].nvecs,"  ",signature
+                 case currentchar of
+                    'm':number=899
+                    'N':number=900
+                    'n':number=901
+                    'O':number=902
+                    'o':number=903
+                    'P': number=904
+                    'p': number=905
+                    'Q': number=906
+                    'q':number=907
+                    else: goto, do_supplementary
+                 endcase
+              endif
+              ;; if number eq 0 then begin
+do_supplementary:
+              if ~additional_opened then begin
+                 openw,out,additional,/get
+                 additional_opened=1
+              endif
+              number=iout
+              printf,out,iout++,format='($,I5)'
+              printf,out,nvects+1,format='($,I3)'
+              printf,out,string(chleft),string(chright),format='($,A1,A1)'
+              printf,out,saved_signature
+           endif
            printf,index,number,currentchar,format='(I12,3x,A)'
            if start then begin
               printf,include,number, format='($,I5)'
@@ -220,7 +267,7 @@ pro gdl_read_compacted_hershey, fontnum
         endelse
      end
 nextFont:
-        printf,include,'};' & printf,include
+     printf,include,'};' & printf,include
   end
   zz="font"+string(bindgen(20)+1,format='(I2.2,:,",")')
   printf,include,"static const int* fontindex[]={",zz,"};"

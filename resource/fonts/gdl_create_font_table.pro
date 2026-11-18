@@ -6,10 +6,10 @@
 PRO getvects, in, x, y, pen_up 
 x = ishft(in, -7) and 127
 y = in and 127
-neg = where(x and 64, count)
-if count gt 0 then x[neg] = x[neg]-128
-neg = where(y and 64, count)
-if count gt 0 then y[neg] = y[neg]-128
+;neg = where(x and 64, count)
+;if count gt 0 then x[neg] = x[neg]-128
+;neg = where(y and 64, count)
+;if count gt 0 then y[neg] = y[neg]-128
 pen_up = (in and 16384) ne 0
 end
 

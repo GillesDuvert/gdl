@@ -46,7 +46,6 @@
 #define NEED_PLDEBUG
 
 #include "plplotP.h"
-#include "hershey_mapping.h"
 // our rasterizer used: the stbtt one, version 1 (2 would be too much ?)
 #define STB_TRUETYPE_IMPLEMENTATION 
 #define STBTT_RASTERIZER_VERSION 1
@@ -62,7 +61,7 @@ extern int insertFontPath(const char *fontPath, const char* name);
 #endif
 
 // Declarations
-#define NUMBERHERSHEYFONTS 20 
+#define NUMBERHERSHEYFONTS 40 
 #define MAXTTFONTS 100
 struct CTAB {
 	unsigned char nvecs;
@@ -901,7 +900,8 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 							ifont += (test - '0');
 							break;
 						default:
-							j--;
+							ifont=3;
+							break;
 					}
 					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
 					break;
@@ -913,7 +913,8 @@ pldeco( PLUNICODE *sym, PLINT *length, PLCHAR_VECTOR text)
 							ifont = 20;
 							break;
 						default:
-							j--;
+							ifont=3;
+							break;
 					}
 					sym[(*length)++] = ifont + PRIVATE_UNICODE_PLANE;
 					break;

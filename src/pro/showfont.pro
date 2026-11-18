@@ -19,6 +19,7 @@
 ;          base = 16                    ; number of columns in the table 
 ;          beg = 32                     ; first character
 ;          fin = num eq 3 ? 255 : 127   ; last character
+;		   /identify		 adds the 'normal' ascii symbol as a reminder for each symbol
 ;
 ; OUTPUTS:
 ;          None.
@@ -51,7 +52,7 @@
 ; (at your option) any later version.                                   
 ;-
 
-pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, _extra=ex
+pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, charsize=charsize, identify=identify, _extra=ex
   
     on_error, 2
   
@@ -64,7 +65,8 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, _extra=ex
   if not keyword_set(name) then name = ''
   if not keyword_set(offin) then offin = 0
   if not keyword_set(tt) then offin=0
-  if not keyword_set(chrsz) then chrsz=2
+  if not keyword_set(charsize) then charsize=2
+  if not keyword_set(identify) then identify=0
   ; save old decomposition
   device, get_decomposed=old
   device, decomposed=0
@@ -72,7 +74,7 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, _extra=ex
   ; save current !P.FONT
   oldp=!P.FONT
 
-  ; we use Hershey fonts for the grid ans axes labelling:
+  ; we use Hershey fonts for the grid and axes labelling:
   !P.FONT=-1
   ; constructing horizontal and vertical grid lines
   n_hor = (fin + 1 - beg) / base + 1
@@ -100,7 +102,7 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, _extra=ex
   xticklayout=1, yticklayout=1,_extra=ex
   ; conversion for characters
   ; size of a character in user coord
-    correction=convert_coord(!D.X_CH_SIZE*chrsz,!D.Y_CH_SIZE*chrsz,0,/DEVICE,/TO_NORM)
+    correction=convert_coord(!D.X_CH_SIZE*charsize,!D.Y_CH_SIZE*charsize,0,/DEVICE,/TO_NORM)
   ; ycorrespondence in data for normed value correction
     sz=abs((!y.crange[1]-!y.crange[0])/(!Y.window[1]-!y.window[0]))*correction[1]
 
@@ -110,12 +112,17 @@ pro showfont, num, name, encapsulated=eps, tt_font=tt, offset=offin, _extra=ex
      DEVICE, SET_FONT=num, /TT_FONT
      for i = offin, offin+255 do begin
         c=STRING(i, FORMAT='("!Z(",Z4.4,")")')
-        xyouts, (i mod base), base * (i / base) +sz/2 , c,_extra=ex
+        xyouts, (i mod base), base * (i / base) +sz/2 , c, charsize=charsize, _extra=ex
      end
   endif else begin
     for c = beg, fin do $
-      xyouts, (c mod base), base * (c / base) +sz/2, '!' + strtrim(string(num), 2) + string(byte(c)),_extra=ex
+      xyouts, (c mod base), base * (c / base) +sz/2, '!' + strtrim(string(num), 2) + string(byte(c)),charsize=charsize,_extra=ex
   endelse
+	if (identify) then begin
+	; normal character small lower right
+    for c = beg, fin do $
+      xyouts, ((c+0.4) mod base), (base * (c / base))+base/2, ALI=0, '!3' + string(byte(c)),charsize=2
+	endif
   ; reset
   !P.FONT=oldp
   device,decomposed=old
