@@ -36,7 +36,7 @@ class DeviceSVG : public GraphicsDevice
   int              decomposed; // false -> use color table
   bool	           orient_portrait; 
   float	           scale;
-  
+  GDLStream  *svgUnit;
   void InitStream()
   {
     delete actStream;
@@ -50,6 +50,13 @@ class DeviceSVG : public GraphicsDevice
     actStream = new GDLSVGStream( nx, ny);
 
     actStream->sfnam( fileName.c_str());
+	// !D.UNIT should contain the unit opened for the postscript file:
+	// bug report 3611898 "I use (fstat(!d.unit)).name to determine the filename of the current postscript file in some of my routines."
+	// Solved AC 29-Avril-2013: just open the file here as a fileUnit, as long as the filename is the same in the driver, it will be the same file.
+	DLong lun = GetLUN();
+	svgUnit = &fileUnits[ lun - 1];
+	svgUnit->Open(fileName, fstream::out, false, false, false, defaultStreamWidth, false, false);
+	(*static_cast<DLongGDL*> (dStruct->GetTag(dStruct->Desc()->TagIndex("UNIT"))))[0] = lun;
 
     actStream->spage(SVG_DPI, SVG_DPI, XPageSize*72*SVG_CM2IN, YPageSize*72*SVG_CM2IN, XOffset*72*SVG_CM2IN, YOffset*72*SVG_CM2IN);
 
@@ -101,7 +108,7 @@ public:
     dStruct->InitTag("Y_PX_CM",    DFloatGDL( SVG_RESOL)); 
     dStruct->InitTag("N_COLORS",   DLongGDL( 16777216)); 
     dStruct->InitTag("TABLE_SIZE", DLongGDL( 256)); 
-    dStruct->InitTag("FILL_DIST",  DLongGDL( 0)); 
+    dStruct->InitTag("FILL_DIST",  DLongGDL( 1)); 
     dStruct->InitTag("WINDOW",     DLongGDL( -1)); 
     dStruct->InitTag("UNIT",       DLongGDL( 0)); 
     dStruct->InitTag("FLAGS",      DLongGDL( 266807)); //if 266295 (i.e., not a "PRINTER") ERASE would work on it, but it is probably not what we want. 
@@ -136,6 +143,9 @@ public:
   {
     delete actStream;
     actStream = NULL;
+	svgUnit->Close();
+	svgUnit->Free();
+	svgUnit = NULL;
     return true;
   }
   

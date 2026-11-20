@@ -21,7 +21,6 @@
 #include "gdlpsstream.hpp"
 #include "plotting.hpp" // get_axis_crange for TV()
 #include "initsysvar.hpp"
-#include <gsl/gsl_const_mksa.h> // GSL_CONST_MKSA_INCH
 
 #include "objects.hpp"
 
@@ -29,15 +28,10 @@
 #define MIN(a,b) ((a) > (b) ? (b) : (a))
 #undef MAX
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
-#undef ABS
-#define ABS(a) (((a) < 0) ? -(a) : (a))
 
-  static const float CM2IN = .01 / GSL_CONST_MKSA_INCH;
-  static const float in2cm = GSL_CONST_MKSA_INCH*100;
+  static const float PS_CM2IN = (1.0 / INCHToCM) ;
   static const PLFLT PS_DPI = 72.0 ; //in dpi;
-  static const PLFLT DPICM = PS_DPI/2.54 ; //dpi/cm;
   static const float PS_RESOL = 1000.0;
-  static const PLFLT PlplotInternalPageRatioXoverY=4./3.; //Some machines do not know PRIVATE values stored in plplotP.h 4/3=PlplotInternalPageRatioXoverY=float(PIXELS_X)/float(PIXELS_Y)
 
 class DevicePS: public GraphicsDevice
 {
@@ -57,88 +51,51 @@ class DevicePS: public GraphicsDevice
   GDLStream  *psUnit;
 
   void InitStream()
-  {
-    delete actStream;
+{
+		delete actStream;
 
-    DLongGDL* pMulti = SysVar::GetPMulti();
-    DLong nx = (*pMulti)[ 1];
-    DLong ny = (*pMulti)[ 2];
+		DLongGDL* pMulti = SysVar::GetPMulti();
+		DLong nx = (*pMulti)[ 1];
+		DLong ny = (*pMulti)[ 2];
 
-    if( nx <= 0) nx = 1;
-    if( ny <= 0) ny = 1;
-    actStream = new GDLPSStream( nx, ny, encapsulated, color, bitsPerPix, orient_portrait);
+		if (nx <= 0) nx = 1;
+		if (ny <= 0) ny = 1;
+		actStream = new GDLPSStream(nx, ny, encapsulated, color, bitsPerPix, orient_portrait);
 
-    actStream->sfnam( fileName.c_str());
+		actStream->sfnam(fileName.c_str());
+		// !D.UNIT should contain the unit opened for the postscript file:
+		// bug report 3611898 "I use (fstat(!d.unit)).name to determine the filename of the current postscript file in some of my routines."
+		// Solved AC 29-Avril-2013: just open the file here as a fileUnit, as long as the filename is the same in the driver, it will be the same file.
+		DLong lun=GetLUN();
+		psUnit = &fileUnits[ lun-1];
+		psUnit->Open(fileName,fstream::out,false,false,false,defaultStreamWidth,false,false);
+		(*static_cast<DLongGDL*>( dStruct->GetTag(dStruct->Desc()->TagIndex("UNIT"))))[0]=lun;
 
-    // trying to solve bug report 3611898
-    // AC 29-Avril-2013: the way I found to link GDLPSStream* and GDLStream*
-    DLong lun=GetLUN();
-    psUnit = &fileUnits[ lun-1];
-    psUnit->Open(fileName,fstream::out,false,false,false,defaultStreamWidth,false,false);
-    (*static_cast<DLongGDL*>( dStruct->GetTag(dStruct->Desc()->TagIndex("UNIT"))))[0]=lun;
+		actStream->spage(PS_DPI, PS_DPI, XPageSize * 72 * PS_CM2IN, YPageSize * 72 * PS_CM2IN, XOffset * 72 * PS_CM2IN, YOffset * 72 * PS_CM2IN);
 
-    // zeroing offsets (xleng and yleng are the default ones but they need to be specified 
-    // for the offsets to be taken into account by spage(), works with plplot >= 5.9.9)
-    PLINT XSIZE=ceil(XPageSize*DPICM);
-    PLINT YSIZE=ceil(YPageSize*DPICM);
-    PLINT XOFF=ceil(XOffset*DPICM);
-    PLINT YOFF=ceil(YOffset*DPICM);
-    
-    // no pause on destruction
-    actStream->spause( false);
+		// no pause on destruction
+		actStream->spause(false);
 
-    PLINT r[ctSize], g[ctSize], b[ctSize];
-    actCT.Get( r, g, b);
-    actStream->SetColorMap0( r, g, b, ctSize);
-    actStream->SetColorMap1( r, g, b, ctSize);
-    // default: black+white (IDL behaviour)
-    string what="color="+i2s(color)+",epsf="+i2s(encapsulated);
-    actStream->setopt( "drvopt",what.c_str());
-    actStream->scolbg(255,255,255); // start with a white background
+		PLINT r[ctSize], g[ctSize], b[ctSize];
+		actCT.Get(r, g, b);
+		actStream->SetColorMap0(r, g, b, ctSize);
+		actStream->SetColorMap1(r, g, b, ctSize);
+		actStream->scolbg(255, 255, 255); // start with a white background
 
-    // setting the offsets and sizes with plPlot is (extremely) tricky as some of these setting
-    // are hardcoded into plplot (like EPS header, and offsets in older versions of plplot)
-    // here we play only with the aspect ratio, and, I must confess, this has been largely based on trial and error.
-    // plot orientation
-    PLFLT xovery = float(XSIZE) / float(YSIZE);
-    //Only by using the -a option can we really fix the aspect ratio. use plsdidev (revious version) did absolutely nothing 
-    //to keep characters etc aspect ok we need to make the 'good' size larger or smaller by truc*PlplotInternalPageRatioXoverY and displace by half this value 
-    actStream->setopt("a", i2s(xovery).c_str()); //this will compress the X or Y axis by xovery, but does not change the position of the axis center. So some difficulty to find the good offsets as
-    //they depend on the axis compression, the half axis size . the following should do.
-    xovery/=PlplotInternalPageRatioXoverY; //normalize
-    if (orient_portrait) { //X size will be OK, Y size must be scaled 
-      actStream->setopt("portrait", NULL);
-      if (xovery <= 1) { //expand Y (will be compressed by the -a setopt)
-        actStream->spage(PS_DPI, PS_DPI, XSIZE, YSIZE/xovery, YOFF       -YSIZE/2/xovery + YSIZE/2,  XOFF);
-      } else { //expand X
-        actStream->spage(PS_DPI, PS_DPI, XSIZE*xovery, YSIZE, YOFF      , -XSIZE/2*xovery + XSIZE/2 + XOFF);
-      }
-    } else { //landscape: XOFF and YOFF are X and Y but XSIZE and YSIZE are exchanged wrt previous case, and YOFF is replaced by YOFF-XSIZE.
-      if (xovery <= 1) {
-        actStream->spage(PS_DPI, PS_DPI, YSIZE, XSIZE/xovery, YOFF-XSIZE -XSIZE/2/xovery + XSIZE/2 , XOFF);
-      } else {
-        actStream->spage(PS_DPI, PS_DPI, YSIZE*xovery, XSIZE, YOFF-XSIZE, -YSIZE/2*xovery + YSIZE/2 + XOFF);
-      }
-      actStream->sdiori(2);
-    }
-    
-    actStream->Init();
+		actStream->Init();
 
-    // need to be called initially. permit to fix things
-    actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
-    actStream->plstream::adv(0); //-->this one is the 1st and only pladv
-    actStream->plstream::vpor(0, 1, 0, 1);
-    actStream->plstream::wind(0, 1, 0, 1);
+		// need to be called initially. permit to fix things
+		actStream->plstream::ssub(1, 1); // plstream below stays with ONLY ONE page
+		actStream->plstream::adv(0); //-->this one is the 1st and only pladv
+		actStream->plstream::vpor(0, 1, 0, 1);
+		actStream->plstream::wind(0, 1, 0, 1);
 
-    actStream->ssub(1, 1);
-    float fudge=17780./float(XPageSize*scale*PS_RESOL)*12700./float(YPageSize*scale*PS_RESOL);
-    fudge=1.46*sqrt(fudge); //best value (experimental) to get same results as IDL with varying CHARSIZE
-    actStream->SetPageDPMM(fudge);
-    actStream->DefaultCharSize();
-    actStream->adv(0); //this is for us (counters) //needs DefaultCharSize
-//    clear();
-  }
-    
+		actStream->ssub(1, 1);
+		actStream->SetPageDPMM();
+		actStream->DefaultCharSize();
+		actStream->adv(0); //this is for us (counters) //needs DefaultCharSize
+	}
+	
 public:
   DevicePS(): 
   GraphicsDevice()
@@ -173,7 +130,7 @@ public:
     dStruct->InitTag("Y_CH_SIZE",  DLongGDL( 352));
     dStruct->InitTag("X_PX_CM",    DFloatGDL( PS_RESOL)); 
     dStruct->InitTag("Y_PX_CM",    DFloatGDL( PS_RESOL)); 
-    dStruct->InitTag("N_COLORS",   DLongGDL( 256)); 
+    dStruct->InitTag("N_COLORS",   DLongGDL( 16777216)); 
     dStruct->InitTag("TABLE_SIZE", DLongGDL( 256)); 
     dStruct->InitTag("FILL_DIST",  DLongGDL( 1));
     dStruct->InitTag("WINDOW",     DLongGDL( -1)); 
@@ -280,11 +237,11 @@ public:
   {
       // no need to update !D
     orient_portrait = true;
-//    nb: IDL defaults to:
-    SetXPageSize(7 * in2cm);
-    SetYPageSize(5 * in2cm);
-    SetXOffset(.75 * in2cm);
-    SetYOffset(5 * in2cm); 
+////    nb: IDL defaults to:
+//    SetXPageSize(7 * in2cm);
+//    SetYPageSize(5 * in2cm);
+//    SetXOffset(.75 * in2cm);
+//    SetYOffset(5 * in2cm); 
     return true;
   }
 
@@ -292,10 +249,10 @@ public:
   {
       // no need to update !D
     orient_portrait = false;
-    SetXPageSize(9.5 * in2cm);
-    SetYPageSize(7.0 * in2cm);
-    SetXOffset(.75 * in2cm);
-    SetYOffset(10.25 * in2cm);
+//    SetXPageSize(9.5 * in2cm);
+//    SetYPageSize(7.0 * in2cm);
+//    SetXOffset(.75 * in2cm);
+//    SetYOffset(10.25 * in2cm);
     return true;
   }
 
@@ -338,8 +295,8 @@ public:
   {
     DIntGDL* res;
     res = new DIntGDL(2, BaseGDL::NOZERO);
-    (*res)[0]= actStream->xPageSize(); //XPageSize;
-    (*res)[1]= actStream->yPageSize(); //YPageSize;
+    (*res)[0]= XPageSize*PS_DPI*PS_CM2IN;
+    (*res)[1]= YPageSize*PS_DPI*PS_CM2IN;
     return res;
   }
 };

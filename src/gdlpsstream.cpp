@@ -20,7 +20,22 @@
 //#include <iostream>
 #include "graphicsdevice.hpp"
 #include "gdlpsstream.hpp"
-
+//We need a copy of PSDev (defined in driver ps.c) 
+typedef struct
+{
+	int epsf;
+    int   which_clip;
+    int   canvasXSize;
+    int   canvasYSize;
+    int   xOffset;
+    int   yOffset;
+    PLFLT scale;
+    int   psIndent;
+    FILE  *psFile;
+    PLINT xold;
+	PLINT yold;
+	int llx, lly, urx, ury;
+} PSDev;
 using namespace std;
 
 void GDLPSStream::Init()
@@ -31,6 +46,10 @@ void GDLPSStream::Init()
    PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
    pls->use_unicode=doFont;
    page = 0;
+    // color or not?
+    plstream::scolor( color);
+    PSDev *dev = (PSDev *) pls->dev;
+    dev->epsf=encapsulated;
 }
  
 void GDLPSStream::eop()
@@ -66,30 +85,7 @@ void image_compress(unsigned char *idata, PLINT size, long bpp)
 }
 //use A85p compressor from bmp2eps package (https://www.mjr19.org.uk/sw/bmp2eps/)
 #include "snippets/A85p.c"
-//We need a copy of PSDev (defined in driver ps.c) 
-typedef struct
-{
-    PLFLT pxlx, pxly;
-    PLINT xold, yold;
 
-    PLINT xmin, xmax, xlen;
-    PLINT ymin, ymax, ylen;
-
-    PLINT xmin_dev, xmax_dev, xlen_dev;
-    PLINT ymin_dev, ymax_dev, ylen_dev;
-
-    PLFLT xscale_dev, yscale_dev;
-
-    int   llx, lly, urx, ury, ptcnt;
-    // font variables.
-    int   nlookup, if_symbol_font;
-    int *lookup;
-
-    // These are only used by the pstex driver for the additional
-    // file required in this case
-    long cur_pos;
-    FILE *fp;
-} PSDev;
 bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,
         DLong trueColorOrder, DLong channel, DLong Mode) {
   //need to : check position in file Ok; update bounding box values: IDL does not take into account images ?
@@ -104,15 +100,6 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
   PLINT x1 = pos[0], y1 = pos[2];
   PLINT x2 = pos[1], y2 = pos[3];
   pls->bytecnt += fprintf(pls->OutFile, "\n%%BeginObject: Image\ngsave\n");
-  if (portrait) {
-      y1/=plsc->aspori;
-      y2/=plsc->aspori;
-      x1*=plsc->aspori;
-      x2*=plsc->aspori;
-  } else {
-    pls->bytecnt += fprintf(pls->OutFile, "0 %d translate 270 rotate\n",plsc->phyxlen );
-   }
-  
   pls->bytecnt += fprintf(pls->OutFile, "%d %d translate %d %d scale\n", x1, y1, x2, y2 );
 #define LINEWIDTH 80
 
@@ -164,10 +151,10 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
     }
   }
  pls->bytecnt += fprintf(pls->OutFile, "\ngrestore\n%%EndObject: Image\n       ");
-   if (!portrait) {
-    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x1, &y1);
-    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x2, &y2);
-   }
+//   if (!portrait) {
+//    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x1, &y1);
+//    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x2, &y2);
+//   }
     dev->llx = MIN(dev->llx, x1);
     dev->lly = MIN(dev->lly, y1);
     dev->urx = MAX(dev->urx, x1);

@@ -272,7 +272,6 @@ typedef struct
     int   canvasYSize;
     PLFLT scale;
     int   svgIndent;
-    FILE  *svgFile;
 } SVG;
 
 bool  GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos,

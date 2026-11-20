@@ -47,7 +47,6 @@
 #cmakedefine PLD_mem
 #cmakedefine PLD_null
 #cmakedefine PLD_ps
-#cmakedefine PLD_psc
 #cmakedefine PLD_svg
 #cmakedefine PLD_wxwidgets
 #cmakedefine PLD_xwin

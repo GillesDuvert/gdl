@@ -1177,7 +1177,7 @@ void plstream::gfile( FILE **p_file )
     ::plgfile( p_file );
 }
 
-// Get the output file pointer
+// Set the output file pointer
 
 void plstream::sfile( FILE *file )
 {

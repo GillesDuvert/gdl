@@ -118,9 +118,6 @@ static PLDispatchInit  static_device_initializers[] = {
 #if defined ( PLD_ps )
     plD_dispatch_init_ps,
 #endif
-#if defined ( PLD_psc )
-    plD_dispatch_init_psc,
-#endif
 #if defined ( PLD_svg )
     plD_dispatch_init_svg,
 #endif

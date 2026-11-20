@@ -190,12 +190,12 @@ void plD_init_svg( PLStream *pls )
     // Calculate ratio of (larger) internal PLplot coordinates to external
     // coordinates used for svg file.
     if ( aStream->canvasXSize > aStream->canvasYSize )
-        aStream->scale = (PLFLT) ( PIXELS_X - 1 ) / (PLFLT) aStream->canvasXSize;
+        aStream->scale = (PLFLT) aStream->canvasXSize / (PLFLT) ( PIXELS_X - 1 );
     else
-        aStream->scale = (PLFLT) PIXELS_Y / (PLFLT) aStream->canvasYSize;
-    plP_setphy( (PLINT) 0, (PLINT) ( aStream->scale * aStream->canvasXSize ), (PLINT) 0, (PLINT) ( aStream->scale * aStream->canvasYSize ) ); // Scaled points.
+        aStream->scale = (PLFLT) aStream->canvasYSize / (PLFLT) PIXELS_Y ;
+    plP_setphy( (PLINT) 0, (PLINT) ( aStream->canvasXSize / aStream->scale ), (PLINT) 0, (PLINT) ( aStream->canvasYSize / aStream->scale ) ); // Scaled points.
 
-    plP_setpxl( aStream->scale * POINTS_PER_INCH / 25.4, aStream->scale * POINTS_PER_INCH / 25.4 );                                           // Scaled points/mm.
+    plP_setpxl( POINTS_PER_INCH / ( 25.4 * aStream->scale ), POINTS_PER_INCH / ( 25.4 * aStream->scale ) );                                           // Scaled points/mm.
 
     aStream->svgFile = pls->OutFile;
 
@@ -274,7 +274,7 @@ void plD_line_svg( PLStream *pls, short x1a, short y1a, short x2a, short y2a )
     svg_stroke_color( pls );
     svg_attr_value( aStream, "fill", "none" );
     // svg_attr_value(aStream, "shape-rendering", "crispEdges");
-    svg_attr_values( aStream, "points", "%r,%r %r,%r", (double) x1a / aStream->scale, (double) y1a / aStream->scale, (double) x2a / aStream->scale, (double) y2a / aStream->scale );
+    svg_attr_values( aStream, "points", "%r,%r %r,%r", (double) x1a * aStream->scale, (double) y1a * aStream->scale, (double) x2a * aStream->scale, (double) y2a * aStream->scale );
     svg_open_end( aStream );
 }
 
@@ -426,7 +426,7 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
     fprintf( aStream->svgFile, "points=\"" );
     for ( i = 0; i < npts; i++ )
     {
-        fprintf( aStream->svgFile, "%.2f,%.2f ", (double) xa[i] / aStream->scale, (double) ya[i] / aStream->scale );
+        fprintf( aStream->svgFile, "%.2f,%.2f ", (double) xa[i] * aStream->scale, (double) ya[i] * aStream->scale );
         if ( ( ( i + 1 ) % 10 ) == 0 )
         {
             fprintf( aStream->svgFile, "\n" );
@@ -472,19 +472,19 @@ void FillPath(PLStream *pls) {
    for (int i = 0; i < pls->dev_npath; ++i) {
     PLINT* x = pls->dev_pathx[i];
     PLINT* y = pls->dev_pathy[i];
-	fprintf( aStream->svgFile, "M %.2f,%.2f ", (double) x[0] / aStream->scale, (double) y[0] / aStream->scale );
+	fprintf( aStream->svgFile, "M %.2f,%.2f ", (double) x[0] * aStream->scale, (double) y[0] * aStream->scale );
     for (int j = 1; j < pls->dev_pathnxy[i]; ++j) {
       switch (x[j]) {
         case -1: //line
-          fprintf( aStream->svgFile, "L %.2f,%.2f ", (double) x[j+1] / aStream->scale, (double) y[j+1] / aStream->scale );
+          fprintf( aStream->svgFile, "L %.2f,%.2f ", (double) x[j+1] * aStream->scale, (double) y[j+1] * aStream->scale );
           j++;
           break;
         case -2:
-         fprintf( aStream->svgFile, "Q %.2f,%.2f %.2f,%.2f ", (double) x[j+1] / aStream->scale, (double) y[j+1] / aStream->scale, (double) x[j+2] / aStream->scale, (double) y[j+2] / aStream->scale);
+         fprintf( aStream->svgFile, "Q %.2f,%.2f %.2f,%.2f ", (double) x[j+1] * aStream->scale, (double) y[j+1] * aStream->scale, (double) x[j+2] * aStream->scale, (double) y[j+2] * aStream->scale);
           j+=2;
           break;
         case -3:
-         fprintf( aStream->svgFile, "C %.2f,%.2f %.2f,%.2f %.2f,%.2f ", (double) x[j+1] / aStream->scale, (double) y[j+1] / aStream->scale, (double) x[j+2] / aStream->scale, (double) y[j+2] / aStream->scale, (double) x[j+3] / aStream->scale, (double) y[j+3] / aStream->scale );
+         fprintf( aStream->svgFile, "C %.2f,%.2f %.2f,%.2f %.2f,%.2f ", (double) x[j+1] * aStream->scale, (double) y[j+1] * aStream->scale, (double) x[j+2] * aStream->scale, (double) y[j+2] * aStream->scale, (double) x[j+3] * aStream->scale, (double) y[j+3] * aStream->scale );
           j+=3;
           break;
         default:

@@ -77,7 +77,6 @@ set(DRIVERS_DEVICE_LIST
   "mem:mem:ON:M:OFF"
   "null:null:ON:M:OFF"
   "ps:ps:ON:F:OFF"
-  "psc:ps:ON:F:OFF"
   "svg:svg:ON:F:ON"
   "wxwidgets:wxwidgets:ON:I:OFF"
   "xwin:xwin:ON:I:OFF"
