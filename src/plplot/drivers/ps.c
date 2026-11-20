@@ -211,8 +211,7 @@ void plD_init_ps( PLStream *pls )
     fprintf( OF, "%%%%BoundingBox: \n",0, (PLINT) ( dev->canvasXSize / dev->scale ),0,(PLINT) ( dev->canvasYSize / dev->scale ));
     fprintf( OF, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" );
 
-    fprintf( OF, "%%%%Title: PLplot Graph\n" );
-    fprintf( OF, "%%%%Creator: PLplot Version %s\n", PLPLOT_VERSION );
+    fprintf( OF, "%%%%Title: Graphics produced by GDL\n" );
     fprintf( OF, "%%%%CreationDate: %s\n", ps_getdate() );
     fprintf( OF, "%%%%Pages: (atend)\n" );
     fprintf( OF, "%%%%EndComments\n%%%%BeginProlog\nsave\n" );
