@@ -47,9 +47,6 @@ PLDLLIMPEXP_DRIVER const char* plD_DEVICE_INFO_svg = "svg:Scalable Vector Graphi
 
 static int    already_warned = 0;
 
-static int    text_clipping = 1;
-static DrvOpt svg_options[] = { { "text_clipping", DRV_INT, &text_clipping, "Use text clipping (text_clipping=0|1)" } };
-
 typedef struct
 {
     short textClipping;
@@ -81,7 +78,6 @@ static void svg_stroke_width( PLStream * );
 static void svg_stroke_color( PLStream * );
 static void svg_fill_color( PLStream * );
 static void svg_fill_background_color( PLStream * );
-static int svg_family_check( PLStream * );
 
 
 // General
@@ -190,16 +186,6 @@ void plD_init_svg( PLStream *pls )
 
     aStream->svgFile = pls->OutFile;
 
-    // Handle the text clipping option
-    plParseDrvOpts( svg_options );
-
-    // Turn on text clipping if the user desires this
-    if ( text_clipping )
-    {
-        aStream->textClipping = 1;
-    }
-    aStream->textClipping = (short) text_clipping;
-
     aStream->svgIndent      = 0;
     svg_general( aStream, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" );
     svg_general( aStream, "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n" );
@@ -303,15 +289,8 @@ void plD_eop_svg( PLStream *pls )
 // Close graphics file or otherwise clean up.
 //--------------------------------------------------------------------------
 
-void plD_tidy_svg( PLStream *pls )
+void plD_tidy_svg( PLStream *PL_UNUSED( pls ) )
 {
-/*
-    if ( svg_family_check( pls ) )
-    {
-        return;
-    }
-    plCloseFile( pls );
-*/
 }
 
 //--------------------------------------------------------------------------
@@ -721,30 +700,6 @@ void svg_fill_background_color( PLStream *pls )
     fprintf( aStream->svgFile, "\"\n" );
     svg_indent( aStream );
     fprintf( aStream->svgFile, "fill-opacity=\"%f\"\n", pls->cmap0[0].a );
-}
-
-//--------------------------------------------------------------------------
-// svg_family_check ()
-//
-// support function to help supress more than one page if family file
-// output not specified by the user  (e.g., with the -fam command-line option).
-//--------------------------------------------------------------------------
-
-int svg_family_check( PLStream *pls )
-{
-    if ( pls->family || pls->page == 1 )
-    {
-        return 0;
-    }
-    else
-    {
-        if ( !already_warned )
-        {
-            already_warned = 1;
-            plwarn( "Device does not support multiple pages (yet).\n" ); //todo: add support for 
-        }                                                                //https://www.w3.org/TR/2004/WD-SVG12-20041027/multipage.html
-        return 1;
-    }
 }
 
 //--------------------------------------------------------------------------
