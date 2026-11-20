@@ -156,7 +156,7 @@ void plD_init_ps( PLStream *pls )
     PSDev *dev;
 	
     pls->termin  = 0;                   // not an interactive device
-    pls->color   = 0;                   // not a color device by default
+    pls->color   = 1;                   // a color device by default
     pls->width   = 1;
     pls->verbose = 1;
     pls->bytecnt = 0;
@@ -164,9 +164,6 @@ void plD_init_ps( PLStream *pls )
     pls->page         = 0;
     pls->dev_fill0    = 1;      // driver generates solid fills
     pls->dev_fill1    = 0;      // Use PLplot core fallback for pattern fills
-
-    if ( !pls->colorset )
-        pls->color = 1;
 
     if ( ( pls->OutFile = fopen( pls->FileName, "wb+" ) ) == NULL )
             fprintf( stderr, "Can't open %s.\n", pls->FileName ); //plOpenFile( pls );

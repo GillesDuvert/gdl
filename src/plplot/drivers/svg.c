@@ -152,15 +152,6 @@ void plD_init_svg( PLStream *pls )
     pls->dev_fill0    = 1;      // driver generates solid fills
     pls->dev_fill1    = 0;      // Use PLplot core fallback for pattern fills
 
-    if ( !pls->colorset )
-        pls->color = 1;
-
-/*
-    // Initialize family file info
-    plFamInit( pls );
-
-    // Prompt for a file name if not already set
-*/
     if ( ( pls->OutFile = fopen( pls->FileName, "wb+" ) ) == NULL )
             fprintf( stderr, "Can't open %s.\n", pls->FileName ); //plOpenFile( pls );
 

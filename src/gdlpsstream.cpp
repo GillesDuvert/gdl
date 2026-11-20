@@ -45,9 +45,9 @@ void GDLPSStream::Init() {
   PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
   pls->use_unicode = doFont;
   page = 0;
+  plstream::init();
   // color or not?
   plstream::scolor(color);
-  plstream::init();
   // initialize directly here now that 'dev' is defined; do not use (inexisting) special driver of option.
   PSDev *dev = (PSDev *) pls->dev;
   dev->epsf = encapsulated;
