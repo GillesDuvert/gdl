@@ -209,10 +209,10 @@ void plD_init_ps( PLStream *pls )
     dev->psFile = pls->OutFile;
 
     dev->psIndent      = 0;
-    if (dev->epsf == 1) fprintf( OF, "%%!PS-Adobe-3.0 EPSF-2.0\n" ); else fprintf( OF, "%%!PS-Adobe-3.0\n" );
-    if (dev->epsf == 1) fprintf( OF, "%%%%BoundingBox:       \n");
-    else fprintf( OF, "%%%%BoundingBox:        \n");
-    fprintf( OF, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" );
+	// start is not epsf. it will become at end if needed.
+    fprintf( OF, "%%!PS-Adobe-3.0\n" );
+    fprintf( OF, "%%%%BoundingBox: \n",0, (PLINT) ( dev->canvasXSize / dev->scale ),0,(PLINT) ( dev->canvasYSize / dev->scale ));
+    fprintf( OF, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" );
 
     fprintf( OF, "%%%%Title: PLplot Graph\n" );
     fprintf( OF, "%%%%Creator: PLplot Version %s\n", PLPLOT_VERSION );
@@ -244,7 +244,11 @@ void plD_init_ps( PLStream *pls )
     fprintf( OF, "0 setlinecap 0 setlinejoin 2.5 setmiterlimit\n");
 
 	fprintf( OF, "%%%%EndProlog\n" );
-	fprintf( OF, "%d %d translate %f dup scale\n",dev->xOffset, dev->yOffset, dev->scale);
+//	if (pls->portrait) fprintf( OF, "%d %d translate %f dup scale\n",dev->xOffset, dev->yOffset, dev->scale);
+	if (pls->portrait) fprintf( OF, "%f dup scale\n",dev->scale);
+// we should do this :	else fprintf( OF, "%d 0 translate %f dup scale 270 rotate %d 0 translate\n",dev->xOffset, dev->scale, -PIXELS_X);
+// but IDL does this: !!!
+	else fprintf( OF, "0 29.7 2 div %f div translate %f dup scale 270 rotate\n",dev->scale, dev->scale); //IDL just translates by 21cm
 	fprintf( OF, "gsave\n");
 }
 
@@ -267,7 +271,7 @@ void plD_bop_ps( PLStream *pls )
     // write opening ps tag for the new page
     fprintf( OF, "%%%%Page: %d %d\n", (int) pls->page, (int) pls->page );
 
-    if ( !pls->portrait ) fprintf( OF, "%%%%PageOrientation: Landscape\n"); else fprintf( OF, "%%%%PageOrientation: Portrait\n");
+    if ( pls->portrait ) fprintf( OF, "%%%%PageOrientation: Portrait\n"); else fprintf( OF, "%%%%PageOrientation: Landscape\n");
 
     fprintf( OF, "gsave\n" );
     
@@ -408,10 +412,12 @@ void plD_tidy_ps( PLStream *pls )
     dev->lly *= dev->scale;
     dev->urx *= dev->scale;
     dev->ury *= dev->scale;
+/*
     dev->llx += dev->xOffset;
     dev->lly += dev->yOffset;
     dev->urx += dev->xOffset;
     dev->ury += dev->yOffset;
+*/
 
 // changed for correct Bounding boundaries Jan Thorbecke  okt 1993
 // occurs from the integer truncation -- postscript uses fp arithmetic
@@ -424,18 +430,19 @@ void plD_tidy_ps( PLStream *pls )
     fprintf( OF, "end\n" );
     fprintf( OF, "%%%%EOF\n" );
 
-// Backtrack to write the BoundingBox at the beginning
+	// Backtrack to write the BoundingBox at the beginning
 // Some applications don't like it atend
-/*
-if (dev->epsf == 1) {
-*/
     rewind( OF );
     if (dev->epsf == 1) fprintf( OF, "%%!PS-Adobe-3.0 EPSF-2.0\n" ); else fprintf( OF, "%%!PS-Adobe-3.0\n" );
-    fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",
-        dev->llx, dev->lly, dev->urx, dev->ury );
-/*
-}
-*/
+    if (dev->epsf == 1) {
+		if ( pls->portrait ) fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",dev->llx, dev->lly, dev->urx, dev->ury );
+		else {
+			fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",dev->llx, dev->lly, dev->ury, dev->urx );
+		}
+	} else {
+		if ( pls->portrait ) fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",pls->wpxoff,pls->wpyoff,pls->xlength, pls->ylength );
+	    else  fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",pls->wpyoff,pls->wpxoff,pls->ylength, pls->xlength );
+	}
     plCloseFile( pls );
 
 }

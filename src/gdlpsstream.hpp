@@ -31,11 +31,8 @@ private:
   int color;
 public:
   GDLPSStream( int nx, int ny, bool encaps, int _color, int bpp, bool orient_portrait):
-  GDLGStream::GDLGStream( nx, ny, "ps"),color(_color),portrait(orient_portrait)
+  GDLGStream::GDLGStream( nx, ny, "ps"),color(_color),portrait(orient_portrait),encapsulated(encaps),page(0),bitsPerPix(bpp)
   {
-    encapsulated = encaps;
-    page = 0;
-    bitsPerPix=bpp;
 	scalable=true;
   }
 

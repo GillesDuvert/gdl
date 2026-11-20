@@ -237,11 +237,11 @@ public:
   {
       // no need to update !D
     orient_portrait = true;
-////    nb: IDL defaults to:
-//    SetXPageSize(7 * in2cm);
-//    SetYPageSize(5 * in2cm);
-//    SetXOffset(.75 * in2cm);
-//    SetYOffset(5 * in2cm); 
+//    nb: IDL defaults to:
+    SetXPageSize(7 * INCHToCM);
+    SetYPageSize(5 * INCHToCM);
+    SetXOffset(.75 * INCHToCM);
+    SetYOffset(5 * INCHToCM); 
     return true;
   }
 
@@ -249,10 +249,10 @@ public:
   {
       // no need to update !D
     orient_portrait = false;
-//    SetXPageSize(9.5 * in2cm);
-//    SetYPageSize(7.0 * in2cm);
-//    SetXOffset(.75 * in2cm);
-//    SetYOffset(10.25 * in2cm);
+    SetXPageSize(9.5 * INCHToCM);
+    SetYPageSize(7.0 * INCHToCM);
+    SetXOffset(.75 * INCHToCM);
+    SetYOffset(10.25 * INCHToCM);
     return true;
   }
 

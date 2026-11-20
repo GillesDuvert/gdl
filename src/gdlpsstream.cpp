@@ -38,18 +38,19 @@ typedef struct
 } PSDev;
 using namespace std;
 
-void GDLPSStream::Init()
-{
-//select the fonts in all cases...
-   plstream::init();
-   //AFTER init, change back to selected
-   PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
-   pls->use_unicode=doFont;
-   page = 0;
-    // color or not?
-    plstream::scolor( color);
-    PSDev *dev = (PSDev *) pls->dev;
-    dev->epsf=encapsulated;
+void GDLPSStream::Init() {
+  //select the fonts in all cases...
+  pls->portrait = portrait;
+  //AFTER init, change back to selected
+  PLINT doFont = ((PLINT) SysVar::GetPFont()>-1) ? 1 : 0;
+  pls->use_unicode = doFont;
+  page = 0;
+  // color or not?
+  plstream::scolor(color);
+  plstream::init();
+  // initialize directly here now that 'dev' is defined; do not use (inexisting) special driver of option.
+  PSDev *dev = (PSDev *) pls->dev;
+  dev->epsf = encapsulated;
 }
  
 void GDLPSStream::eop()
@@ -151,10 +152,6 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
     }
   }
  pls->bytecnt += fprintf(pls->OutFile, "\ngrestore\n%%EndObject: Image\n       ");
-//   if (!portrait) {
-//    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x1, &y1);
-//    plRotPhy(1, dev->xmin, dev->ymin, dev->xmax, dev->ymax, &x2, &y2);
-//   }
     dev->llx = MIN(dev->llx, x1);
     dev->lly = MIN(dev->lly, y1);
     dev->urx = MAX(dev->urx, x1);
