@@ -3,6 +3,8 @@
 //////////////////////////////////////////////////////////////////////
 
 // #include "stdafx.h"
+#include <list>
+
 #include "ofxContourPlot.h"
 #include "ListContour.h"
 
@@ -639,6 +641,46 @@ bool::CListContour::PrintContour(char *fname)
 	file.close();
 	return true;
 	
+}
+//remove intermediary points if colinear /* up to epsilon */
+bool::CListContour::SimplifyContours(/*double epsilon*/){
+//  int num=0; int rej=0;
+	unsigned int i, index;
+	CLineStrip* pStrip;
+	CLineStripList::iterator pos1;
+	
+	for(i=0;i<GetNPlanes();i++) {
+		for(pos1 = m_vStripLists[i].begin();pos1!=m_vStripLists[i].end();pos1++) 
+		{
+			pStrip = (*pos1);
+		    CLineStrip::iterator pos2 = pStrip->begin(),pos3;
+            double x0=GetXi(*pos2);
+            double y0=GetYi(*pos2);
+            pos2++;
+            double x1=GetXi(*pos2);
+            double y1=GetYi(*pos2);
+            double pente=atan2(y1-y0,x1-x0);
+             // num+=2;
+            while (pos2!=pStrip->end()) 
+            {
+                pos3 = pos2; 
+                pos3++; /*num++;*/
+                double x=GetXi(*pos3);
+                double y=GetYi(*pos3);
+                double currpente=atan2((y-y0),(x-x0));
+                if (currpente==pente) {/*rej++; */ pStrip->erase(pos3);} 
+                else {
+                  x0=x1;x1=x;
+                  y0=y1;y1=y;
+                  pente=atan2((y-y0),(x-x0));
+                }
+                pos2++;
+            }
+            if (pStrip->size()<=1)  delete pStrip;
+		}
+	}
+//    std::cerr<<"rejected: "<<rej<<" of "<<num<<" ( "<<(float)(rej)*100/(float)(num)<<"%)"<<std::endl; 
+	return true;
 }
 bool::CListContour::PlotContour(const unsigned int iPlane, void (plotfunc)(int, const double**, const double**, const int*)) {
   unsigned int index;

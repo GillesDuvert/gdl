@@ -23,7 +23,7 @@
 #include "contourHelper/ListContour.cpp"
 #define LABELOFFSET 0.003
 #define LABELSPACING 0.4
-#define OVERSAMPLING 16
+#define OVERSAMPLING 32
 
 static DDouble minmin = std::numeric_limits<PLFLT>::min();
 static DDouble maxmax = std::numeric_limits<PLFLT>::max();
@@ -692,7 +692,8 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
         }
         contouring.SetPlanes(levelsVect);
         contouring.Generate(); //makes vectors of contours, in fractions of contourable map pixels.
-        //assign  currentXVal and currentYVal for final conversion of contour units (fractinal pixels) to world coordinates.
+        contouring.SimplifyContours(/*1e-3*/); //crude but efficient
+        //assign  currentXVal and currentYVal for final conversion of contour units (fractional pixels) to world coordinates.
         currentXVal=xVal;
         currentYVal=yVal;
 //        //Good place for conversion to normed values

@@ -49,6 +49,7 @@ public:
 	double Area(CLineStrip* Line);
 	double EdgeWeight(CLineStrip* pLine, double R);
 	bool   PrintContour(char *fname);
+	bool   SimplifyContours(/*double epsilon*/);
     virtual bool PlotContour(const unsigned int iPlane, void (plotfunc)(int, const double**, const double**, const int*)) final;
 
 protected:
