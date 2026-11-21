@@ -200,7 +200,10 @@ void plD_init_ps( PLStream *pls )
     else
         dev->scale = (PLFLT) dev->canvasYSize / (PLFLT) PIXELS_Y ;
     plP_setphy( (PLINT) 0, (PLINT) ( dev->canvasXSize / dev->scale ), (PLINT) 0, (PLINT) ( dev->canvasYSize / dev->scale ) ); // Scaled points.
-
+	dev->llx=pls->phyxma+1;
+	dev->lly=pls->phyyma+1;
+	dev->urx=0;
+	dev->ury=0;
     plP_setpxl( POINTS_PER_INCH / ( 25.4 * dev->scale ), POINTS_PER_INCH / ( 25.4 * dev->scale ) );                                           // Scaled points/mm.
 
     dev->psFile = pls->OutFile;
@@ -208,9 +211,8 @@ void plD_init_ps( PLStream *pls )
     dev->psIndent      = 0;
 	// start is not epsf. it will become at end if needed.
     fprintf( OF, "%%!PS-Adobe-3.0\n" );
-    fprintf( OF, "%%%%BoundingBox: \n",0, (PLINT) ( dev->canvasXSize / dev->scale ),0,(PLINT) ( dev->canvasYSize / dev->scale ));
-    fprintf( OF, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" );
-
+	//This line will compensate the size of the real bounding box written afterwards
+    fprintf( OF, "%%%%BoundingBox: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n");
     fprintf( OF, "%%%%Title: Graphics produced by GDL\n" );
     fprintf( OF, "%%%%CreationDate: %s\n", ps_getdate() );
     fprintf( OF, "%%%%Pages: (atend)\n" );
@@ -235,13 +237,13 @@ void plD_init_ps( PLStream *pls )
     fprintf( OF, "/RO {rotate} def\n" );
     fprintf( OF, "/SW {stringwidth 2 index mul exch 2 index mul exch rmoveto pop} bind def\n" );
     fprintf( OF, "/B {Z %d %d M %d %d D %d %d D %d %d D %d %d closepath} def\n",
-        0, 0, 0, dev->canvasYSize, dev->canvasXSize, dev->canvasYSize, dev->canvasXSize, 0, 0, 0 );
+        pls->phyxmi, pls->phyymi , pls->phyxmi, pls->phyyma, pls->phyxma, pls->phyyma, pls->phyxma, pls->phyymi, pls->phyxmi, pls->phyymi  );
     fprintf( OF, "/CL {newpath M D D D closepath clip} def\n" );
     fprintf( OF, "0 setlinecap 0 setlinejoin 2.5 setmiterlimit\n");
 
 	fprintf( OF, "%%%%EndProlog\n" );
-//	if (pls->portrait) fprintf( OF, "%d %d translate %f dup scale\n",dev->xOffset, dev->yOffset, dev->scale);
-	if (pls->portrait) fprintf( OF, "%f dup scale\n",dev->scale);
+	if (pls->portrait) fprintf( OF, "%d %d translate %f dup scale\n",dev->xOffset, dev->yOffset, dev->scale);
+//	if (pls->portrait) fprintf( OF, "%f dup scale\n",dev->scale);
 // we should do this :	else fprintf( OF, "%d 0 translate %f dup scale 270 rotate %d 0 translate\n",dev->xOffset, dev->scale, -PIXELS_X);
 // but IDL does this: !!!
 	else fprintf( OF, "0 29.7 2 div %f div translate %f dup scale 270 rotate\n",dev->scale, dev->scale); //IDL just translates by 21cm
@@ -404,16 +406,23 @@ void plD_tidy_ps( PLStream *pls )
 
     fprintf( OF, "\n%%%%Trailer\n" );
 
+	if (!pls->portrait) {
+	// Rotate by 90 degrees
+    plRotPhy( 1, pls->phyxmi, pls->phyymi, pls->phyxma, pls->phyyma, &dev->llx, &dev->lly );
+    plRotPhy( 1, pls->phyxmi, pls->phyymi, pls->phyxma, pls->phyyma, &dev->urx, &dev->ury );
+	}
+
     dev->llx *= dev->scale;
     dev->lly *= dev->scale;
     dev->urx *= dev->scale;
     dev->ury *= dev->scale;
-/*
+
+ 	if (pls->portrait) {
     dev->llx += dev->xOffset;
     dev->lly += dev->yOffset;
     dev->urx += dev->xOffset;
     dev->ury += dev->yOffset;
-*/
+	}
 
 // changed for correct Bounding boundaries Jan Thorbecke  okt 1993
 // occurs from the integer truncation -- postscript uses fp arithmetic
@@ -429,15 +438,10 @@ void plD_tidy_ps( PLStream *pls )
 	// Backtrack to write the BoundingBox at the beginning
 // Some applications don't like it atend
     rewind( OF );
-    if (dev->epsf == 1) fprintf( OF, "%%!PS-Adobe-3.0 EPSF-2.0\n" ); else fprintf( OF, "%%!PS-Adobe-3.0\n" );
-    if (dev->epsf == 1) {
-		if ( pls->portrait ) fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",dev->llx, dev->lly, dev->urx, dev->ury );
-		else {
-			fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",dev->llx, dev->lly, dev->ury, dev->urx );
-		}
-	} else {
-		if ( pls->portrait ) fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",pls->wpxoff,pls->wpyoff,pls->xlength, pls->ylength );
-	    else  fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",pls->wpyoff,pls->wpxoff,pls->ylength, pls->xlength );
+    if (dev->epsf == 1) fprintf( OF, "%%!PS-Adobe-3.0 EPSF-3.0\n" ); else fprintf( OF, "%%!PS-Adobe-3.0\n" );
+	if ( pls->portrait ) fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",dev->llx, dev->lly, dev->urx, dev->ury );
+	else {
+		fprintf( OF, "%%%%BoundingBox: %d %d %d %d\n",dev->llx, dev->ury, dev->urx, dev->lly);
 	}
     plCloseFile( pls );
 

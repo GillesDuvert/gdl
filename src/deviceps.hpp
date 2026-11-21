@@ -81,7 +81,7 @@ class DevicePS: public GraphicsDevice
 		actStream->SetColorMap0(r, g, b, ctSize);
 		actStream->SetColorMap1(r, g, b, ctSize);
 		actStream->scolbg(255, 255, 255); // start with a white background
-
+		
 		actStream->Init();
 
 		// need to be called initially. permit to fix things
