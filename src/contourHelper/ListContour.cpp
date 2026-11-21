@@ -642,9 +642,9 @@ bool::CListContour::PrintContour(char *fname)
 	return true;
 	
 }
-//remove intermediary points if colinear /* up to epsilon */
-bool::CListContour::SimplifyContours(/*double epsilon*/){
-//  int num=0; int rej=0;
+//remove intermediary points if colinear up to epsilon
+bool::CListContour::SimplifyContours(double epsilon){
+  int num=0; int rej=0;
 	unsigned int i, index;
 	CLineStrip* pStrip;
 	CLineStripList::iterator pos1;
@@ -660,15 +660,15 @@ bool::CListContour::SimplifyContours(/*double epsilon*/){
             double x1=GetXi(*pos2);
             double y1=GetYi(*pos2);
             double pente=atan2(y1-y0,x1-x0);
-             // num+=2;
+              num+=2;
             while (pos2!=pStrip->end()) 
             {
                 pos3 = pos2; 
-                pos3++; /*num++;*/
+                pos3++; num++;
                 double x=GetXi(*pos3);
                 double y=GetYi(*pos3);
                 double currpente=atan2((y-y0),(x-x0));
-                if (currpente==pente) {/*rej++; */ pStrip->erase(pos3);} 
+                if (abs(currpente-pente) < epsilon) {rej++; pStrip->erase(pos3);} 
                 else {
                   x0=x1;x1=x;
                   y0=y1;y1=y;
