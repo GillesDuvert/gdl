@@ -692,7 +692,7 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
         }
         contouring.SetPlanes(levelsVect);
         contouring.Generate(); //makes vectors of contours, in fractions of contourable map pixels.
-        contouring.SimplifyContours(/*1e-3*/); //crude but efficient
+        contouring.SimplifyContours(1e-5); //use if necessary...
         //assign  currentXVal and currentYVal for final conversion of contour units (fractional pixels) to world coordinates.
         currentXVal=xVal;
         currentYVal=yVal;
