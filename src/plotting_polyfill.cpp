@@ -228,8 +228,8 @@ namespace lib {
       if (hachures) {
         PLINT ori = 0, spa = 1500;
 
-        if (e->KeywordSet(orientationIx)) ori = PLINT(1e1 * (*e->GetKWAs<DFloatGDL>(orientationIx))[0]);
-        if (e->KeywordSet(spacingIx)) spa = PLINT(1e4 * (*e->GetKWAs<DFloatGDL>(spacingIx))[0]);
+        if (e->KeywordSet(orientationIx)) ori = PLINT(1e1 * (*e->GetKWAs<DFloatGDL>(orientationIx))[0]); //in tenth of degrees
+        if (e->KeywordSet(spacingIx)) spa = PLINT(1e4 * (*e->GetKWAs<DFloatGDL>(spacingIx))[0]); //in micrometers instead of centimeters
 
         gdlSetPenThickness(e, actStream);
         gdlSetLineStyle(e, actStream);

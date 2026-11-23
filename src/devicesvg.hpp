@@ -111,7 +111,8 @@ public:
     dStruct->InitTag("FILL_DIST",  DLongGDL( 1)); 
     dStruct->InitTag("WINDOW",     DLongGDL( -1)); 
     dStruct->InitTag("UNIT",       DLongGDL( 0)); 
-    dStruct->InitTag("FLAGS",      DLongGDL( 266807)); //if 266295 (i.e., not a "PRINTER") ERASE would work on it, but it is probably not what we want. 
+    dStruct->InitTag("FLAGS",      DLongGDL( 266807));  //266807 if color, 266791 if monochrome.
+	//if 266295 (i.e., not a "PRINTER") ERASE would work on it, but it is probably not what we want. 
     dStruct->InitTag("ORIGIN",     origin); 
     dStruct->InitTag("ZOOM",       zoom); 
     
@@ -139,6 +140,12 @@ public:
     return true;
   }
 
+  bool ResetFileame( )
+  {
+    fileName = "gdl.svg";
+    return true;
+  }
+
   bool CloseFile()
   {
     delete actStream;
@@ -146,6 +153,7 @@ public:
 	svgUnit->Close();
 	svgUnit->Free();
 	svgUnit = NULL;
+	ResetFileName();
     return true;
   }
   

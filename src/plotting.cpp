@@ -2332,6 +2332,8 @@ void SelfNormLonLat(DDoubleGDL *lonlat) {
       e->AssureLongScalarKWIfPresent(BACKGROUNDIx, background);
     }
     DLong decomposed = GraphicsDevice::GetDevice()->GetDecomposed();
+    bool printer = (((*static_cast<DLongGDL*> (SysVar::D()->GetTag(SysVar::D()->Desc()->TagIndex("FLAGS"), 0)))[0] & 512) == 512);
+    if (printer) background=0xFFFFFF;
     a->Color(background, decomposed);
   }
 

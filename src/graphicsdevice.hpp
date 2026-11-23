@@ -261,8 +261,9 @@ public:
   virtual DIntGDL* GetWindowPosition()                { return NULL;}
   virtual DLong GetWriteMask()                        { return -1;}
   virtual DByteGDL* WindowState()                     { return NULL;}
-  virtual bool CloseFile()                            { return false;}
   virtual bool SetFileName( const std::string& f)     { return false;}
+  virtual bool ResetFileName()     { return false;}
+  virtual bool CloseFile()                            { return false;}
   virtual bool Decomposed( bool value)                { return false;}
   virtual bool SetGraphicsFunction( DLong value)      { return false;}
   virtual bool CursorStandard( int value)             { return false;}

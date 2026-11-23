@@ -617,8 +617,12 @@ typedef struct
     PLINT page_status, freeaspect, portrait;
 
 // Fill pattern info
+// patt		Fill pattern number
+// inclin	Array of inclinations in tenths of degree for fill lines
+// delta	Array of spacings in micrometers between fill lines
+// nps		Number of distinct line styles for fills
 
-    PLINT patt, inclin[2], delta[2], nps;
+    PLINT patt, inclin[2], delta[2], nps, doPatternedFills;
 
 // Variables used in line drawing
 

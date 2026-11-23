@@ -107,7 +107,7 @@ namespace lib {
   void drawContour(int i, const double **x, const double **y, const int *nelem){
     for (int j=0; j<i; ++j)  plline( nelem[j],  x[j] , y[j] );
 }
-void fillContour(int i, const double **x, const double **y, const int *nelem){
+  void CellFillContour(int i, const double **x, const double **y, const int *nelem){
     plfill_paths( i,  x , y, nelem );
   }
 
@@ -130,7 +130,7 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
     DDouble minVal, maxVal;
     bool isLog=false;
     bool overplot=false, nodata=false;
-    DLongGDL *colors, *labels, *style;
+    DLongGDL *color, *contour_colors, *labels, *style;
     DFloatGDL* thick;
     Guard<BaseGDL> colors_guard, thick_guard, labels_guard, style_guard;
     DFloatGDL *spacing, *orientation;
@@ -143,6 +143,7 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
     bool hasMinVal, hasMaxVal;
     bool recordPath;
     myContour contouring;
+    bool noerase;
 
   public:
     static void XYIdentity(double &x, double &y){ //interpolate x (fractional pixels) on world X
@@ -435,6 +436,9 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
         gdlSetGraphicsBackgroundColorFromKw(e, actStream);
         //start a plot
         gdlNextPlotHandlingNoEraseOption(e, actStream); //NOERASE
+        //we need to know if NEORASE was acive
+        static int NOERASE=e->KeywordIx("NOERASE");
+        noerase= e->KeywordSet(NOERASE);
 
         //Box adjustement:
         gdlAdjustAxisRange(e, XAXIS, xStart, xEnd, xLog);
@@ -486,6 +490,22 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
         recordPath = false;
       }
 
+      static int colorIx = e->KeywordIx("COLOR");
+      bool doColor = false;
+      if (e->GetKW(colorIx) != NULL) {
+        color = e->GetKWAs<DLongGDL>(colorIx);
+        doColor = true;
+      }
+
+      //properties
+      if (!doColor || color->N_Elements() == 1) {
+        //if no KW or only 1 color, no need to complicate things
+        gdlSetGraphicsForegroundColorFromKw(e, actStream); //COLOR
+        doColor = false;
+      } else if (color->N_Elements() > 1) e->Throw("Expression must be a scalar or 1 element array in this context:" + e->GetString(colorIx));
+
+      gdlSetPenThickness(e, actStream); //THICK
+
       // labeling
       // initiated by /FOLLOW.
       // C_ANNOTATION=vector of strings:  strings replace the default numerical values. Implies FOLLOW. Impossible with PLPLOT!
@@ -507,13 +527,14 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
       static int C_LABELS = e->KeywordIx("C_LABELS");
       bool dolabels = false;
       static int FILL = e->KeywordIx("FILL");
-      static int CELL_FILL = e->KeywordIx("CELL_FILL");
+      static int CELL_FILL = e->KeywordIx("CELL_FILL"); //actually our hatched filling IS CELL_FILLING 
       static int C_SPACING = e->KeywordIx("C_SPACING");
       bool dospacing = false;
       static int C_ORIENTATION = e->KeywordIx("C_ORIENTATION");
       bool doori = false;
       bool label = (e->KeywordSet(FOLLOW) || e->KeywordSet(C_CHARSIZE) || e->KeywordSet(C_CHARTHICK) || e->KeywordSet(C_LABELS) || e->KeywordSet(C_ANNOTATION));
       bool fill = (e->KeywordSet(FILL) || e->KeywordSet(CELL_FILL) || e->KeywordSet(C_SPACING) || e->KeywordSet(C_ORIENTATION));
+      bool cellfill = (e->KeywordSet(CELL_FILL));
       if (fill) label = false; //mutually exclusive
       if (recordPath) {
         fill = true;
@@ -705,25 +726,25 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
           doT3d = false;
         } // else we have to do it ourselves for each contour
 
-        //Colors.
+        //Contour Colors.
         DStructGDL* pStruct = SysVar::P(); //MUST NOT BE STATIC, due to .reset 
         static int c_colorsIx = e->KeywordIx("C_COLORS");
-        bool docolors = false;
+        bool doContourColors = false;
         // Get decomposed value for colors
         DLong decomposed = GraphicsDevice::GetDevice()->GetDecomposed();
         if (e->GetKW(c_colorsIx) != NULL) {
-          colors = e->GetKWAs<DLongGDL>(c_colorsIx);
-          docolors = true;
+          contour_colors = e->GetKWAs<DLongGDL>(c_colorsIx);
+          doContourColors = true;
         } else {
           // Get COLOR from PLOT system variable
-          colors = new DLongGDL(1, BaseGDL::NOZERO);
-          colors_guard.Init(colors); // delete upon exit
-          colors = static_cast<DLongGDL*> (pStruct->GetTag(pStruct->Desc()->TagIndex("COLOR"), 0));
-          docolors = false;
+          contour_colors = new DLongGDL(1, BaseGDL::NOZERO);
+          colors_guard.Init(contour_colors); // delete upon exit
+          contour_colors = static_cast<DLongGDL*> (pStruct->GetTag(pStruct->Desc()->TagIndex("COLOR"), 0));
+          doContourColors = false;
         }
         //treat decomposed problem here (simpler: colors for table 0 will already be truncated to 0xFF)
-        if (!decomposed) for (SizeT i = 0; i < colors->N_Elements(); ++i) {
-            (*colors)[i] &= 0xFF;
+        if (!decomposed) for (SizeT i = 0; i < contour_colors->N_Elements(); ++i) {
+            (*contour_colors)[i] &= 0xFF;
           }
 
         static int c_linestyleIx = e->KeywordIx("C_LINESTYLE");
@@ -774,17 +795,20 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
         bool hachures = (dospacing || doori);
 
         //provides some defaults:
-        if (!docolors) gdlSetGraphicsForegroundColorFromKw(e, actStream);
-        if (!dothick) gdlSetPenThickness(e, actStream);
         gdlSetPlotCharsize(e, actStream);
         actStream->psty(0); //solid fill by default!
 
         PLFLT value; //used for all filled contours: they use colortable 1; value is between 0 and 1.
-        if (docolors) actStream->SetColorMap1Table(nlevel, colors, decomposed); //load colormap1 with given colors (decomposed or not))
+        if (doContourColors) actStream->SetColorMap1Table(nlevel, contour_colors, decomposed); //load colormap1 with given colors (decomposed or not))
         else if (nlevel > 1) actStream->SetColorMap1DefaultColors(nlevel, decomposed); // if 1 contour, it is in foreground color.
 
-        if (fill) {
+        if (fill) { //may be cell_fill
           if (hachures) {
+            // apparently, if /NOERASE ( i.e. the intention is to draw hatching above something ) then:
+            // if FILL hatching will crisscross (as no underlying background fill is done)
+            // but with CELL_FILL (which is what our hatching does always) it will make a nice hatching.
+            // without NOERASE, IDL fills the contour with background color before hatching, and CELL_FILL needs not to be used.
+            // so without /NOERASE we fill the contour (with fillContour) with background and hatch with CellFillContour
             PLINT ori;
             PLINT spa;
 
@@ -793,19 +817,23 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
             // if C_SPACING and C_ORIENTATION absent, FILL will do a solid fill .
             for (SizeT i = 0; i < nlevel; ++i) {
               if (doT3d) gdlStartT3DMatrixDriverTransform(actStream, (clevel[i] - cmin) / (cmax - cmin));
-              ori = floor(10.0 * (*orientation)[i % orientation->N_Elements()]);
-              spa = floor(10000 * (*spacing)[i % spacing->N_Elements()]);
+              ori = floor(1e1 * (*orientation)[i % orientation->N_Elements()]); // in tenth of degrees
+              spa = floor(1e4 * (*spacing)[i % spacing->N_Elements()]); //in micrometers
               if (dothick) actStream->Thick((*thick)[i % thick->N_Elements()]);
               if (dostyle) gdlLineStyle(actStream, (*style)[i % style->N_Elements()]); //not working; plplot bug see https://sourceforge.net/p/plplot/bugs/111
-              //the background
-              actStream->psty(0);
-              gdlSetGraphicsForegroundColorFromBackgroundKw(e,actStream); //patterns written on background, not transparents!
-              contouring.PlotContour(i, fillContour);
+              //the background if not noerase
+              if (!noerase) {
+                actStream->psty(0);
+                gdlSetGraphicsForegroundColorFromBackgroundKw(e,actStream); //patterns written on background, not transparents!
+                contouring.PlotContour(i, CellFillContour);
+              }
               //the pattern, now
               actStream->psty(1);
               actStream->pat(1, &ori, &spa);
-              if (docolors) actStream->Color((*colors)[i % colors->N_Elements()], decomposed); else gdlSetGraphicsForegroundColorFromKw ( e, actStream );
-              contouring.PlotContour(i, fillContour);
+              if (doContourColors) actStream->Color((*contour_colors)[i % contour_colors->N_Elements()], decomposed); 
+              else gdlSetGraphicsForegroundColorFromKw ( e, actStream );
+              //we do not use fillContour even if CELL_FILL was not asked for. 
+              contouring.PlotContour(i, CellFillContour);
               actStream->psty(0);
             }
           }//end FILL with equispaced lines
@@ -814,17 +842,17 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
               gdlStartT3DMatrixDriverTransform(actStream, (clevel[i] - cmin) / (cmax - cmin));
               value = static_cast<PLFLT> (i) / nlevel;
               actStream->col1(value);
-              contouring.PlotContour(i, fillContour);
+              contouring.PlotContour(i, CellFillContour);
             }
           } else { 
               for (SizeT i = 0; i < nlevel; ++i) {
                 value = static_cast<PLFLT> (i) / nlevel;
                 actStream->col1(value);
-                contouring.PlotContour(i, fillContour);              
+                contouring.PlotContour(i, CellFillContour);              
               }
             }
         } else { //no fill = contours . use normal pen procedures.
-          if (!docolors) gdlSetGraphicsForegroundColorFromKw(e, actStream);
+          if (!doContourColors) gdlSetGraphicsForegroundColorFromKw(e, actStream);
           DFloat referencePenThickness;
           if (!dothick) {
             gdlSetPenThickness(e, actStream);
@@ -833,7 +861,7 @@ void fillContour(int i, const double **x, const double **y, const int *nelem){
           gdlSetPlotCharsize(e, actStream);
           for (SizeT i = 0; i < nlevel; ++i) {
             if (doT3d) gdlStartT3DMatrixDriverTransform(actStream, (clevel[i] - cmin) / (cmax - cmin));
-            if (docolors) actStream->Color((*colors)[i % colors->N_Elements()], decomposed);
+            if (doContourColors) actStream->Color((*contour_colors)[i % contour_colors->N_Elements()], decomposed);
             if (dothick) {
               actStream->Thick((*thick)[i % thick->N_Elements()]);
               referencePenThickness = (*thick)[i % thick->N_Elements()];

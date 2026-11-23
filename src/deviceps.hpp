@@ -163,6 +163,12 @@ public:
     return true;
   }
 
+  bool ResetFileName()
+  {
+    fileName = "gdl.ps";
+    return true;
+  }
+  
   bool CloseFile()
   {
     // trying to solve bug report 3611898
@@ -176,6 +182,7 @@ public:
       psUnit->Free();
       psUnit = NULL;
     }
+	ResetFileName();
     return true;
   }
 

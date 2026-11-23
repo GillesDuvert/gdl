@@ -412,7 +412,7 @@ plP_fill( short *x, short *y, PLINT npts )
 // software fills on orientation swaps.
 //
 
-    if ( plsc->patt > 0 )
+    if ( plsc->patt > 0 && !plsc->doPatternedFills )
         plfill_soft( x, y, npts );
 
     else

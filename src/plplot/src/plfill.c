@@ -262,7 +262,7 @@ c_plfill_multi(PLINT npoly, PLFLT_VECTOR *x, PLFLT_VECTOR *y, PLINT_VECTOR nelem
 		return;
 	}
 
-	if (plsc->patt > 0) {
+	if (plsc->patt > 0 && ! plsc->doPatternedFills) {
 		for (int i = 0; i < npoly; ++i) {
 			c_plfill_one(nelem[i], x[i], y[i], plP_fill);
 		}
