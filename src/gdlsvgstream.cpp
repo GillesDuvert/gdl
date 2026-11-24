@@ -320,7 +320,7 @@ bool GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *p
 static int counter=0;
 static char id[32];
 
-bool GDLSVGStream::PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, DLong trueColorOrder) {
+bool GDLSVGStream::PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, DLong trueColorOrder, PLFLT ori) {
   c_plflush();
   SVG* dev = (SVG *) pls->dev;
   if (trueColorOrder > 1) {
@@ -329,8 +329,8 @@ bool GDLSVGStream::PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, 
   }
   snprintf(id,31,"img_%3.3d",counter++);
   pls->bytecnt += fprintf(pls->OutFile, "<pattern id=\"%s\" patternUnits=\"userSpaceOnUse\" width=\"%d\" "
-      "height=\"%d\">\n   <image preserveAspectRatio=\"none\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\" href=\"data:image/svg;base64,",
-      id,nx,ny,nx,ny);
+      "height=\"%d\" patternTransform=\"rotate(%f)\">\n   <image preserveAspectRatio=\"none\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\" href=\"data:image/svg;base64,",
+      id,nx,ny,ori,nx,ny);
   int error;
   std::string ret;
   if (trueColorOrder == 0) { //indexed value 0->255: image

@@ -623,6 +623,8 @@ typedef struct
 // nps		Number of distinct line styles for fills
 
     PLINT patt, inclin[2], delta[2], nps, doPatternedFills;
+	PLINT patternFill;
+	const unsigned char* thePatternBase64; 
 
 // Variables used in line drawing
 

@@ -45,7 +45,7 @@ public:
 
   void Init();
   bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos, DLong tru, DLong chan, DLong Mode=GDL_COPY);
-  bool PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, DLong tru);
+  bool PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, DLong tru, PLFLT ori=0);
 #ifdef USE_PNGLIB
   std::string svg_to_png64(int height, int width, unsigned char *image, int bit_depth, int bpp, int whattype, int *error);
 #endif

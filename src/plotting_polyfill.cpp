@@ -227,8 +227,7 @@ namespace lib {
       static int PATTERN = e->KeywordIx("PATTERN");
       bool pattern=e->KeywordPresentAndDefined(PATTERN);
       bool hachures=(e->KeywordPresentAndDefined(line_fillIx)||e->KeywordPresentAndDefined(orientationIx)||e->KeywordPresentAndDefined(spacingIx)||e->KeywordPresentAndDefined(linestyleIx));
-      if (hachures) {
-        pattern=false;
+      if (hachures && ! pattern) {
         PLINT ori = 0, spa = 1500;
 
         if (e->KeywordSet(orientationIx)) ori = PLINT(1e1 * (*e->GetKWAs<DFloatGDL>(orientationIx))[0]); //in tenth of degrees
@@ -254,7 +253,9 @@ namespace lib {
           imageHeight = byteImage->Dim(2);
         }
         DByte* im = &(*byteImage)[0];
-        if (!actStream->PassImageAsPattern(im, imageWidth, imageHeight, trueColor)) e->Throw("device does not support Pattern Filling.");
+        PLFLT ori=0;
+        if (e->KeywordSet(orientationIx)) ori = 1e1 * (*e->GetKWAs<DFloatGDL>(orientationIx))[0]; //in tenth of degrees
+        if (!actStream->PassImageAsPattern(im, imageWidth, imageHeight, trueColor, ori)) e->Throw("device does not support Pattern Filling.");
       }
       
      //Take care of projections: 
