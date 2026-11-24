@@ -962,12 +962,12 @@ void LibInit()
     {
       "CLIP", "COLOR","DATA","DEVICE","NORMAL","LINESTYLE","NOCLIP", //supported graphic KW
       "ORIENTATION","THICK", //supported graphic KW
-      "LINE_FILL", "SPACING", "T3D","Z", //polyfill specifics
+      "LINE_FILL", "SPACING", "T3D","Z",  "PATTERN", //polyfill specifics
       KLISTEND
     };
    const string polyfillWarnKey[]=
     {
-     "IMAGE_COORD","IMAGE_INTERP", "PATTERN", "FILL_PATTERN", "TRANSPARENT",KLISTEND
+     "IMAGE_COORD","IMAGE_INTERP", "TRANSPARENT",KLISTEND //for Z buffer
     };
   new DLibPro(lib::polyfill, string("POLYFILL"), 3, polyfillKey,polyfillWarnKey);
 

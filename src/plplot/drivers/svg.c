@@ -409,7 +409,7 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
     if ( fill )
     {
 	//this is a (multiple) FILL. Will add a stroke under certain cases, below.
-	if (pls->curcolor.a < 0.99 || plsc->patt) {
+	if (pls->curcolor.a < 0.99 || plsc->patt|| plsc->patternFill) {
 	    // pls->curcolor.a < 0.99: Two adjacent regions will put non-zero width boundary strokes on top
         // of each other on their common boundary.  Thus, a stroke on the boundary
         // of a filled region is generally a bad idea when the fill is partially
@@ -427,6 +427,8 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
 	}
 	if (plsc->patt) {
 		svg_fill_pattern(pls, buf);
+	} else if (plsc->patternFill) {
+		svg_fill_pattern(pls, pls->thePatternBase64);
 	} else {
 		svg_fill_color(pls);
 	}
@@ -490,7 +492,7 @@ void FillPath(PLStream *pls) {
     svgDev = pls->dev;
 	if (plsc->patt) {
 		define_pattern(pls,buf);
-	}
+	} 
     fprintf( svgDev->svgFile, "\n<path d=\"");
     for (int i = 0; i < pls->dev_npath; ++i) {
     PLINT* x = pls->dev_pathx[i];
@@ -518,7 +520,7 @@ void FillPath(PLStream *pls) {
   }
 	fprintf( svgDev->svgFile, "\"\n");
 	//this is a (multiple) FILL. Will add a stroke under certain cases, below.
-	if (pls->curcolor.a < 0.99 || plsc->patt) {
+	if (pls->curcolor.a < 0.99 || plsc->patt || plsc->patternFill) {
 	    // pls->curcolor.a < 0.99: Two adjacent regions will put non-zero width boundary strokes on top
         // of each other on their common boundary.  Thus, a stroke on the boundary
         // of a filled region is generally a bad idea when the fill is partially
@@ -536,7 +538,9 @@ void FillPath(PLStream *pls) {
 	}
 	if (plsc->patt) {
 		svg_fill_pattern(pls, buf);
-	} else {
+	} else if (plsc->patternFill) {
+		svg_fill_pattern(pls, pls->thePatternBase64);
+	} else 	{
 		svg_fill_color(pls);
 	}
 	if (pls->patt && pls->dev_eofill)

@@ -224,8 +224,11 @@ namespace lib {
       static int orientationIx = e->KeywordIx("ORIENTATION");
       static int line_fillIx = e->KeywordIx("LINE_FILL");
       static int spacingIx = e->KeywordIx("SPACING");
+      static int PATTERN = e->KeywordIx("PATTERN");
+      bool pattern=e->KeywordPresentAndDefined(PATTERN);
       bool hachures=(e->KeywordPresentAndDefined(line_fillIx)||e->KeywordPresentAndDefined(orientationIx)||e->KeywordPresentAndDefined(spacingIx)||e->KeywordPresentAndDefined(linestyleIx));
       if (hachures) {
+        pattern=false;
         PLINT ori = 0, spa = 1500;
 
         if (e->KeywordSet(orientationIx)) ori = PLINT(1e1 * (*e->GetKWAs<DFloatGDL>(orientationIx))[0]); //in tenth of degrees
@@ -238,6 +241,20 @@ namespace lib {
         actStream->pat(1, &ori, &spa);
       } else {
         actStream->psty(0);
+      }
+      if (pattern) {
+        BaseGDL* image=e->GetKW(PATTERN);
+        DByteGDL* byteImage = static_cast<DByteGDL*> (image->Convert2(GDL_BYTE, BaseGDL::COPY));
+        bool trueColor=false;
+        PLINT imageWidth = byteImage->Dim(0);
+        PLINT imageHeight = byteImage->Dim(1);
+        if (byteImage->Rank() == 3) {
+          trueColor=true;
+          imageWidth = byteImage->Dim(1);
+          imageHeight = byteImage->Dim(2);
+        }
+        DByte* im = &(*byteImage)[0];
+        if (!actStream->PassImageAsPattern(im, imageWidth, imageHeight, trueColor)) e->Throw("device does not support Pattern Filling.");
       }
       
      //Take care of projections: 

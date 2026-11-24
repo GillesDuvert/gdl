@@ -274,6 +274,7 @@ public:
   virtual void Clear()         {}
   virtual void Clear( DLong chan)          {}
   virtual bool PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *pos, DLong tru, DLong chan, DLong Mode=GDL_COPY){return false;}
+  virtual bool PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, DLong tru){return false;}
   virtual bool HasCrossHair() {return false;}
   virtual void UnMapWindowAndSetPixmapProperty() {usedAsPixmap=true;} 
   bool IsPixmapWindow() {return usedAsPixmap;}
