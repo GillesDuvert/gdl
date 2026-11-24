@@ -286,11 +286,11 @@ bool  GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *
     cerr << "TV+SVG device: True Color images must be [3,*,*] only. (FIXME!)" << endl;
     return false;
   }
-  double x1=(double) pos[0] /aStream->scale;
-  double x2=(double) pos[1] / aStream->scale;
-  double y1=(double) pos[2] / aStream->scale;
-  double y2=(double) pos[3] / aStream->scale;
-  pls->bytecnt += fprintf(pls->OutFile,"<image preserveAspectRatio=\"none\" x=\"%.2f\" y=\"%.2f\" width=\"%.2f\" height=\"%.2f\" xlink:href=\"data:image/svg;base64,",
+  double x1=(double) pos[0] * aStream->scale;
+  double x2=(double) pos[1] * aStream->scale;
+  double y1=(double) pos[2] * aStream->scale;
+  double y2=(double) pos[3] * aStream->scale;
+  pls->bytecnt += fprintf(pls->OutFile,"<image preserveAspectRatio=\"none\" x=\"%.2f\" y=\"%.2f\" width=\"%.2f\" height=\"%.2f\" href=\"data:image/svg;base64,",
           x1,y1,x2,y2);
   int error;
   std::string ret ;      
