@@ -346,7 +346,49 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
 
     }
 }
+#define SVG_STYLE_FACTOR 100
+void define_pattern(PLStream *pls, char* id) {
+    SVG *svgDev;
 
+    svgDev = pls->dev;
+	int total = 0;
+	for (int i = 0; i < plsc->lineStyleNumberOfElements; i++) {
+		total += plsc->mark[i];
+		total += plsc->space[i];
+	}
+	float thick = pls->width;
+	float neededLength = (total == 0) ? 10 : (float) total / SVG_STYLE_FACTOR;
+	float sep = 10 + thick;
+	if (pls->delta[0] > 0) sep = MAX(2, pls->delta[0]*1e-3);
+	float rot = (float) plsc->inclin[0] / 10.;
+	int ix = neededLength + thick;
+	int iy = sep;
+	ix = MAX(10 + sep, ix);
+	iy = MAX(1 + sep, iy);
+	snprintf(id, 31, "hatch_%03.3d", svgDev->patcount++);
+	fprintf(svgDev->svgFile, "\n<pattern id=\"%s\" width=\"%d\" height=\"%d\" "
+			"patternTransform=\"rotate(%f 0 0)\" stroke-linecap=\"round\" patternUnits=\"userSpaceOnUse\">\n", id, ix, iy, rot);
+	if (plsc->lineStyleNumberOfElements == 0) {
+		fprintf(svgDev->svgFile, "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%f; stroke:#", thick, iy / 2, ix, iy / 2, thick);
+		write_hex(svgDev->svgFile, pls->curcolor.r);
+		write_hex(svgDev->svgFile, pls->curcolor.g);
+		write_hex(svgDev->svgFile, pls->curcolor.b);
+		fprintf(svgDev->svgFile, "\"/></pattern>");
+	} else {
+		int start = thick;
+		int end = 0;
+		for (int i = 0; i < plsc->lineStyleNumberOfElements; i++) {
+			end = start + (float) plsc->mark[i] / SVG_STYLE_FACTOR;
+			fprintf(svgDev->svgFile, "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%f; stroke:#", start, iy / 2, end, iy / 2, thick);
+			write_hex(svgDev->svgFile, pls->curcolor.r);
+			write_hex(svgDev->svgFile, pls->curcolor.g);
+			write_hex(svgDev->svgFile, pls->curcolor.b);
+			fprintf(svgDev->svgFile, "\"/>\n");
+			start += (float) (plsc->mark[i] + plsc->space[i]) / SVG_STYLE_FACTOR;
+		}
+		fprintf(svgDev->svgFile, "</pattern>");
+	}
+}
 //--------------------------------------------------------------------------
 // poly_line()
 //
@@ -355,15 +397,20 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
 
 void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
 {
-    int i;
+	char buf[32];
     SVG *svgDev;
 
     svgDev = pls->dev;
+	if (plsc->patt) {
+		define_pattern(pls,buf);
+	}
 
 	svg_open( svgDev, "polyline" );
     if ( fill )
     {
-	     // Two adjacent regions will put non-zero width boundary strokes on top
+	//this is a (multiple) FILL. Will add a stroke under certain cases, below.
+	if (pls->curcolor.a < 0.99 || plsc->patt) {
+	    // pls->curcolor.a < 0.99: Two adjacent regions will put non-zero width boundary strokes on top
         // of each other on their common boundary.  Thus, a stroke on the boundary
         // of a filled region is generally a bad idea when the fill is partially
         // opaque because the partial opacity of the two boundary strokes which
@@ -373,20 +420,20 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
         // it will keep the background from leaking through at the anti-aliased
         // edges of filled regions that have a common boundary with other
         // filled regions.
-			if ( pls->curcolor.a < 0.99 )
-			{
-				svg_attr_value( svgDev, "stroke", "none" );
-			}
-			else
-			{
-				svg_stroke_width( pls );
-				svg_stroke_color( pls );
-			}
-			svg_fill_color( pls );
-        if ( pls->dev_eofill )
-            svg_attr_value( svgDev, "fill-rule", "evenodd" );
-        else
-            svg_attr_value( svgDev, "fill-rule", "nonzero" );
+		svg_attr_value(svgDev, "stroke", "none");
+	} else {
+		svg_stroke_width(pls);
+		svg_stroke_color(pls);
+	}
+	if (plsc->patt) {
+		svg_fill_pattern(pls, buf);
+	} else {
+		svg_fill_color(pls);
+	}
+	if (pls->patt && pls->dev_eofill)
+		svg_attr_value(svgDev, "fill-rule", "evenodd");
+	else
+		svg_attr_value(svgDev, "fill-rule", "nonzero");
     }
     else
     {
@@ -397,7 +444,7 @@ void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
     //svg_attr_value(svgDev, "shape-rendering", "crispEdges");
     svg_indent( svgDev );
     fprintf( svgDev->svgFile, "points=\"" );
-    for ( i = 0; i < npts; i++ )
+    for ( int i = 0; i < npts; i++ )
     {
         fprintf( svgDev->svgFile, "%.2f,%.2f ", (double) xa[i] * svgDev->scale, (double) ya[i] * svgDev->scale );
         if ( ( ( i + 1 ) % 10 ) == 0 )
@@ -442,14 +489,7 @@ void FillPath(PLStream *pls) {
 	char buf[32];
     svgDev = pls->dev;
 	if (plsc->patt) {
-		snprintf(buf,31,"hatch_%03.3d",svgDev->patcount++);
-		fprintf( svgDev->svgFile, "\n<pattern id=\"%s\" width=\"10\" height=\"10\" "
-				"patternTransform=\"rotate(%d 0 0)\" patternUnits=\"userSpaceOnUse\">\n"
-				"    <line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"10\" style=\"stroke-width:%f; stroke:#",buf,plsc->inclin[0]/10,pls->width);
-				write_hex( svgDev->svgFile, pls->curcolor.r );
-				write_hex( svgDev->svgFile, pls->curcolor.g );
-				write_hex( svgDev->svgFile, pls->curcolor.b );
-				fprintf( svgDev->svgFile, "\"/></pattern>");
+		define_pattern(pls,buf);
 	}
     fprintf( svgDev->svgFile, "\n<path d=\"");
     for (int i = 0; i < pls->dev_npath; ++i) {

@@ -224,7 +224,7 @@ namespace lib {
       static int orientationIx = e->KeywordIx("ORIENTATION");
       static int line_fillIx = e->KeywordIx("LINE_FILL");
       static int spacingIx = e->KeywordIx("SPACING");
-      bool hachures=(e->KeywordSet(line_fillIx)||e->KeywordSet(orientationIx)||e->KeywordSet(spacingIx)||e->KeywordSet(linestyleIx));
+      bool hachures=(e->KeywordPresentAndDefined(line_fillIx)||e->KeywordPresentAndDefined(orientationIx)||e->KeywordPresentAndDefined(spacingIx)||e->KeywordPresentAndDefined(linestyleIx));
       if (hachures) {
         PLINT ori = 0, spa = 1500;
 

@@ -689,7 +689,7 @@ namespace lib
   //LINESTYLE
   void gdlLineStyle(GDLGStream *a, DLong style)
   {
-      //set saved Satle to nex style:
+      //set saved Sate to next style:
       savedStyle=style;
       static PLINT mark1[]={200};
       static PLINT space1[]={750};
