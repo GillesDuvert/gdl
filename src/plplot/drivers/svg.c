@@ -347,7 +347,7 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
     }
 }
 #define SVG_STYLE_FACTOR 100
-void define_pattern(PLStream *pls, char* id) {
+static void define_pattern(PLStream *pls, char* id) {
     SVG *svgDev;
 
     svgDev = pls->dev;
@@ -398,10 +398,8 @@ void define_pattern(PLStream *pls, char* id) {
 static void
 poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
 {
-	char buf[32];
-    SVG *svgDev;
-
-    svgDev = pls->dev;
+char buf[32];
+    SVG *svgDev = pls->dev;
 	if (plsc->patt) {
 		define_pattern(pls,buf);
 	}

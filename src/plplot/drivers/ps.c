@@ -231,7 +231,9 @@ void plD_init_ps( PLStream *pls )
         pls->phyxmi, pls->phyymi , pls->phyxmi, pls->phyyma, pls->phyxma, pls->phyyma, pls->phyxma, pls->phyymi, pls->phyxmi, pls->phyymi  );
     fprintf( OF, "/CL {newpath M D D D closepath clip} def\n" );
     fprintf( OF, "0 setlinecap 0 setlinejoin 2.5 setmiterlimit\n");
-
+// for patterns:
+	if (pls->color) fprintf( OF, "[ /Pattern [/DeviceRGB] ] setcolorspace\n");
+	else fprintf( OF, "[ /Pattern [/DeviceGray] ] setcolorspace\n");
 	fprintf( OF, "%%%%EndProlog\n" );
 	if (pls->portrait) fprintf( OF, "%d %d translate %f dup scale\n",dev->xOffset, dev->yOffset, dev->scale);
 //	if (pls->portrait) fprintf( OF, "%f dup scale\n",dev->scale);
@@ -285,14 +287,6 @@ void plD_bop_ps( PLStream *pls )
 
     plD_state_ps( pls, PLSTATE_COLOR0 );
     plD_state_ps( pls, PLSTATE_WIDTH );
-
-/*
-    // invert the coordinate system so that graphs appear right side up
-
-    ps_open( dev, "g" );
-    ps_attr_values( dev, "transform", "matrix(1 0 0 -1 0 %d)", dev->canvasYSize );
-    ps_general( dev, ">\n" );
-*/
 }
 
 //--------------------------------------------------------------------------
@@ -338,44 +332,6 @@ void plD_line_ps( PLStream *pls, short x1a, short y1a, short x2a, short y2a )
 void plD_polyline_ps( PLStream *pls, short *xa, short *ya, PLINT npts )
 {
 	poly_line( pls, xa, ya, npts, 0 );
-	  
-/*
-	  PLINT i;
-	PSDev * dev = (PSDev *) pls->dev;
-	PLINT x = xa[0], y = ya[0];
-
-	if (pls->linepos > LINELENGTH) {
-		fputc('\n', OF);
-		pls->linepos = 0;
-	}
-
-	pls->linepos +=fprintf(OF, "%d %d M ", x, y);
-	dev->llx = MIN(dev->llx, x);
-	dev->lly = MIN(dev->lly, y);
-	dev->urx = MAX(dev->urx, x);
-	dev->ury = MAX(dev->ury, y);
-	dev->xold = x;
-	dev->yold = y;
-
-	for (i = 1; i < npts ; i++) {
-		x = xa[i];
-		y = ya[i];
-		pls->linepos +=fprintf(OF, "%i %i R ", x - dev->xold, y - dev->yold);
-		dev->llx = MIN(dev->llx, x);
-		dev->lly = MIN(dev->lly, y);
-		dev->urx = MAX(dev->urx, x);
-		dev->ury = MAX(dev->ury, y);
-		dev->xold = x;
-		dev->yold = y;
-		if (pls->linepos > (LINELENGTH)) {
-			pls->linepos +=fputc('\n', OF);
-			pls->linepos = 0;
-		}
-	}
-	dev->xold = PL_UNDEFINED;
-	dev->yold = PL_UNDEFINED;	
-	pls->linepos +=fprintf(OF, "S ");
-*/
 }
 
 //--------------------------------------------------------------------------
@@ -529,15 +485,57 @@ void plD_esc_ps( PLStream *pls, PLINT op, void *ptr )
 
     }
 }
+#define PS_STYLE_FACTOR 100
+static void define_pattern(PLStream *pls, char* id) {
+    PSDev *psDev;
+
+    psDev = pls->dev;
+	int total = 0;
+	for (int i = 0; i < plsc->lineStyleNumberOfElements; i++) {
+		total += plsc->mark[i];
+		total += plsc->space[i];
+	}
+	float thick = pls->width;
+	float neededLength = (total == 0) ? 10 : (float) total / PS_STYLE_FACTOR;
+    float sep = MAX(2, pls->delta[0]*1e-3);
+	float rot = (float) plsc->inclin[0] / 10.;
+	int ix = neededLength + thick;
+	int iy = sep;
+	ix = MAX(10 + sep, ix);
+	iy = MAX(1 + sep, iy);
+	snprintf(id, 31, "hatch_%03.3d", psDev->patcount++);
+	pls->linepos += fprintf(OF, " gsave matrix defaultmatrix setmatrix %f rotate %f setlinewidth %%use defaultmatrix for patterns\n",rot, thick);
+	pls->linepos += fprintf(OF, " << /PatternType 1\n/PaintType 2 /TilingType 1 /BBox [ %d %d %d %d ] "
+			" /XStep %d /YStep %d /PaintProc { pop ", 0, 0, ix, iy, ix, iy);
+	if (plsc->lineStyleNumberOfElements == 0) {
+		int start = 0;
+		int end = ix;
+		pls->linepos += fprintf(OF, " %d %d moveto %d %d lineto stroke ", start, iy / 2, end , iy / 2);
+	} else {
+		int start = 0;
+		int end = 0;
+		for (int i = 0; i < plsc->lineStyleNumberOfElements; i++) {
+			end = start + (float) plsc->mark[i] / PS_STYLE_FACTOR;
+  		    pls->linepos += fprintf(OF, " %d %d moveto %d %d lineto ", start, iy / 2, end , iy / 2);
+			start += (float) (plsc->mark[i] + plsc->space[i]) / PS_STYLE_FACTOR;
+		}
+		pls->linepos += fprintf(OF, " stroke ");
+	}
+	pls->linepos += fprintf(OF, " } bind >> matrix makepattern /%s exch def grestore\n",id);
+}
 //--------------------------------------------------------------------------
 // poly_line()
 //
 // Handles drawing filled and unfilled polygons
 //--------------------------------------------------------------------------
-
 static void
-poly_line(PLStream *pls, short *xa, short *ya, PLINT npts, short fill) {
+poly_line(PLStream *pls, short *xa, short *ya, PLINT npts, short fill)
+{
+	char buf[32];
 	PSDev *dev = (PSDev *) pls->dev;
+	if (plsc->patt) {
+		define_pattern(pls,buf);
+	}
 	PLINT n, ix, iy;
 	PLINT x, y;
 
@@ -571,12 +569,25 @@ poly_line(PLStream *pls, short *xa, short *ya, PLINT npts, short fill) {
 	dev->xold = PL_UNDEFINED;
 	dev->yold = PL_UNDEFINED;
 	if (fill) {
-	if (pls->dev_eofill)
-		pls->linepos += fprintf(OF, " E ");
-	else
-		pls->linepos += fprintf(OF, " F ");
-	}
-	else pls->linepos += fprintf(OF, " S ");
+		if (plsc->patt) {
+			if (pls->color) {
+				PLFLT r = ((PLFLT) pls->curcolor.r) / 255.0;
+				PLFLT g = ((PLFLT) pls->curcolor.g) / 255.0;
+				PLFLT b = ((PLFLT) pls->curcolor.b) / 255.0;
+
+				pls->linepos += fprintf(OF, "%.4f %.4f %.4f %s setpattern gsave fill grestore\n", r, g, b, buf);
+			} else {
+				PLFLT r = ((PLFLT) pls->curcolor.r) / 255.0;
+				pls->linepos += fprintf(OF, " %.4f  %s setpattern gsave fill grestore\n", 1.0 - r, buf);
+			}
+		} else if (plsc->patternFill) {
+		} else {
+			if (pls->dev_eofill)
+				pls->linepos += fprintf(OF, " E ");
+			else
+				pls->linepos += fprintf(OF, " F ");
+		}
+	} else pls->linepos += fprintf(OF, " S ");
 	if (pls->linepos > LINELENGTH) {
 		putc('\n', OF);
 		pls->linepos = 0;
@@ -609,12 +620,6 @@ static void fill_path( PLStream *pls) {
   }
   FillPath(pls);
 }
-
-//--------------------------------------------------------------------------
-// FillPath()
-//
-// see fill_path
-//--------------------------------------------------------------------------
 static void
 FillPath(PLStream *pls) {
 	PSDev *dev = (PSDev *) pls->dev;
