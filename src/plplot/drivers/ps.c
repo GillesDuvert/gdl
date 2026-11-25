@@ -80,6 +80,7 @@ typedef struct
     PLINT xold;
 	PLINT yold;
 	int llx, lly, urx, ury;
+	int patcount;
 } PSDev;
 
 // Debugging extras
@@ -87,9 +88,11 @@ typedef struct
 //-----------------------------------------------
 // function declarations
 // -----------------------------------------------
+static const char *ps_getdate( void );
 
+static void poly_line(PLStream *, short *, short *, PLINT, short );
 static void fill_path(PLStream *pls);
-static void fill_polygon(PLStream *pls);
+static void FillPath(PLStream *pls);
 
 // PLplot interface functions
 
@@ -131,19 +134,6 @@ void plD_dispatch_init_ps( PLDispatchTable *pdt )
     pdt->pl_state    = (plD_state_fp) plD_state_ps;
     pdt->pl_esc      = (plD_esc_fp) plD_esc_ps;
 }
-static const char *
-ps_getdate( void )
-{
-    int    len;
-    time_t t;
-    char   *p;
-
-    t   = time( (time_t *) 0 );
-    p   = ctime( &t );
-    len = (int) strlen( p );
-    *( p + len - 1 ) = '\0';      // zap the newline character
-    return p;
-}
 
 //--------------------------------------------------------------------------
 // ps_init()
@@ -164,6 +154,7 @@ void plD_init_ps( PLStream *pls )
     pls->page         = 0;
     pls->dev_fill0    = 1;      // driver generates solid fills
     pls->dev_fill1    = 0;      // Use PLplot core fallback for pattern fills
+	pls->doPatternedFills = 1;  // can do patterned fills
 
     if ( ( pls->OutFile = fopen( pls->FileName, "wb+" ) ) == NULL )
             fprintf( stderr, "Can't open %s.\n", pls->FileName ); //plOpenFile( pls );
@@ -178,7 +169,7 @@ void plD_init_ps( PLStream *pls )
         plexit( "plD_init_ps: Out of memory." );
 
     dev = (PSDev *) pls->dev;
-
+	dev->patcount=0;
     // Set the bounds for plotting in points (unit of 1/72 of an inch).  Default is PS_Default_X points x PS_Default_Y points unless otherwise specified by plspage or -geometry option.
 
     if ( pls->xlength <= 0 || pls->ylength <= 0 )
@@ -296,7 +287,7 @@ void plD_bop_ps( PLStream *pls )
     plD_state_ps( pls, PLSTATE_WIDTH );
 
 /*
-    // invert the coordinate system so that PLplot graphs appear right side up
+    // invert the coordinate system so that graphs appear right side up
 
     ps_open( dev, "g" );
     ps_attr_values( dev, "transform", "matrix(1 0 0 -1 0 %d)", dev->canvasYSize );
@@ -346,7 +337,10 @@ void plD_line_ps( PLStream *pls, short x1a, short y1a, short x2a, short y2a )
 
 void plD_polyline_ps( PLStream *pls, short *xa, short *ya, PLINT npts )
 {
-	PLINT i;
+	poly_line( pls, xa, ya, npts, 0 );
+	  
+/*
+	  PLINT i;
 	PSDev * dev = (PSDev *) pls->dev;
 	PLINT x = xa[0], y = ya[0];
 
@@ -381,6 +375,7 @@ void plD_polyline_ps( PLStream *pls, short *xa, short *ya, PLINT npts )
 	dev->xold = PL_UNDEFINED;
 	dev->yold = PL_UNDEFINED;	
 	pls->linepos +=fprintf(OF, "S ");
+*/
 }
 
 //--------------------------------------------------------------------------
@@ -464,7 +459,7 @@ void plD_state_ps(PLStream *pls, PLINT op) {
 			float width = pls->width*DEF_WIDTH;
 			if (width < MIN_WIDTH) width = MIN_WIDTH;
 			if (width > MAX_WIDTH) width = MAX_WIDTH;
-			pls->linepos += fprintf(OF, " %f W ", width);
+			pls->linepos += fprintf(OF, "\n%f W\n", width);
 
 			dev->xold = PL_UNDEFINED;
 			dev->yold = PL_UNDEFINED;
@@ -475,7 +470,7 @@ void plD_state_ps(PLStream *pls, PLINT op) {
 				pls->linepos += fprintf(OF, " %.4f G ", (pls->icol0 ? 0.0 : 1.0));
 				// Reinitialize current point location.
 				if (dev->xold != PL_UNDEFINED && dev->yold != PL_UNDEFINED)
-					pls->linepos += fprintf(OF, " %d %d M \n", (int) dev->xold, (int) dev->yold);
+					pls->linepos += fprintf(OF, "\n%d %d M\n", (int) dev->xold, (int) dev->yold);
 				break;
 			}
 			// else fallthrough
@@ -485,14 +480,14 @@ void plD_state_ps(PLStream *pls, PLINT op) {
 				PLFLT g = ((PLFLT) pls->curcolor.g) / 255.0;
 				PLFLT b = ((PLFLT) pls->curcolor.b) / 255.0;
 
-				pls->linepos += fprintf(OF, " %.4f %.4f %.4f C ", r, g, b);
+				pls->linepos += fprintf(OF, "\n%.4f %.4f %.4f C\n", r, g, b);
 			} else {
 				PLFLT r = ((PLFLT) pls->curcolor.r) / 255.0;
 				pls->linepos += fprintf(OF, " %.4f G ", 1.0 - r);
 			}
 			// Reinitialize current point location.
 			if (dev->xold != PL_UNDEFINED && dev->yold != PL_UNDEFINED)
-				pls->linepos += fprintf(OF, " %d %d M \n", (int) dev->xold, (int) dev->yold);
+				pls->linepos += fprintf(OF, "\n%d %d M\n", (int) dev->xold, (int) dev->yold);
 			break;
 	}
 }
@@ -515,11 +510,12 @@ void plD_esc_ps( PLStream *pls, PLINT op, void *ptr )
             int y = pls->dev_y[i];
             // 3D convert, must take into account that y is inverted.
             SelfTransform3D(&x, &y);
+
             pls->dev_x[i] = x;
             pls->dev_y[i] = y;
           }
         }
-		fill_polygon(pls);
+		poly_line(pls, pls->dev_x, pls->dev_y, pls->dev_npts, 1);
         break;
     case PLESC_FILL_PATH:
         fill_path( pls );
@@ -534,12 +530,93 @@ void plD_esc_ps( PLStream *pls, PLINT op, void *ptr )
     }
 }
 //--------------------------------------------------------------------------
+// poly_line()
+//
+// Handles drawing filled and unfilled polygons
+//--------------------------------------------------------------------------
+
+static void
+poly_line(PLStream *pls, short *xa, short *ya, PLINT npts, short fill) {
+	PSDev *dev = (PSDev *) pls->dev;
+	PLINT n, ix, iy;
+	PLINT x, y;
+
+	if (fill) pls->linepos += fprintf(OF, " Z\nN "); //newpath
+	// First time through start with a x y moveto
+	x = xa[0];
+	y = ya[0];
+	pls->linepos += fprintf(OF, "%d %d M ", x, y);
+	dev->llx = MIN(dev->llx, x);
+	dev->lly = MIN(dev->lly, y);
+	dev->urx = MAX(dev->urx, x);
+	dev->ury = MAX(dev->ury, y);
+	dev->xold = x;
+	dev->yold = y;
+
+	for (n = 1, ix = 1, iy = 1; n < npts; n++) {
+		if (pls->linepos > LINELENGTH) {
+			fputc('\n', OF);
+			pls->linepos = 0;
+		}
+		x = xa[ix++];
+		y = ya[iy++];
+		pls->linepos += fprintf(OF, "%i %i R ", x - dev->xold, y - dev->yold);
+		dev->llx = MIN(dev->llx, x);
+		dev->lly = MIN(dev->lly, y);
+		dev->urx = MAX(dev->urx, x);
+		dev->ury = MAX(dev->ury, y);
+		dev->xold = x;
+		dev->yold = y;
+	}
+	dev->xold = PL_UNDEFINED;
+	dev->yold = PL_UNDEFINED;
+	if (fill) {
+	if (pls->dev_eofill)
+		pls->linepos += fprintf(OF, " E ");
+	else
+		pls->linepos += fprintf(OF, " F ");
+	}
+	else pls->linepos += fprintf(OF, " S ");
+	if (pls->linepos > LINELENGTH) {
+		putc('\n', OF);
+		pls->linepos = 0;
+	}
+}
+
+//--------------------------------------------------------------------------
+//  static void fill_path( PLStream *pls )
+//
+//  Fill special arrangement of values defining multiple path at once
+//--------------------------------------------------------------------------
+static void fill_path( PLStream *pls) {
+
+  if (Status3D == 1) { //enable use everywhere.
+    //perform conversion on the fly
+    for (PLINT i = 0; i < pls->dev_npath; ++i) {
+      PLINT *x = pls->dev_pathx[i];
+      PLINT *y = pls->dev_pathy[i];
+      for (PLINT j = 0; j < pls->dev_pathnxy[i]; ++j) {
+        // 3D convert, must take into account that y is inverted.
+        int ix=x[j];
+        int iy=y[j];
+        if (ix >= 0) { //avoid transforming the negative codes...
+          SelfTransform3D(&ix, &iy);
+        x[j]=ix;
+        y[j]=iy;
+        }
+      }
+    }
+  }
+  FillPath(pls);
+}
+
+//--------------------------------------------------------------------------
 // FillPath()
 //
 // see fill_path
 //--------------------------------------------------------------------------
-
-void fill_path(PLStream *pls) {
+static void
+FillPath(PLStream *pls) {
 	PSDev *dev = (PSDev *) pls->dev;
 	pls->linepos = 0;
 	fprintf(OF, " Z\n"); //stroke newpath
@@ -644,51 +721,17 @@ void fill_path(PLStream *pls) {
 	}
 }
 
-//--------------------------------------------------------------------------
-// fill_polygon()
-//
-// Fill polygon described in points pls->dev_x[] and pls->dev_y[].
-// Only solid color fill supported.
-//--------------------------------------------------------------------------
+static const char *
+ps_getdate( void )
+{
+    int    len;
+    time_t t;
+    char   *p;
 
-static void
-fill_polygon(PLStream *pls) {
-	PSDev *dev = (PSDev *) pls->dev;
-	PLINT n, ix, iy;
-	PLINT x, y;
-
-	pls->linepos += fprintf(OF, " Z "); //newpath
-	// First time through start with a x y moveto
-	x = pls->dev_x[0];
-	y = pls->dev_y[0];
-	pls->linepos += fprintf(OF, "N %d %d M ", x, y);
-	dev->llx = MIN(dev->llx, x);
-	dev->lly = MIN(dev->lly, y);
-	dev->urx = MAX(dev->urx, x);
-	dev->ury = MAX(dev->ury, y);
-	dev->xold = x;
-	dev->yold = y;
-
-	for (n = 1, ix = 1, iy = 1; n < pls->dev_npts; n++) {
-		if (pls->linepos > LINELENGTH) {
-			fputc('\n', OF);
-			pls->linepos = 0;
-		}
-		x = pls->dev_x[ix++];
-		y = pls->dev_y[iy++];
-		pls->linepos += fprintf(OF, "%i %i R ", x - dev->xold, y - dev->yold);
-		dev->llx = MIN(dev->llx, x);
-		dev->lly = MIN(dev->lly, y);
-		dev->urx = MAX(dev->urx, x);
-		dev->ury = MAX(dev->ury, y);
-		dev->xold = x;
-		dev->yold = y;
-	}
-	dev->xold = PL_UNDEFINED;
-	dev->yold = PL_UNDEFINED;
-	pls->linepos += fprintf(OF, " F ");
-	if (pls->linepos > LINELENGTH) {
-		putc('\n', OF);
-		pls->linepos = 0;
-	}
+    t   = time( (time_t *) 0 );
+    p   = ctime( &t );
+    len = (int) strlen( p );
+    *( p + len - 1 ) = '\0';      // zap the newline character
+    return p;
 }
+

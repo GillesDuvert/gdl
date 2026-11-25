@@ -80,14 +80,14 @@ static void svg_stroke_color( PLStream * );
 static void svg_fill_pattern( PLStream * , const char*);
 static void svg_fill_color( PLStream * );
 static void svg_fill_background_color( PLStream * );
+static void write_hex( FILE *, unsigned char );
 
 
 // General
 
-static void poly_line( PLStream *, short *, short *, PLINT, short );
-static void fill_path(PLStream *);
+static void poly_line(PLStream *, short *, short *, PLINT, short );
+static void fill_path(PLStream * pls);
 static void FillPath(PLStream *pls);
-static void write_hex( FILE *, unsigned char );
 
 // PLplot interface functions
 
@@ -358,8 +358,7 @@ void define_pattern(PLStream *pls, char* id) {
 	}
 	float thick = pls->width;
 	float neededLength = (total == 0) ? 10 : (float) total / SVG_STYLE_FACTOR;
-	float sep = 10 + thick;
-	if (pls->delta[0] > 0) sep = MAX(2, pls->delta[0]*1e-3);
+    float sep = MAX(2, pls->delta[0]*1e-2);
 	float rot = (float) plsc->inclin[0] / 10.;
 	int ix = neededLength + thick;
 	int iy = sep;
@@ -367,15 +366,17 @@ void define_pattern(PLStream *pls, char* id) {
 	iy = MAX(1 + sep, iy);
 	snprintf(id, 31, "hatch_%03.3d", svgDev->patcount++);
 	fprintf(svgDev->svgFile, "\n<pattern id=\"%s\" width=\"%d\" height=\"%d\" "
-			"patternTransform=\"rotate(%f 0 0)\" stroke-linecap=\"round\" patternUnits=\"userSpaceOnUse\">\n", id, ix, iy, rot);
+			"patternTransform=\"rotate(%f)\" stroke-linecap=\"round\" patternUnits=\"userSpaceOnUse\">\n", id, ix, iy, rot);
 	if (plsc->lineStyleNumberOfElements == 0) {
-		fprintf(svgDev->svgFile, "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%f; stroke:#", thick, iy / 2, ix, iy / 2, thick);
+		int start = 0;
+		int end = ix;
+		fprintf(svgDev->svgFile, "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%f; stroke:#", start, iy / 2, end , iy / 2, thick);
 		write_hex(svgDev->svgFile, pls->curcolor.r);
 		write_hex(svgDev->svgFile, pls->curcolor.g);
 		write_hex(svgDev->svgFile, pls->curcolor.b);
 		fprintf(svgDev->svgFile, "\"/></pattern>");
 	} else {
-		int start = thick;
+		int start = 0;
 		int end = 0;
 		for (int i = 0; i < plsc->lineStyleNumberOfElements; i++) {
 			end = start + (float) plsc->mark[i] / SVG_STYLE_FACTOR;
@@ -394,8 +395,8 @@ void define_pattern(PLStream *pls, char* id) {
 //
 // Handles drawing filled and unfilled polygons
 //--------------------------------------------------------------------------
-
-void poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
+static void
+poly_line( PLStream *pls, short *xa, short *ya, PLINT npts, short fill )
 {
 	char buf[32];
     SVG *svgDev;
