@@ -346,7 +346,7 @@ void plD_esc_svg( PLStream *pls, PLINT op, void *ptr )
 
     }
 }
-#define SVG_STYLE_FACTOR 100
+#define SVG_STYLE_FACTOR (1e-4/2.54*plsc->xdpi)
 static void define_pattern(PLStream *pls, char* id) {
     SVG *svgDev;
 
@@ -357,8 +357,8 @@ static void define_pattern(PLStream *pls, char* id) {
 		total += plsc->space[i];
 	}
 	float thick = pls->width;
-	float neededLength = (total == 0) ? 10 : (float) total / SVG_STYLE_FACTOR;
-    float sep = MAX(2, pls->delta[0]*1e-2);
+	float neededLength = (total == 0) ? 10 : (float) total * SVG_STYLE_FACTOR;
+    float sep = MAX( 2, pls->delta[0]*SVG_STYLE_FACTOR);
 	float rot = (float) plsc->inclin[0] / 10.;
 	int ix = neededLength + thick;
 	int iy = sep;
@@ -379,13 +379,13 @@ static void define_pattern(PLStream *pls, char* id) {
 		int start = 0;
 		int end = 0;
 		for (int i = 0; i < plsc->lineStyleNumberOfElements; i++) {
-			end = start + (float) plsc->mark[i] / SVG_STYLE_FACTOR;
+			end = start + (float) plsc->mark[i] * SVG_STYLE_FACTOR;
 			fprintf(svgDev->svgFile, "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" style=\"stroke-width:%f; stroke:#", start, iy / 2, end, iy / 2, thick);
 			write_hex(svgDev->svgFile, pls->curcolor.r);
 			write_hex(svgDev->svgFile, pls->curcolor.g);
 			write_hex(svgDev->svgFile, pls->curcolor.b);
 			fprintf(svgDev->svgFile, "\"/>\n");
-			start += (float) (plsc->mark[i] + plsc->space[i]) / SVG_STYLE_FACTOR;
+			start += (float) (plsc->mark[i] + plsc->space[i]) * SVG_STYLE_FACTOR;
 		}
 		fprintf(svgDev->svgFile, "</pattern>");
 	}

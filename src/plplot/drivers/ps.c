@@ -485,7 +485,7 @@ void plD_esc_ps( PLStream *pls, PLINT op, void *ptr )
 
     }
 }
-#define PS_STYLE_FACTOR 100
+#define PS_STYLE_FACTOR (1e-4/2.54*plsc->xdpi)
 static void define_pattern(PLStream *pls, char* id) {
     PSDev *psDev;
 
@@ -496,8 +496,8 @@ static void define_pattern(PLStream *pls, char* id) {
 		total += plsc->space[i];
 	}
 	float thick = pls->width;
-	float neededLength = (total == 0) ? 10 : (float) total / PS_STYLE_FACTOR;
-    float sep = MAX(2, pls->delta[0]*1e-3);
+	float neededLength = (total == 0) ? 10 : (float) total * PS_STYLE_FACTOR;
+    float sep = MAX(2, pls->delta[0] * PS_STYLE_FACTOR);
 	float rot = (float) plsc->inclin[0] / 10.;
 	int ix = neededLength + thick;
 	int iy = sep;
@@ -515,9 +515,9 @@ static void define_pattern(PLStream *pls, char* id) {
 		int start = 0;
 		int end = 0;
 		for (int i = 0; i < plsc->lineStyleNumberOfElements; i++) {
-			end = start + (float) plsc->mark[i] / PS_STYLE_FACTOR;
+			end = start + (float) plsc->mark[i] * PS_STYLE_FACTOR;
   		    pls->linepos += fprintf(OF, " %d %d moveto %d %d lineto ", start, iy / 2, end , iy / 2);
-			start += (float) (plsc->mark[i] + plsc->space[i]) / PS_STYLE_FACTOR;
+			start += (float) (plsc->mark[i] + plsc->space[i]) * PS_STYLE_FACTOR;
 		}
 		pls->linepos += fprintf(OF, " stroke ");
 	}
@@ -622,9 +622,12 @@ static void fill_path( PLStream *pls) {
 }
 static void
 FillPath(PLStream *pls) {
+	char buf[32];
 	PSDev *dev = (PSDev *) pls->dev;
-	pls->linepos = 0;
-	fprintf(OF, " Z\n"); //stroke newpath
+	if (plsc->patt) {
+		define_pattern(pls,buf);
+	}
+	pls->linepos += fprintf(OF, " Z\nN "); //newpath0;
 	PLINT x, y;
 	PLINT x1, y1;
 	PLINT x2, y2;
@@ -716,10 +719,24 @@ FillPath(PLStream *pls) {
 	}
 	dev->xold = PL_UNDEFINED;
 	dev->yold = PL_UNDEFINED;
-	if (pls->dev_eofill)
-		pls->linepos += fprintf(OF, " E ");
-	else
-		pls->linepos += fprintf(OF, " F ");
+	if (plsc->patt) {
+		if (pls->color) {
+			PLFLT r = ((PLFLT) pls->curcolor.r) / 255.0;
+			PLFLT g = ((PLFLT) pls->curcolor.g) / 255.0;
+			PLFLT b = ((PLFLT) pls->curcolor.b) / 255.0;
+
+			pls->linepos += fprintf(OF, "%.4f %.4f %.4f %s setpattern gsave fill grestore\n", r, g, b, buf);
+		} else {
+			PLFLT r = ((PLFLT) pls->curcolor.r) / 255.0;
+			pls->linepos += fprintf(OF, " %.4f  %s setpattern gsave fill grestore\n", 1.0 - r, buf);
+		}
+	} else if (plsc->patternFill) {
+	} else {
+		if (pls->dev_eofill)
+			pls->linepos += fprintf(OF, " E ");
+		else
+			pls->linepos += fprintf(OF, " F ");
+	}
 	if (pls->linepos > LINELENGTH) {
 		putc('\n', OF);
 		pls->linepos = 0;
