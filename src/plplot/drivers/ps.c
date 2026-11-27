@@ -504,9 +504,9 @@ static void define_pattern(PLStream *pls, char* id) {
 	ix = MAX(10 + sep, ix);
 	iy = MAX(1 + sep, iy);
 	snprintf(id, 31, "hatch_%03.3d", psDev->patcount++);
-	pls->linepos += fprintf(OF, " gsave matrix defaultmatrix setmatrix %f rotate %f setlinewidth %%use defaultmatrix for patterns\n",rot, thick);
+	pls->linepos += fprintf(OF, "\ngsave matrix defaultmatrix setmatrix %f rotate %f setlinewidth %%use defaultmatrix for patterns\n",rot, thick);
 	pls->linepos += fprintf(OF, " << /PatternType 1\n/PaintType 2 /TilingType 1 /BBox [ %d %d %d %d ] "
-			" /XStep %d /YStep %d /PaintProc { pop ", 0, 0, ix, iy, ix, iy);
+			" /XStep %d /YStep %d /PaintProc \n{ pop ", 0, 0, ix, iy, ix, iy);
 	if (plsc->lineStyleNumberOfElements == 0) {
 		int start = 0;
 		int end = ix;
@@ -580,7 +580,6 @@ poly_line(PLStream *pls, short *xa, short *ya, PLINT npts, short fill)
 				PLFLT r = ((PLFLT) pls->curcolor.r) / 255.0;
 				pls->linepos += fprintf(OF, " %.4f  %s setpattern gsave fill grestore\n", 1.0 - r, buf);
 			}
-		} else if (plsc->patternFill) {
 		} else {
 			if (pls->dev_eofill)
 				pls->linepos += fprintf(OF, " E ");
@@ -627,7 +626,7 @@ FillPath(PLStream *pls) {
 	if (plsc->patt) {
 		define_pattern(pls,buf);
 	}
-	pls->linepos += fprintf(OF, " Z\nN "); //newpath0;
+	pls->linepos += fprintf(OF, " Z gsave N "); //newpath0;
 	PLINT x, y;
 	PLINT x1, y1;
 	PLINT x2, y2;
@@ -725,10 +724,10 @@ FillPath(PLStream *pls) {
 			PLFLT g = ((PLFLT) pls->curcolor.g) / 255.0;
 			PLFLT b = ((PLFLT) pls->curcolor.b) / 255.0;
 
-			pls->linepos += fprintf(OF, "%.4f %.4f %.4f %s setpattern gsave fill grestore\n", r, g, b, buf);
+			pls->linepos += fprintf(OF, "%.4f %.4f %.4f %s setpattern fill grestore\n", r, g, b, buf);
 		} else {
 			PLFLT r = ((PLFLT) pls->curcolor.r) / 255.0;
-			pls->linepos += fprintf(OF, " %.4f  %s setpattern gsave fill grestore\n", 1.0 - r, buf);
+			pls->linepos += fprintf(OF, " %.4f  %s setpattern fill grestore\n", 1.0 - r, buf);
 		}
 	} else if (plsc->patternFill) {
 	} else {

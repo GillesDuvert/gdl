@@ -163,3 +163,32 @@ bool GDLPSStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *po
     return true;
 #undef LINEWIDTH
 }
+
+static int counter=0;
+static char id[32];
+static char stringid[32];
+
+bool GDLPSStream::PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, DLong trueColorOrder, PLFLT ori) {
+  FILE* OF=pls->OutFile;
+  c_plflush();
+  PSDev* dev = (PSDev *) pls->dev;
+  if (trueColorOrder > 1) {
+    cerr << "PS device: True Color images must be [3,*,*] only. (FIXME!)" << endl;
+    return false;
+  }
+  snprintf(id,31,"img_%3.3d",counter++);
+  snprintf(stringid,31,"string_%3.3d",counter++);
+  fprintf(OF, "\n/%s <\n",stringid);
+  int mult=(trueColorOrder >0)?3:1;
+  for (int i=0; i< nx*ny*mult; ++i) fprintf(pls->OutFile, "%2.2x",idata[i]);
+  fprintf(OF, "\n> def\n gsave matrix defaultmatrix setmatrix %f rotate\n",ori);
+  fprintf(OF, "<< /PatternType 1 /PaintType 1 /TilingType 1 /BBox [ 0 0 %d %d ]  /XStep %d /YStep %d /PaintProc {\n",nx,ny,nx,ny); 
+  fprintf(OF, " begin %d %d scale %s setcolorspace\n << \n  /ImageType 1 /Width %d /Height %d /BitsPerComponent 8"
+      " /ImageMatrix [%d 0 0 -%d 0 %d]" 
+      " /DataSource %s >> image end } bind >> matrix makepattern /%s exch def grestore\n",
+      nx,ny,(trueColorOrder >0)?"/DeviceRGB":"/DeviceGray",nx,ny,nx,ny,ny,stringid,id);
+  fprintf(OF, " /Pattern setcolorspace %s setcolor\n",id);
+//  pls->patternFill=1;
+//  pls->thePatternBase64=(const unsigned char*)id;
+  return true;
+}

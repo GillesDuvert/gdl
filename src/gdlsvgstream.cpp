@@ -314,7 +314,6 @@ bool GDLSVGStream::PaintImage(unsigned char *idata, PLINT nx, PLINT ny, DLong *p
   }
   pls->bytecnt += fprintf(pls->OutFile, "\"/>\n");
   return true;
-#undef BUFLEN
 }
 
 static int counter=0;
@@ -344,7 +343,6 @@ bool GDLSVGStream::PassImageAsPattern(unsigned char *idata, PLINT nx, PLINT ny, 
   pls->patternFill=1;
   pls->thePatternBase64=(const unsigned char*)id;
   return true;
-#undef BUFLEN
 }
 
 // Clear is not used on SVG --- but this could be it.
